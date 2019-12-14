@@ -24,9 +24,10 @@
  * 1. Read and parse the config file. 
  * 2. Read fried parameters from FITS file.
  * 3. Send one fried parameter to each worker.
- * 4. Wait for workers to finish simulation and return data.
- * 5. Store the data, repeat steps 3, 4, 5 for all fried parameters.
+ * 4. Wait for workers to return simulation.
+ * 5. Store the data, repeat steps 3-5.
  * 6. Write to file.
+ * 7. Shutdown workers.
  *
  * Additional information:
  *
@@ -163,33 +164,33 @@ int main(int argc, char *argv[]){
         for(int id = 1; id < processes_total; id++){
             if(id > fried.get_size()){
 
-		/*
-		 * Kill MPI process if rank > fried.get_size(), data sent is irrelevant.
-		 */
+	    /*
+	     * Kill MPI process if rank > fried.get_size(), data sent is irrelevant.
+	     */
 
                 MPI_Send(fried.root_ptr, 1, MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
                 MPI_Send(aperture.root_ptr, aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
 
-               	/*
-		 * Update number of processes in use.
-		 */
+	    /*
+	     * Update number of processes in use.
+	     */
 		
 		processes_total--;          
 
             }else{
 
-		/*
-		 * Send fried parameter, and aperture function to process. 
-		 */
+	    /*
+	     * Send fried parameter, and aperture function to process.
+	     */
 
                 MPI_Send(fried.root_ptr + index_of_fried_in_queue, 1, MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
                 MPI_Send(aperture.root_ptr, aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
                 
-		/*
-		 * Store index_of_fried_in_queue in process_fried_map[id].
-		 * Process with rank id is now working on fried[index_of_fried_in_queue].
-		 * Increment index_of_fried_in_queue.
-		 */
+	    /*
+	     * Store index_of_fried_in_queue in process_fried_map[id].
+	     * Process with rank id is now working on fried[index_of_fried_in_queue].
+	     * Increment index_of_fried_in_queue.
+	     */
 
 		process_fried_map[id] = index_of_fried_in_queue;
                 index_of_fried_in_queue++;
@@ -206,31 +207,64 @@ int main(int argc, char *argv[]){
 	Array<double> phase(dims_phase);
 
     /*
-     * !(3, 4) Distribute fried parameter to workers.
+     * !(3, 4, 5) Distribute fried parameters to workers, store returned simulations.
      */
-/*
-	while(fried_completed < fried.get_size()){
-	    
-    	    MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-	    MPI_Get_count(&status, MPI_DOUBLE, &MPI_Recv_Count);
 
-      long MPI_Recv_loc = PIDIndexMap[status.MPI_SOURCE];
-      MPI_Recv(Phasescreens.data4D[MPI_Recv_loc][0][0], MPI_Recv_Count,\
-               MPI_DOUBLE, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD,\
-               &status);
-      ProgressCounter++;
-      ProgressPercentage = ProgressCounter*100.0/FriedParameter.nelements();
-      fprintf(stdout, "\r- Simulating phasescreens: \tIn Progress [%0.3lf %%]", ProgressPercentage);
-      fflush(console);
-      if(NextIndex < FriedParameter.nelements()){
-        MPI_Send(FriedParameter.data + NextIndex, 1, MPI_DOUBLE,\
-                 status.MPI_SOURCE, CMDS::KEEPALIVE, MPI_COMM_WORLD);
-        PIDIndexMap[status.MPI_SOURCE] = NextIndex;
-        NextIndex++;
-      }
+        while(fried_completed < fried.get_size()){
+        	  
+	/*
+	 * Wait for a worker that is ready. If found, get and store worker info.
+	 */	
+	
+	    MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+	    MPI_Get_count(&status, MPI_DOUBLE, &mpi_recv_count);
+
+	/*
+	 * Get the fried parameter index that the process was working on, from process_fried_map.
+	 *
+	 * Name		Type	Purpose
+	 * fried_index	long	Variable to store the index of the fried parameter.
+	 */
+
+	    long fried_index = process_fried_map[status.MPI_SOURCE];
+
+	/*
+	 * Get data, and store in phase at the correct location.
+	 */
+
+	    MPI_Recv(phase.root_ptr + fried_index, mpi_recv_count, MPI_DOUBLE, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+      	/*
+	 * Increment fried_completed
+	 */
+
+	    fried_completed++;
       
+	/*
+	 * Update progress_percent, and print to stdout.
+	 */
+
+	    progress_percent = (100.0 * fried_completed) / fried.get_size();
+	    fprintf(stdout, "\r- Simulating phasescreens: \tIn Progress [%0.3lf %%]", progress_percent);
+	    fflush(console);
+
+	    if(index_of_fried_in_queue < fried.get_size()){
+	    
+	    /*
+	     * If unprocessed fried parameters available, send a new one to the worker.
+	     */
+
+		MPI_Send(fried.root_ptr + index_of_fried_in_queue, 1, MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+	
+	    /*
+	     * Update process_fried_map, and increment index_of_fried_in_queue)
+	     */
+	
+		process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
+		index_of_fried_in_queue++;
+      	    }
+
 	}
-*/	
 
     }else if(process_rank){
 
