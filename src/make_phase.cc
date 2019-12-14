@@ -11,8 +11,45 @@
 #include <unistd.h>
 #include <iostream>
 
+/*
+ * Description:
+ *
+ * This is a program to simulate atmospheric phase-screens, which are functions of \\
+ * the fried parameter (Fried, 1967). A phase-screen is computed by taking the inverse \\
+ * fourier transformation of an array (of spatial frequencies) that satisfies the \\
+ * Kolmogorov-Obukhov power law.
+ *
+ * Program logic:
+ * 
+ * 1. Read and parse the config file. 
+ * 2. Read fried parameters from FITS file.
+ * 3. Send one fried parameter to each worker.
+ * 4. Wait for workers to finish simulation and return data.
+ * 5. Store the data, repeat steps 3, 4, 5 for all fried parameters.
+ * 6. Write to file.
+ *
+ * Additional information:
+ *
+ * Each comment block has a title (of sorts).
+ * Titles starting with !, followed by a number 'n' indicate a block handling step 'n'.
+ *
+ */
+
 int main(int argc, char *argv[]){
 
+/*
+ *  Declare MPI variables.
+ *  
+ *  Name		Type		Purpose
+ *  status:		MPI_status	Required in MPI functions, see MPI documentation for explanation.
+ *  process_rank:	int		Variable to store the rank of each MPI process.
+ *  process_total:	int		Variable to store the number of processes requested with mpiexec.
+ *  processes_active:	int		Variable to store the number of processes actually used by the program.
+ *  processes_deleted:	int		Variable to store the number of processes that are not required by the program.
+ *  mpi_recv_count:	int		Variable to store the count of data received in MPI_Recv, see MPI documentation for explanation. 
+ *  
+ */
+   
     MPI_Status status;
     int process_rank = 0;
     int processes_total = 0;
@@ -20,14 +57,27 @@ int main(int argc, char *argv[]){
     int processes_deleted = 0;
     int mpi_recv_count = 0;
 
+
+/*
+ * Initialize MPI, get processes information.
+ */
+   
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &processes_total);
     MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
+
+/*
+ * Only the master MPI process - rank zero - prints to stdout. All others shut up.
+ */
 
     FILE *console   = process_rank == 0 ? stdout : fopen("/dev/null","wb");
     fprintf(console, "------------------------------------------------------\n");
     fprintf(console, "- Turbulence-degraded phasescreen simulation program -\n");
     fprintf(console, "------------------------------------------------------\n");
+
+/*
+ * !(1) Read and parse the config file.
+ */
 
     if(argc < 2){
         fprintf(console, "1. Config file required. Aborting!\n");
@@ -43,43 +93,145 @@ int main(int argc, char *argv[]){
         fprintf(console, "[Done]\n");
     }
     
-    if(process_rank == 0){
 
-        long   fried_in_queue   = 0;
+/*
+ * Work flow for the master MPI process.
+ */
+
+    if(process_rank == 0){
+	
+    /*
+     * Initialize variables for distributing work.
+     *
+     * Name			Type	Purpose
+     * index_of_fried_in_queue	long	Variable to store array index of the next fried parameter.
+     * fried_completed		long	Variable to store the number of fried parameters simulated.
+     * progress_percent		double	Variable to display the progress percentage.
+     */
+
+        long   index_of_fried_in_queue   = 0;
         long   fried_completed  = 0;
         double progress_percent = 0.0;
+
+    /*
+     * Initialize arrays.
+     *
+     * Name		Type		Purpose
+     * fried		Array<double>	Array to store the fried parameters, see "lib_array.h" for datatype.
+     * aperture		Array<double>	Array to store the aperture function, see "lib_array.h" for datatype.
+     */
 
         Array<double> fried;
         Array<double> aperture;
 
-//      Read the fried parameters from file.
-        fprintf(console, "2. Reading file %s:\t", config::read_fried_from.c_str());
+    /*
+     * !(2) Read fried parameters from file, store in array.
+     */
+
+	fprintf(console, "2. Reading file %s:\t", config::read_fried_from.c_str());
         fried.rd_fits(config::read_fried_from.c_str());
         fprintf(console, "[Done]\n");
 
-//      Read the aperture function from file.
-        fprintf(console, "3. Reading file %s:\t", config::read_aperture_function_from.c_str());
+    /*
+     * Read aperture function from file, store in array.
+     */
+        
+	fprintf(console, "3. Reading file %s:\t", config::read_aperture_function_from.c_str());
         aperture.rd_fits(config::read_aperture_function_from.c_str());
         fprintf(console, "[Done]\n");
 
-	//      Create vectors to store frequently used dimensions  
-        sizt_vector dims_phase{fried.get_size(), config::sims_per_fried, config::sims_size_x, config::sims_size_y};
+    /*
+     * Initialize variables to store dimensions, and maps.
+     *
+     * Name			Type			Purpose
+     * dims_phase		std::vector<size_t>	Vector to store the dimensions of phase screens.
+     * dims_phase_per_fried	std::vector<size_t>	Vector to store the dimensions of phase screens, per fried. 
+     * process_fried_map	std::vector<size_t>	Vector to store the map of which process is handling which fried parameter.
+     */
+    
+    	sizt_vector dims_phase{fried.get_size(), config::sims_per_fried, config::sims_size_x, config::sims_size_y};
         sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
         sizt_vector process_fried_map; process_fried_map.resize(fried.get_size() + 1);
-        
+       
+    /*
+     * Initialize MPI processes, shutdown if more MPI processes than fried parameters.
+     *
+     * Name	Type	Purpose
+     * id	int	Variable to iterate over MPI processes.
+     */
+
         for(int id = 1; id < processes_total; id++){
             if(id > fried.get_size()){
+
+		/*
+		 * Kill MPI process if rank > fried.get_size(), data sent is irrelevant.
+		 */
+
                 MPI_Send(fried.root_ptr, 1, MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
                 MPI_Send(aperture.root_ptr, aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
-                processes_total--;          
+
+               	/*
+		 * Update number of processes in use.
+		 */
+		
+		processes_total--;          
+
             }else{
-                MPI_Send(fried.root_ptr + fried_in_queue, 1, MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+
+		/*
+		 * Send fried parameter, and aperture function to process. 
+		 */
+
+                MPI_Send(fried.root_ptr + index_of_fried_in_queue, 1, MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
                 MPI_Send(aperture.root_ptr, aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
-                process_fried_map[id] = fried_in_queue;
-                fried_in_queue++;
+                
+		/*
+		 * Store index_of_fried_in_queue in process_fried_map[id].
+		 * Process with rank id is now working on fried[index_of_fried_in_queue].
+		 * Increment index_of_fried_in_queue.
+		 */
+
+		process_fried_map[id] = index_of_fried_in_queue;
+                index_of_fried_in_queue++;
             }
         }
-        
+
+    /*
+     * Initialize phase screens.
+     *
+     * Name	Type		Purpose
+     * phase	Array<double>	Array to store the simulated phase screens, later written to file.
+     */
+
+	Array<double> phase(dims_phase);
+
+    /*
+     * !(3, 4) Distribute fried parameter to workers.
+     */
+/*
+	while(fried_completed < fried.get_size()){
+	    
+    	    MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+	    MPI_Get_count(&status, MPI_DOUBLE, &MPI_Recv_Count);
+
+      long MPI_Recv_loc = PIDIndexMap[status.MPI_SOURCE];
+      MPI_Recv(Phasescreens.data4D[MPI_Recv_loc][0][0], MPI_Recv_Count,\
+               MPI_DOUBLE, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD,\
+               &status);
+      ProgressCounter++;
+      ProgressPercentage = ProgressCounter*100.0/FriedParameter.nelements();
+      fprintf(stdout, "\r- Simulating phasescreens: \tIn Progress [%0.3lf %%]", ProgressPercentage);
+      fflush(console);
+      if(NextIndex < FriedParameter.nelements()){
+        MPI_Send(FriedParameter.data + NextIndex, 1, MPI_DOUBLE,\
+                 status.MPI_SOURCE, CMDS::KEEPALIVE, MPI_COMM_WORLD);
+        PIDIndexMap[status.MPI_SOURCE] = NextIndex;
+        NextIndex++;
+      }
+      
+	}
+*/	
+
     }else if(process_rank){
 
 	sizt_vector dims_phase{sizt(config::phase_size * config::sims_size_x / config::aperture_size),\
