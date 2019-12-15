@@ -26,8 +26,7 @@
  * 3. Send one fried parameter to each worker.
  * 4. Wait for workers to return simulation.
  * 5. Store the data, repeat steps 3-5.
- * 6. Write to file.
- * 7. Shutdown workers.
+ * 6. Write phase array to file.
  *
  * Additional information:
  *
@@ -96,7 +95,7 @@ int main(int argc, char *argv[]){
     
 
 /*
- * Work flow for the master MPI process.
+ * Workflow for the master MPI process.
  */
 
     if(process_rank == 0){
@@ -145,8 +144,8 @@ int main(int argc, char *argv[]){
      * Initialize variables to store dimensions, and maps.
      *
      * Name			Type			Purpose
-     * dims_phase		std::vector<size_t>	Vector to store the dimensions of phase screens.
-     * dims_phase_per_fried	std::vector<size_t>	Vector to store the dimensions of phase screens, per fried. 
+     * dims_phase		std::vector<size_t>	Vector to store the dimensions of phase-screens, in pixels.
+     * dims_phase_per_fried	std::vector<size_t>	Vector to store the dimensions of phase-screens, per fried, in pixels.
      * process_fried_map	std::vector<size_t>	Vector to store the map of which process is handling which fried parameter.
      */
     
@@ -198,7 +197,7 @@ int main(int argc, char *argv[]){
         }
 
     /*
-     * Initialize phase screens.
+     * Initialize phase-screens.
      *
      * Name	Type		Purpose
      * phase	Array<double>	Array to store the simulated phase screens, later written to file.
@@ -222,11 +221,11 @@ int main(int argc, char *argv[]){
 	/*
 	 * Get the fried parameter index that the process was working on, from process_fried_map.
 	 *
-	 * Name		Type	Purpose
-	 * fried_index	long	Variable to store the index of the fried parameter.
+	 * Name		Type		Purpose
+	 * fried_index	std::size_t	Variable to store the index of the fried parameter.
 	 */
 
-	    long fried_index = process_fried_map[status.MPI_SOURCE];
+	    sizt fried_index = process_fried_map[status.MPI_SOURCE] * sizeof_vector(dims_phase_per_fried);
 
 	/*
 	 * Get data, and store in phase at the correct location.
@@ -245,13 +244,17 @@ int main(int argc, char *argv[]){
 	 */
 
 	    progress_percent = (100.0 * fried_completed) / fried.get_size();
-	    fprintf(stdout, "\r- Simulating phasescreens: \tIn Progress [%0.3lf %%]", progress_percent);
+	    fprintf(stdout, "\r4. Simulating phasescreens: \tIn Progress [%0.3lf %%]", progress_percent);
 	    fflush(console);
+
+	/*
+	 * Assign new fried parameter, if available, to worker. Else, shutdown. 
+	 */
 
 	    if(index_of_fried_in_queue < fried.get_size()){
 	    
 	    /*
-	     * If unprocessed fried parameters available, send a new one to the worker.
+	     * If unprocessed fried parameters are available, send a new one to the worker.
 	     */
 
 		MPI_Send(fried.root_ptr + index_of_fried_in_queue, 1, MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
@@ -263,51 +266,147 @@ int main(int argc, char *argv[]){
 		process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
 		index_of_fried_in_queue++;
       	    }
+	    else{
+	    
+	    /*
+	     * If no more fried parameters are available, shutdown processes
+	     */
+
+		MPI_Send(nullptr, 0, MPI_CHAR, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+	    }
 
 	}
 
+    /*
+     * !(6) Write phase-screens to output file
+     *
+     */
+
+	fprintf(console, "\n5. Writing phase to file:");
+	if(phase.wr_bin(config::write_phase_to.c_str(), config::output_clobber) != EXIT_SUCCESS){
+	    fprintf(console, "\t[Failed]\n");
+	}
+	else
+	    fprintf(console, "\t[Done]\n");
+
+
+    /*
+     * End of workflow
+     */
+
     }else if(process_rank){
 
-	sizt_vector dims_phase{sizt(config::phase_size * config::sims_size_x / config::aperture_size),\
-			       sizt(config::phase_size * config::sims_size_y / config::aperture_size)};
-  
+    /*
+     * Workflow for the worker MPI processes
+     */
+    
+    /*
+     * Initialize variables to store dimensions.
+     *
+     * Name			Type			Purpose
+     * dims_phase		std::vector<size_t>	Vector to store the dimensions of a single phase-screen, in pixels.
+     * dims_aperture		std::vector<size_t>	Vector to store the dimensions of the aperture, in pixels.
+     * dims_phase_per_fried	std::vector<size_t>	Vector to store the dimensions of phase-screens, per fried, in pixels.
+     *
+     * Additional comments:
+     *
+     * The size of the phase-screen simulation *should* be much larger than the size of the aperture to avoid \\
+     * underestimation of the low-order fluctuations. Therefore, the size of the simulation, in pixels, is appropriately \\
+     * scaled. Therefore, dims_phase in this workflow is *not* equal to the dims_phase in the master workflow. 
+     */
+	sizt_vector dims_phase{sizt(config::phase_size * config::sims_size_x / config::aperture_size), sizt(config::phase_size * config::sims_size_y / config::aperture_size)}; 
         sizt_vector dims_aperture{config::sims_size_x, config::sims_size_y};
 	sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
+
+    /*
+     * Initialize phase-screen arrays.
+     *
+     * Name		Type		Purpose
+     * aperture		Array<double>	Array to store the aperture function.
+     * phase_per_fried	Array<double>	Array to store the phase-screen simulations, per fried.
+     * phase		Array<cmpx>	Array to store a single phase-screen.
+     * phase_fourier	Array<cmpx>	Array to store the fourier transformation of a phase-screen.
+     *
+     * Additional comments:
+     *
+     * phase and phase_fourier are both re-used for multiple simulations, then clipped \\
+     * to the size of the aperture and stored in phase_per_fried.
+     */
 
         Array<double> aperture(dims_aperture);
 	Array<double> phase_per_fried(dims_phase_per_fried);
 	Array<cmpx>   phase(dims_phase);
 	Array<cmpx>   phase_fourier(dims_phase);
 
+    /*
+     * Import fft wisdom, if available, and initialize fourier transformation.
+     *
+     * Name		Type		Purpose
+     * reverse		fftw_plan	Re-usable FFTW plan for the reverse transformation.
+     */
+
         fftw_import_wisdom_from_filename(config::read_fftwisdom_from.c_str());
         fftw_plan reverse = fftw_plan_dft_2d(dims_phase[0], dims_phase[1],\
                                              reinterpret_cast<fftw_complex*>(phase_fourier.root_ptr),\
                                              reinterpret_cast<fftw_complex*>(phase.root_ptr),\
                                              FFTW_BACKWARD, FFTW_MEASURE);
-    
-	double aperture_radius = config::sims_size_x / (2.0 * config::aperture_sampling_factor);
+   
+    /*
+     * Initialize convenience variables.
+     *
+     * Name		Type	Purpose
+     * fried		double	Variable to store the fried parameter value received from master rank.
+     * aperture_radius	double	Variable to store the radius of the aperture, in pixels. Required for clipping.
+     * phase_center_x	sizt	Variable to store the center of the clipping region in x, in pixels.
+     * phase_center_y   sizt	Variable to store the center of the clipping region in y, in pixels. 
+     * sims_center_x	sizt	Variable to store the center of the simulated phase-screen in x, in pixels.
+     * sims_center_y	sizt	Variable to store the center of the simulated phase-screen in y, in pixels.
+     */
+
         double fried = 0.0;
+	double aperture_radius = config::sims_size_x / (2.0 * config::aperture_sampling_factor);
+        sizt phase_center_x    = sizt(config::sims_size_x / 2.0);
+        sizt phase_center_y    = sizt(config::sims_size_y / 2.0);
+        sizt sims_center_x     = sizt(dims_phase[0] / 2.0);
+        sizt sims_center_y     = sizt(dims_phase[1] / 2.0);
 
-        sizt phase_center_x = sizt(config::sims_size_x / 2.0);
-        sizt phase_center_y = sizt(config::sims_size_y / 2.0);
 
-        sizt sims_center_x = sizt(dims_phase[0] / 2.0);
-        sizt sims_center_y = sizt(dims_phase[1] / 2.0);
+    /*
+     * Get fried parameter, and aperture function from master.
+     */
 
         MPI_Recv(&fried, 1,  MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         MPI_Recv(aperture.root_ptr, aperture.get_size(), MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        
 
-	fprintf(stdout, " - process %d received aperture\n", process_rank);
-        /*
+    /*
+     * Enter loop to simulate phase-screens, until shutdown. 
+     */
+
 	while(status.MPI_TAG != mpi_cmds::shutdown){
+
+	    /*
             for(int l = 0; l < config::sims_per_fried; l++){
                 create_phase_screen_fourier(phase_fourier, fried, config::aperture_sampling_factor*config::phase_size);
             
                 fftw_execute_dft(reverse, reinterpret_cast<fftw_complex*>(phase_fourier.root_ptr),\
                                           reinterpret_cast<fftw_complex*>(phase.root_ptr));
             }
+	    */	    
+	    for(sizt ind = 0; ind < phase_per_fried.get_size(); ind++)
+	        phase_per_fried.root_ptr[ind] = double(ind);
+
+	/*
+	 * Send the simulation back to the master rank
+	 */
+
+	    MPI_Send(phase_per_fried.root_ptr, phase_per_fried.get_size(), MPI_DOUBLE, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+            
+	/*
+	 * Get the next fried parameter from master.
+	 */
+	    MPI_Recv(&fried, 1,  MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         }
-	*/
     }
 
     MPI_Finalize();
