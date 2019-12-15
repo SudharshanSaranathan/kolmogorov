@@ -53,14 +53,15 @@ int main(int argc, char *argv[]){
  *  status:		MPI_status	See MPI documentation.
  *  process_rank:	int		Rank of MPI processes.
  *  process_total:	int		Store the total number of MPI processes
- *  mpi_recv_count:	int		Store the count of data received in MPI_Recv, see MPI documentation for explanation.  
+ *  mpi_recv_count:	int		Store the count of data received in MPI_Recv, see MPI documentation for explanation.
+ *  read_status:	int		File read status.
  */
    
     MPI_Status status;
     int process_rank = 0;
     int processes_total = 0;
     int mpi_recv_count = 0;
-
+    int read_status = 0;
 
 /*
  * Initialize MPI
@@ -135,8 +136,14 @@ int main(int argc, char *argv[]){
      */
 
 	fprintf(console, "(Info)\tReading file %s:\t", config::read_fried_from.c_str());
-	fried.rd_fits(config::read_fried_from.c_str());
-	fprintf(console, "[Done]\n");
+	read_status = fried.rd_fits(config::read_fried_from.c_str());
+	if(read_status != EXIT_SUCCESS){
+	    fprintf(console, "[Failed, Err code: %d]\n", read_status);
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
+	}
+	else{
+	    fprintf(console, "[Done]\n");
+	}
 
     /*
      * Vector declaration:
@@ -167,7 +174,14 @@ int main(int argc, char *argv[]){
      */
 	Array<double> aperture;
 	fprintf(console, "(Info)\tReading file %s:\t", config::read_aperture_function_from.c_str());
-	aperture.rd_fits(config::read_aperture_function_from.c_str());
+	read_status = aperture.rd_fits(config::read_aperture_function_from.c_str());
+	if(read_status != EXIT_SUCCESS){
+	    fprintf(console, "[Failed, Err code: %d]\n", read_status);
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
+	}
+	else{
+	    fprintf(console, "[Done]\n");
+	}
 
     /*
      * Vector declaration:
