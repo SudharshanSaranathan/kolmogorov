@@ -12,7 +12,15 @@
 #include <exception>
 #include <algorithm>
 
-sizt sizeof_vector(sizt_vector &vector){
+sizt sizeof_vector(      sizt_vector &vector){
+    sizt N = 1;
+    for(int i = 0; i < vector.size(); i++){
+        N *= vector[i];
+    }
+    return(N);
+}
+
+sizt sizeof_vector(const sizt_vector &vector){
     sizt N = 1;
     for(int i = 0; i < vector.size(); i++){
         N *= vector[i];
