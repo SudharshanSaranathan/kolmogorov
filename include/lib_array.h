@@ -18,7 +18,8 @@ using type_vector = std::vector<type>;
 using sizt_vector = std::vector<sizt>;
 using long_vector = std::vector<long>;
 
-sizt sizeof_vector(sizt_vector&);
+sizt sizeof_vector(      sizt_vector&);
+sizt sizeof_vector(const sizt_vector&);
 
 template <class type>
 class Array{
@@ -46,7 +47,9 @@ public:
     bool        get_stat();
     sizt        get_size();
     sizt        get_dims(sizt);
+    type	get_total();
     sizt_vector get_dims();
+
 
 public:
     type& operator()(const sizt);

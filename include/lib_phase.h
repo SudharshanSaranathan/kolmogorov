@@ -7,6 +7,8 @@
 #include "config.h"
 #include "lib_array.h"
 
+#define _USE_MATH_DEFINES
+
 template <class type> 
 void create_pupil_function(Array<type>& pupil, double apodize_radius){
 
@@ -23,7 +25,7 @@ void create_pupil_function(Array<type>& pupil, double apodize_radius){
     }
 }
 
-void create_phase_screen_fourier(Array<cmpx>& fourier, double fried, double size){
+void create_phase_screen_fourier_shifted(Array<cmpx>& fourier, double fried, double sim_size){
 
     Array<cmpx> fourier_copy(fourier);
     sizt_vector fourier_dims = fourier.get_dims();
@@ -39,10 +41,10 @@ void create_phase_screen_fourier(Array<cmpx>& fourier, double fried, double size
     for(int xpix = 0; xpix < fourier_dims[0]; xpix++){
         for(int ypix = 0; ypix < fourier_dims[1]; ypix++){
             frq = sqrt(pow(xpix - xc, 2) + pow(ypix - yc, 2));
-            amp = frq == 0.0 ? 0.0 : sqrt(0.023)*pow(size/fried, 5./6.) / pow(frq, 11./6.);
+            amp = frq == 0.0 ? 0.0 : sqrt(0.023) * pow(sim_size / fried, 5. / 6.) / pow(frq, 11./6.);
             double cosphi = distribution(generator);
             double sinphi = distribution(generator);
-
+ 
             cmpx phase(amp*cosphi, amp*sinphi);
             fourier_copy(xpix, ypix) = phase;
         }
@@ -57,4 +59,29 @@ void create_phase_screen_fourier(Array<cmpx>& fourier, double fried, double size
     }
 }
 
+void create_phase_screen_fourier(Array<cmpx>& fourier, double fried, double sim_size){
+
+    sizt_vector fourier_dims = fourier.get_dims();
+
+    double xc  = fourier_dims[0]/2;
+    double yc  = fourier_dims[1]/2;
+    double amp = 1.0;
+    double frq = 1.0;
+
+    std::default_random_engine generator(rand());
+    std::normal_distribution<double> distribution(0.0, 1.0);
+
+    for(int xpix = 0; xpix < fourier_dims[0]; xpix++){
+        for(int ypix = 0; ypix < fourier_dims[1]; ypix++){
+            frq = sqrt(pow(xpix, 2) + pow(ypix, 2));
+            amp = frq == 0.0 ? 0.0 : sqrt(0.023) * pow(sim_size / fried, 5. / 6.) / pow(frq, 11./6.);
+            double cosphi = distribution(generator);
+            double sinphi = distribution(generator);
+ 
+            cmpx phase(amp*cosphi, amp*sinphi);
+            fourier(xpix, ypix) = phase;
+        }
+    }
+
+}
 #endif
