@@ -91,6 +91,9 @@ int main(int argc, char *argv[]){
     }else
     {
         fprintf(console, "[Done]\n");
+	fprintf(console, " - wavefront size , in pixels:\t[%d %d]\n", config::sims_size_x, config::sims_size_y);
+	fprintf(console, " - simulation size, in meters:\t[%lf]\n", config::phase_size);
+        fprintf(console, " - aperture sampling factor:\t[%lf]\n", config::aperture_sampling_factor);
     }
     
 
@@ -283,7 +286,7 @@ int main(int argc, char *argv[]){
      */
 
 	fprintf(console, "\n5. Writing phase to file:");
-	if(phase.wr_bin(config::write_phase_to.c_str(), config::output_clobber) != EXIT_SUCCESS){
+	if(phase.wr_fits(config::write_phase_to.c_str(), config::output_clobber) != EXIT_SUCCESS){
 	    fprintf(console, "\t[Failed]\n");
 	}
 	else
@@ -342,33 +345,33 @@ int main(int argc, char *argv[]){
      * Import fft wisdom, if available, and initialize fourier transformation.
      *
      * Name		Type		Purpose
-     * reverse		fftw_plan	Re-usable FFTW plan for the reverse transformation.
+     * forward		fftw_plan	Re-usable FFTW plan for the forward transformation.
      */
 
         fftw_import_wisdom_from_filename(config::read_fftwisdom_from.c_str());
-        fftw_plan reverse = fftw_plan_dft_2d(dims_phase[0], dims_phase[1],\
+        fftw_plan forward = fftw_plan_dft_2d(dims_phase[0], dims_phase[1],\
                                              reinterpret_cast<fftw_complex*>(phase_fourier.root_ptr),\
                                              reinterpret_cast<fftw_complex*>(phase.root_ptr),\
-                                             FFTW_BACKWARD, FFTW_MEASURE);
+                                             FFTW_FORWARD, FFTW_MEASURE);
    
     /*
      * Initialize convenience variables.
      *
-     * Name		Type	Purpose
-     * fried		double	Variable to store the fried parameter value received from master rank.
-     * aperture_radius	double	Variable to store the radius of the aperture, in pixels. Required for clipping.
-     * phase_center_x	sizt	Variable to store the center of the clipping region in x, in pixels.
-     * phase_center_y   sizt	Variable to store the center of the clipping region in y, in pixels. 
-     * sims_center_x	sizt	Variable to store the center of the simulated phase-screen in x, in pixels.
-     * sims_center_y	sizt	Variable to store the center of the simulated phase-screen in y, in pixels.
+     * Name			Type	Purpose
+     * fried			double	Variable to store the fried parameter value received from master rank.
+     * aperture_radius		double	Variable to store the radius of the aperture, in pixels. Required for clipping.
+     * aperture_center_x	sizt	Variable to store the center of the clipping region in x, in pixels.
+     * aperture_center_y   	sizt	Variable to store the center of the clipping region in y, in pixels. 
+     * phase_center_x		sizt	Variable to store the center of the simulated phase-screen in x, in pixels.
+     * phase_center_y		sizt	Variable to store the center of the simulated phase-screen in y, in pixels.
      */
 
         double fried = 0.0;
 	double aperture_radius = config::sims_size_x / (2.0 * config::aperture_sampling_factor);
-        sizt phase_center_x    = sizt(config::sims_size_x / 2.0);
-        sizt phase_center_y    = sizt(config::sims_size_y / 2.0);
-        sizt sims_center_x     = sizt(dims_phase[0] / 2.0);
-        sizt sims_center_y     = sizt(dims_phase[1] / 2.0);
+        sizt aperture_center_x = sizt(config::sims_size_x / 2.0);
+        sizt aperture_center_y = sizt(config::sims_size_y / 2.0);
+        sizt phase_center_x    = sizt(dims_phase[0] / 2.0);
+        sizt phase_center_y    = sizt(dims_phase[1] / 2.0);
 
 
     /*
@@ -384,18 +387,27 @@ int main(int argc, char *argv[]){
      */
 
 	while(status.MPI_TAG != mpi_cmds::shutdown){
+	    
+	/*
+	 * Simulate <config::sims_per_fried> phase-screens
+	 */
 
-	    /*
-            for(int l = 0; l < config::sims_per_fried; l++){
-                create_phase_screen_fourier(phase_fourier, fried, config::aperture_sampling_factor*config::phase_size);
-            
-                fftw_execute_dft(reverse, reinterpret_cast<fftw_complex*>(phase_fourier.root_ptr),\
+            for(sizt ind = 0; ind < config::sims_per_fried; ind++){
+             
+	        create_phase_screen_fourier_shifted(phase_fourier, fried, config::phase_size);
+                fftw_execute_dft(forward, reinterpret_cast<fftw_complex*>(phase_fourier.root_ptr),\
                                           reinterpret_cast<fftw_complex*>(phase.root_ptr));
-            }
-	    */	    
-	    for(sizt ind = 0; ind < phase_per_fried.get_size(); ind++)
-	        phase_per_fried.root_ptr[ind] = double(ind);
 
+		for(sizt xs = 0; xs < config::sims_size_x; xs++){
+		    for(sizt ys = 0; ys < config::sims_size_y; ys++){
+			phase_per_fried(ind, xs, ys) = phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real();
+		    }
+		}
+            }
+	    
+	    #ifdef _APODIZE_
+
+	    #endif
 	/*
 	 * Send the simulation back to the master rank
 	 */

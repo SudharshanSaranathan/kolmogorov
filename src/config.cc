@@ -12,9 +12,9 @@ string config::write_log_to      = "phase.log";
 string config::write_phase_to    = "phase.fits";
 string config::write_residual_to = "residual.fits";
 
-uint   config::sims_per_fried = 100;
-uint   config::sims_size_x = 64;
-uint   config::sims_size_y = 64;
+uint   config::sims_per_fried = 400;
+uint   config::sims_size_x    = 94;
+uint   config::sims_size_y    = 94;
 
 double config::phase_size               = 6.0;
 double config::aperture_size            = 1.0;
@@ -42,7 +42,7 @@ int config_parse(const char* filename){
 	config::read_fried_from = value;
     else if(key == "basis")
 	config::read_basis_from = value;
-    else if(key == "pupil")
+    else if(key == "aperture")
 	config::read_aperture_function_from = value;
     else if(key == "weights")
 	config::read_weights_from = value;
@@ -64,7 +64,7 @@ int config_parse(const char* filename){
 	config::phase_size  = std::stof(value);
     else if(key == "aperture_size")
 	config::aperture_size = std::stof(value);
-    else if(key == "aperture_sampling_factor")
+    else if(key == "aperture_sampling")
 	config::aperture_sampling_factor = std::stof(value);
     else if(key == "save")
 	config::output_save = value == "Y";
