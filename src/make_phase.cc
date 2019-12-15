@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <iostream>
 
+#define _APERTURE_
+
 /*
  * Description:
  *
@@ -136,15 +138,7 @@ int main(int argc, char *argv[]){
         fprintf(console, "[Done]\n");
 
     /*
-     * Read aperture function from file, store in array.
-     */
-        
-	fprintf(console, "3. Reading file %s:\t", config::read_aperture_function_from.c_str());
-        aperture.rd_fits(config::read_aperture_function_from.c_str());
-        fprintf(console, "[Done]\n");
-
-    /*
-     * Initialize variables to store dimensions, and maps.
+     * Initialize dimensions vectors for simulations
      *
      * Name			Type			Purpose
      * dims_phase		std::vector<size_t>	Vector to store the dimensions of phase-screens, in pixels.
@@ -155,7 +149,32 @@ int main(int argc, char *argv[]){
     	sizt_vector dims_phase{fried.get_size(), config::sims_per_fried, config::sims_size_x, config::sims_size_y};
         sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
         sizt_vector process_fried_map; process_fried_map.resize(fried.get_size() + 1);
-       
+    
+    /*
+     * !(2) Read aperture function from file, store in array.
+     */
+
+#ifdef _APERTURE_
+
+	fprintf(console, "3. Reading file %s:\t", config::read_aperture_function_from.c_str());
+        aperture.rd_fits(config::read_aperture_function_from.c_str());
+        fprintf(console, "[Done]\n");
+
+    /*
+     * Initialize dimensions vectors for aperture.
+     *
+     * Name		Type			Purpose
+     * dims_aperture	std::vector<size_t>	Vector to store the dimensions of the aperture, in pixels.
+     */
+
+	sizt_vector dims_aperture = aperture.get_dims();
+	if(dims_aperture[0] != config::sims_size_x && dims_aperture[1] != config::sims_size_y){
+	    fprintf(console, " - Expected aperture with dimensions [%ld, %ld]. Calling MPI_Abort()\n", config::sims_size_x, config::sims_size_y);
+	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+	}
+
+#endif
+
     /*
      * Initialize MPI processes, shutdown if more MPI processes than fried parameters.
      *
@@ -171,8 +190,12 @@ int main(int argc, char *argv[]){
 	     */
 
                 MPI_Send(fried.root_ptr, 1, MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
-                MPI_Send(aperture.root_ptr, aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
 
+#ifdef _APERTURE_
+
+		MPI_Send(aperture.root_ptr, aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+
+#endif
 	    /*
 	     * Update number of processes in use.
 	     */
@@ -186,8 +209,13 @@ int main(int argc, char *argv[]){
 	     */
 
                 MPI_Send(fried.root_ptr + index_of_fried_in_queue, 1, MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
-                MPI_Send(aperture.root_ptr, aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
-                
+
+#ifdef _APERTURE_
+
+		MPI_Send(aperture.root_ptr, aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+
+#endif
+
 	    /*
 	     * Store index_of_fried_in_queue in process_fried_map[id].
 	     * Process with rank id is now working on fried[index_of_fried_in_queue].
@@ -207,6 +235,9 @@ int main(int argc, char *argv[]){
      */
 
 	Array<double> phase(dims_phase);
+	progress_percent = (100.0 * fried_completed) / fried.get_size();
+	fprintf(stdout, "\r4. Simulating phasescreens: \tIn Progress [%0.3lf %%]", progress_percent);
+	fflush(console);
 
     /*
      * !(3, 4, 5) Distribute fried parameters to workers, store returned simulations.
@@ -308,7 +339,7 @@ int main(int argc, char *argv[]){
      *
      * Name			Type			Purpose
      * dims_phase		std::vector<size_t>	Vector to store the dimensions of a single phase-screen, in pixels.
-     * dims_aperture		std::vector<size_t>	Vector to store the dimensions of the aperture, in pixels.
+     * dims_aperture		std::vector<size_t>	Vector to store the dimensions of the aperture function, in pixels.
      * dims_phase_per_fried	std::vector<size_t>	Vector to store the dimensions of phase-screens, per fried, in pixels.
      *
      * Additional comments:
@@ -318,17 +349,17 @@ int main(int argc, char *argv[]){
      * scaled. Therefore, dims_phase in this workflow is *not* equal to the dims_phase in the master workflow. 
      */
 	sizt_vector dims_phase{sizt(config::phase_size * config::sims_size_x / config::aperture_size), sizt(config::phase_size * config::sims_size_y / config::aperture_size)}; 
-        sizt_vector dims_aperture{config::sims_size_x, config::sims_size_y};
+	sizt_vector dims_aperture{config::sims_size_x, config::sims_size_y};
 	sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
 
     /*
      * Initialize phase-screen arrays.
      *
      * Name		Type		Purpose
-     * aperture		Array<double>	Array to store the aperture function.
-     * phase_per_fried	Array<double>	Array to store the phase-screen simulations, per fried.
      * phase		Array<cmpx>	Array to store a single phase-screen.
      * phase_fourier	Array<cmpx>	Array to store the fourier transformation of a phase-screen.
+     * phase_per_fried	Array<double>	Array to store the phase-screen simulations, per fried.
+     * aperture		Array<double>	Array to store the aperture function.
      *
      * Additional comments:
      *
@@ -336,10 +367,10 @@ int main(int argc, char *argv[]){
      * to the size of the aperture and stored in phase_per_fried.
      */
 
-        Array<double> aperture(dims_aperture);
-	Array<double> phase_per_fried(dims_phase_per_fried);
 	Array<cmpx>   phase(dims_phase);
 	Array<cmpx>   phase_fourier(dims_phase);
+	Array<double> phase_per_fried(dims_phase_per_fried);
+	Array<double> aperture(dims_aperture);
 
     /*
      * Import fft wisdom, if available, and initialize fourier transformation.
@@ -360,6 +391,7 @@ int main(int argc, char *argv[]){
      * Name			Type	Purpose
      * fried			double	Variable to store the fried parameter value received from master rank.
      * aperture_radius		double	Variable to store the radius of the aperture, in pixels. Required for clipping.
+     * aperture_total		double	Variable to store the area of the aperture;
      * aperture_center_x	sizt	Variable to store the center of the clipping region in x, in pixels.
      * aperture_center_y   	sizt	Variable to store the center of the clipping region in y, in pixels. 
      * phase_center_x		sizt	Variable to store the center of the simulated phase-screen in x, in pixels.
@@ -368,7 +400,9 @@ int main(int argc, char *argv[]){
 
         double fried = 0.0;
 	double aperture_radius = config::sims_size_x / (2.0 * config::aperture_sampling_factor);
-        sizt aperture_center_x = sizt(config::sims_size_x / 2.0);
+        double aperture_total  = 0.0;
+
+	sizt aperture_center_x = sizt(config::sims_size_x / 2.0);
         sizt aperture_center_y = sizt(config::sims_size_y / 2.0);
         sizt phase_center_x    = sizt(dims_phase[0] / 2.0);
         sizt phase_center_y    = sizt(dims_phase[1] / 2.0);
@@ -379,8 +413,13 @@ int main(int argc, char *argv[]){
      */
 
         MPI_Recv(&fried, 1,  MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-        MPI_Recv(aperture.root_ptr, aperture.get_size(), MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-        
+
+#ifdef _APERTURE_
+
+	MPI_Recv(aperture.root_ptr, aperture.get_size(),  MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+	aperture_total = aperture.get_total();
+
+#endif
 
     /*
      * Enter loop to simulate phase-screens, until shutdown. 
@@ -398,16 +437,36 @@ int main(int argc, char *argv[]){
                 fftw_execute_dft(forward, reinterpret_cast<fftw_complex*>(phase_fourier.root_ptr),\
                                           reinterpret_cast<fftw_complex*>(phase.root_ptr));
 
+#ifdef _APERTURE_
+
+		double phase_piston = 0.0;
+		for(sizt xs = 0; xs < config::sims_size_x; xs++){
+		    for(sizt ys = 0; ys < config::sims_size_y; ys++){
+			phase_per_fried(ind, xs, ys) = aperture(xs, ys) * phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real();
+			phase_piston += aperture(xs, ys) * phase_per_fried(ind, xs, ys);
+		    }
+		}
+
+		phase_piston /= aperture_total;
+		for(sizt xs = 0; xs < config::sims_size_x; xs++){
+		    for(sizt ys = 0; ys < config::sims_size_y; ys++){
+		    	phase_per_fried(ind, xs, ys) -= aperture(xs, ys) * phase_piston;
+		    }
+		}
+
+#else
+
 		for(sizt xs = 0; xs < config::sims_size_x; xs++){
 		    for(sizt ys = 0; ys < config::sims_size_y; ys++){
 			phase_per_fried(ind, xs, ys) = phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real();
 		    }
 		}
-            }
-	    
-	    #ifdef _APODIZE_
 
-	    #endif
+#endif
+
+            }
+
+	    
 	/*
 	 * Send the simulation back to the master rank
 	 */

@@ -101,22 +101,32 @@ Array<type>:: Array(const Array<type> &src){
 }
 
 template <class type>
-bool        Array<type>:: get_stat(){
+bool         Array<type>:: get_stat(){
     return(this->stat);
 }
 
 template <class type>
-sizt        Array<type>:: get_size(){
+sizt         Array<type>:: get_size(){
     return(this->size);
 }
 
 template <class type>
-sizt        Array<type>:: get_dims(sizt xs){
+sizt         Array<type>:: get_dims(sizt xs){
     if(xs >= dims.size())
         return 0;
     else
         return(dims[xs]);
     
+}
+
+template <class type>
+type	     Array<type>::get_total(){
+
+    type total = static_cast<type>(0);
+    for(sizt ind = 0; ind < this->size; ind++){
+	total += this->root_ptr[ind];
+    }
+    return(total);
 }
 
 template <class type>
