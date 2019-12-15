@@ -98,7 +98,6 @@ int main(int argc, char *argv[]){
 	fprintf(console, "[Done]\n");
     }
     
-
 /*
  * -------------------------
  * Workflow for master rank.
@@ -350,7 +349,6 @@ int main(int argc, char *argv[]){
 	else
 	    fprintf(console, "[Done]\n");
 
-
     /*
      * -------------------------------
      * End of workflow for master rank
@@ -509,6 +507,7 @@ int main(int argc, char *argv[]){
 	    /*
 	     * If aperture not available, clip simulation to requested size. 
 	     */
+
 		for(sizt xs = 0; xs < config::sims_size_x; xs++){
 		    for(sizt ys = 0; ys < config::sims_size_y; ys++){
 			phase_per_fried(ind, xs, ys) = phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real();
@@ -528,6 +527,7 @@ int main(int argc, char *argv[]){
 	/*
 	 * Get next fried parameter from master.
 	 */
+
 	    MPI_Recv(&fried, 1,  MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         }
     }
