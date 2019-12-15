@@ -149,8 +149,8 @@ int main(int argc, char *argv[]){
      * process_fried_map	std::vector<size_t>	Map of which MPI process is working on which fried parameter.
      */
     
-	sizt_vector dims_phase{fried.get_size(), config::sims_per_fried, config::sims_size_x, config::sims_size_y};
-	sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
+	const sizt_vector dims_phase{fried.get_size(), config::sims_per_fried, config::sims_size_x, config::sims_size_y};
+	const sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
 	sizt_vector process_fried_map(fried.get_size() + 1);
     
 #ifdef _APERTURE_
@@ -380,6 +380,7 @@ int main(int argc, char *argv[]){
      * underestimation of the low-order fluctuations. Therefore, the size of the simulation, in pixels, is appropriately \\
      * scaled. Therefore, dims_phase in this workflow is *not* equal to the dims_phase in the master workflow. 
      */
+
 	const sizt_vector dims_phase{sizt(config::phase_size * config::sims_size_x / config::aperture_size), sizt(config::phase_size * config::sims_size_y / config::aperture_size)}; 
 	const sizt_vector dims_aperture{config::sims_size_x, config::sims_size_y};
 	const sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
@@ -517,7 +518,6 @@ int main(int argc, char *argv[]){
 #endif
 
             }
-
 	    
 	/*
 	 * Send phase-screens to master rank.
