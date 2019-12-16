@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <iostream>
 
+#define _RESIDUAL_
 #define _APERTURE_
 
 /*
