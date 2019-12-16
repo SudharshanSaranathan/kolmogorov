@@ -46,15 +46,15 @@
 int main(int argc, char *argv[]){
 
 /*
- *  Variable declaration:
- *  -----------------------------------------------
- *  Name		Type		Description
- *  -----------------------------------------------
- *  status:		MPI_status	See MPI documentation.
- *  process_rank:	int		Rank of MPI processes.
- *  process_total:	int		Store the total number of MPI processes
- *  mpi_recv_count:	int		Store the count of data received in MPI_Recv, see MPI documentation for explanation.
- *  read_status:	int		File read status.
+ * Variable declaration:
+ * --------------------------------
+ * Name		Type		Description
+ * --------------------------------
+ * status:		MPI_status	See MPI documentation.
+ * process_rank:	int		Rank of MPI processes.
+ * process_total:	int		Store the total number of MPI processes
+ * mpi_recv_count:	int		Store the count of data received in MPI_Recv, see MPI documentation for explanation.
+ * read_status:	int		File read status.
  */
    
     MPI_Status status;
@@ -85,8 +85,7 @@ int main(int argc, char *argv[]){
  */
 
     if(argc < 2){
-	    fprintf(console, "(Error)\tConfig file required. Aborting!\n");
-        fflush(console);
+	    fprintf(console, "(Error)\tExpected configuration file, aborting!\n");
 	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
@@ -108,12 +107,12 @@ int main(int argc, char *argv[]){
 	
     /*
      * Variable declaration:
-     *---------------------------------------------
+     * --------------------------------
      * Name			Type	Description
-     * --------------------------------------------
+     * --------------------------------
      * index_of_fried_in_queue	long	Index of the next fried parameter.
-     * fried_completed		long	Number of fried parameters simulated.
-     * progress_percent		double	Progress percentage.
+     * fried_completed		    long	Number of fried parameters processed.
+     * progress_percent		    double	Progress percentage.
      */
 
         long   index_of_fried_in_queue   = 0;
@@ -122,9 +121,9 @@ int main(int argc, char *argv[]){
 
     /*
      * Array declaration:
-     *---------------------------------------------
+     * --------------------------------
      * Name		Type		Description
-     * --------------------------------------------
+     * --------------------------------
      * fried		Array<double>	Fried parameters array, see "lib_array.h" for datatype.
      */
     
@@ -145,9 +144,9 @@ int main(int argc, char *argv[]){
 
     /*
     * Vector declaration:
-    *-------------------------------------------------------------
+    * -----------------------------------------
     * Name			Type			Description
-    * ------------------------------------------------------------
+    * -----------------------------------------
     * dims_phase		std::vector<size_t>	Dimensions of phase-screens, in pixels.
     * dims_phase_per_fried	std::vector<size_t>	Dimensions of phase-screens, per fried, in pixels.
     * process_fried_map	std::vector<size_t>	Map of which MPI process is working on which fried parameter.
@@ -165,9 +164,9 @@ int main(int argc, char *argv[]){
 
     /*
      * Array declaration:
-     *-----------------------------------------------------
+     * ------------------------------------
      * Name		Type			Description
-     * ----------------------------------------------------
+     * ------------------------------------
      * aperture		Array<double>		Aperture function array, see "lib_array.h" for datatype.
      */
 	
@@ -184,9 +183,9 @@ int main(int argc, char *argv[]){
 
     /*
      * Vector declaration:
-     *-----------------------------------------------------
+     * ------------------------------------
      * Name		Type			Description
-     * ----------------------------------------------------
+     * ------------------------------------
      * dims_aperture	std::vector<size_t>	Dimensions of the aperture, in pixels.
      */
 
@@ -206,9 +205,9 @@ int main(int argc, char *argv[]){
      * Shutdown processes if rank > number of fried parameters.
      *
      * Variable declaration:
-     * ----------------------------
+     * ------------------------
      * Name	Type	Description
-     * ----------------------------
+     * ------------------------
      * id	int	Rank of MPI processes.
      */
 
@@ -263,9 +262,9 @@ int main(int argc, char *argv[]){
 
     /*
      * Array declaration:
-     *-------------------------------------
+     * ----------------------------
      * Name	Type		Description
-     * ------------------------------------
+     * ----------------------------
      * phase	Array<double>	Phase-screens array.
      */
 
@@ -292,9 +291,9 @@ int main(int argc, char *argv[]){
 	     * Get the index of the simulated fried parameter from process_fried_map.
 	     *
 	     * Variable declaration:
-	     *-----------------------------------------
+	     *---------------------------------
 	     * Name		Type		Description
-	     * ----------------------------------------
+	     * --------------------------------
 	     * fried_index	std::size_t	Index of simulated fried parameter.
 	     */
 
@@ -379,9 +378,9 @@ int main(int argc, char *argv[]){
     
     /*
      * Vector declaration:
-     * ------------------------------------------------------------
+     * ----------------------------------------
      * Name			Type			Description
-     * ------------------------------------------------------------
+     * ----------------------------------------
      * dims_phase		std::vector<size_t>	Dimensions of single phase-screen, in pixels.
      * dims_aperture		std::vector<size_t>	Dimensions of the aperture function, in pixels.
      * dims_phase_per_fried	std::vector<size_t>	Dimensions of phase-screens, per fried, in pixels.
@@ -399,9 +398,9 @@ int main(int argc, char *argv[]){
 
     /*
      * Array declaration:
-     * --------------------------------------------
+     * --------------------------------
      * Name		Type		Description
-     * --------------------------------------------
+     * --------------------------------
      * phase		Array<cmpx>	Single phase-screen array.
      * phase_fourier	Array<cmpx>	Single phase-screen fourier array.
      * phase_per_fried	Array<double>	Phase-screens array, per fried.
@@ -422,9 +421,9 @@ int main(int argc, char *argv[]){
      * Import fft wisdom, if available, and initialize fourier transformation.
      * 
      * Variable declaration:
-     * --------------------------------------------
+     * --------------------------------
      * Name		Type		Description
-     * --------------------------------------------
+     * --------------------------------
      * forward		fftw_plan	Re-usable FFTW plan for the forward transformation.
      */
 
@@ -436,9 +435,9 @@ int main(int argc, char *argv[]){
    
     /*
      * Variable declaration:.
-     * --------------------------------------------
+     * --------------------------------
      * Name			Type	Description
-     * --------------------------------------------
+     * --------------------------------
      * fried			double	Fried parameter value received from master rank.
      * aperture_radius		double	Radius of the aperture, in pixels.
      * aperture_total		double	Area of the aperture;
