@@ -127,16 +127,15 @@ int main(int argc, char *argv[]){
      * --------------------------------------------
      * fried		Array<double>	Fried parameters array, see "lib_array.h" for datatype.
      */
-
-	    Array<double> fried;
+    
+        Array<double> fried;
 
     /*
      * !(2) Read fried parameters from file..
      */
-
-	    fprintf(console, "(Info)\tReading file %s:\t", config::read_fried_from.c_str());
-	    read_status = fried.rd_fits(config::read_fried_from.c_str());
-	    if(read_status != EXIT_SUCCESS){
+        fprintf(console, "(Info)\tReading file %s:\t", config::read_fried_from.c_str());
+        read_status = fried.rd_fits(config::read_fried_from.c_str());
+        if(read_status != EXIT_SUCCESS){
 	        fprintf(console, "[Failed, Err code: %d]\n", read_status);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
     	}
@@ -270,7 +269,7 @@ int main(int argc, char *argv[]){
      * phase	Array<double>	Phase-screens array.
      */
 
-	    Array<double> phase(dims_phase);
+        Array<double> phase(dims_phase);
 
     /*
      * !(3, 4, 5) Distribute fried parameters to workers, store returned simulations.
