@@ -19,10 +19,12 @@ OBJS   = ${patsubst %,${OBJDIR}/%,${OBJS_}}
 LIBTESTOBJS_   = lib_array.o test_lib_array.o
 MEMTESTOBJS_   = test_lib_mem.o
 MAKEPHASEOBJS_ = config.o lib_array.o make_phase.o
+MAKERESDLOBJS_ = config.o lib_array.o residual.o
 
 LIBTESTOBJS    = ${patsubst %,${OBJDIR}/%,${LIBTESTOBJS_}}
 MEMTESTOBJS    = ${patsubst %,${OBJDIR}/%,${MEMTESTOBJS_}}
 MAKEPHASEOBJS  = ${patsubst %,${OBJDIR}/%,${MAKEPHASEOBJS_}}
+MAKERESDLOBJS  = ${patsubst %,${OBJDIR}/%,${MAKERESDLOBJS_}}
 
 
 .PHONY: all
@@ -37,6 +39,9 @@ test_lib_array: ${LIBTESTOBJS}
 	${CC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
 
 make_phase: ${MAKEPHASEOBJS}
+	${CC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
+
+residual: ${MAKERESDLOBJS}
 	${CC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
 
 clean:

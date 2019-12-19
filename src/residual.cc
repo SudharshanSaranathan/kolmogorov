@@ -90,7 +90,7 @@ int main(int argc, char *argv[]){
 	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
-    fprintf(console, "(Info)\tReading configuration:\t\t");
+    fprintf(console, "(Info)\tReading configuration:\t");
     if(config_parse(argv[1]) == EXIT_FAILURE){
 	    fprintf(console, "[Failed]\n");
 	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -128,7 +128,6 @@ int main(int argc, char *argv[]){
      * phase    Array<double>   Phase-screen simulations, see 'lib_array.h' for datatype.
      * basis    Array<double>   Basis functions on aperture.
      * weights  Array<double>   Basis weights.
-     * residual Array<double>   Residual phase-screens.
      */
 
         Array<double> phase;
@@ -152,8 +151,8 @@ int main(int argc, char *argv[]){
      * Read basis functions.
      */
 
-        fprintf(console, "(Info)\tReading %s:\t", config::read_basis_functions_from.c_str());
-        read_status = basis.rd_fits(config::read_basis_functions_from.c_str());
+        fprintf(console, "(Info)\tReading %s:\t", config::read_basis_from.c_str());
+        read_status = basis.rd_fits(config::read_basis_from.c_str());
         if(read_status != EXIT_SUCCESS){
             fprintf(console, "[Failed, Err code: %d]\n", read_status);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -182,14 +181,74 @@ int main(int argc, char *argv[]){
      * dims_phase           std::vector<sizt>   Dimensions of phase-screen simulations.
      * dims_basis           std::vector<sizt>   Dimensions of basis functions.
      * dims_weights         std::vector<sizt>   Dimensions of basis weights.
+     * dims_phase_per_fried std::vector<sizt>   Dimensions of phase-screen simulations, per fried.
      * process_fried_map    std::vector<sizt>   Map of which process is handling which fried index.
      */
 
         const sizt_vector dims_phase   = phase.get_dims();
         const sizt_vector dims_basis   = basis.get_dims();
         const sizt_vector dims_weights = weights.get_dims();
+        const sizt_vector dims_phase_per_fried(dims_phase.begin() + 1, dims_phase.end());
         sizt_vector process_fried_map(dims_phase[0] + 1);
-        
+
+    /*
+     * Validate the dimensions of the input arrays.
+     */
+
+        if(dims_phase[0] != dims_weights[0]){
+            fprintf(console, "(Error)\tExpected equal dimensions for phase-screens and weights. Aborting\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }else if(dims_phase[2] != dims_basis[1] || dims_phase[3] != dims_basis[2]){
+            fprintf(console, "(Error)\tExpected equal dimensions for phase-screens and basis functions. Aborting\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }else if(dims_weights[1] != dims_basis[0]){
+            fprintf(console, "(Error)\tExpected equal dimensions for basis functions and basis weights. Aborting\n");
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
+
+    /*
+     * Array declaration.
+     * ----------------------------------------
+     * Name         Type            Description
+     * ----------------------------------------
+     * residual     Array<double>   Residual phase-screens, see 'lib_array.h' for datatype.
+     * basis_normed Array<double>   L2 normalized basis functions, see 'lib_array.h' for datatype.
+     */
+
+        Array<double> residual(phase);
+        Array<double> basis_normed(basis);
+
+    /*
+     * Vector declaration.
+     * --------------------------------------------------------
+     * Name                         Type    Description
+     * --------------------------------------------------------
+     * dims_phase_per_fried_naxis   sizt    Number of axes of dims_phase_per_fried
+     * dims_weights_naxis           sizt    Number of axes of dims_weights
+     * dims_basis_naxis             sizt    Number of axes of dims_basis
+     */
+
+        sizt dims_phase_per_fried_naxis = dims_phase_per_fried.size();
+        sizt dims_weights_naxis = dims_weights.size();
+        sizt dims_basis_naxis = dims_basis.size();
+
+    /*
+     * If more MPI processes than fried parameters, shutdown. 
+     */
+
+        for(int id = 1; id < processes_total; id++){
+            if(id > dims_phase[0]){
+                MPI_Send(&dims_phase_per_fried_naxis, 1, MPI_LONG, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                MPI_Send(&dims_weights_naxis, 1, MPI_LONG, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                MPI_Send(&dims_basis_naxis, 1, MPI_LONG, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                processes_total--;
+            }else{
+                MPI_Send(dims_phase_per_fried.data(), 3, MPI_LONG, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(dims_weights.data(), 2, MPI_LONG, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(dims_basis.data(), 3, MPI_LONG, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+            }
+        }
+
     }else if(process_rank){
 
 

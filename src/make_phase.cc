@@ -178,9 +178,6 @@ int main(int argc, char *argv[]){
 	        fprintf(console, "[Failed, Err code: %d]\n", read_status);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
 	    }
-	    else{
-    	    fprintf(console, "[Done]\n");
-    	}
 
     /*
      * Vector declaration:
