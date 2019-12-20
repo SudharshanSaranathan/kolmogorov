@@ -227,9 +227,9 @@ int main(int argc, char *argv[]){
     /*
      * Variable declaration:
      * ----------------------------
-     * Name	    Type	Description
+     * Name     Type    Description
      * ----------------------------
-     * id	    int	    Rank of MPI processes.
+     * id       int     Rank of MPI processes.
      */
 
         percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
@@ -444,11 +444,11 @@ int main(int argc, char *argv[]){
     /*
      * Vector declaration:
      * ----------------------------------------------------
-     * Name			            Type			Description
+     * Name                     Type            Description
      * ----------------------------------------------------
-     * dims_phase		        sizt_vector 	Dimensions of single phase-screen, in pixels.
-     * dims_aperture		    sizt_vector 	Dimensions of the aperture function, in pixels.
-     * dims_phase_per_fried	    sizt_vector 	Dimensions of phase-screens, per fried, in pixels.
+     * dims_phase               sizt_vector     Dimensions of single phase-screen, in pixels.
+     * dims_aperture            sizt_vector     Dimensions of the aperture function, in pixels.
+     * dims_phase_per_fried     sizt_vector     Dimensions of phase-screens, per fried, in pixels.
      *
      * --------------------
      * Additional comments:
@@ -465,12 +465,12 @@ int main(int argc, char *argv[]){
     /*
      * Array declaration:
      * --------------------------------------------
-     * Name		        Type		    Description
+     * Name             Type            Description
      * --------------------------------------------
-     * phase		    Array<cmpx>	    Single phase-screen array.
-     * phase_fourier	Array<cmpx>	    Single phase-screen fourier array.
-     * phase_per_fried	Array<double>	Phase-screens array, per fried.
-     * aperture		    Array<double>	Aperture function array.
+     * phase            Array<cmpx>     Single phase-screen array.
+     * phase_fourier	Array<cmpx>     Single phase-screen fourier array.
+     * phase_per_fried  Array<double>   Phase-screens array, per fried.
+     * aperture         Array<double>   Aperture function array.
      *
      * --------------------
      * Additional comments:
@@ -487,9 +487,9 @@ int main(int argc, char *argv[]){
     /*
      * Variable declaration:
      * --------------------------------
-     * Name		Type		Description
+     * Name     Type        Description
      * --------------------------------
-     * forward	fftw_plan	Re-usable FFTW plan for the forward transformation.
+     * forward  fftw_plan   Re-usable FFTW plan for the forward transformation.
      */
 
     /* -----------------------------------------------------------------------
@@ -506,15 +506,15 @@ int main(int argc, char *argv[]){
     /*
      * Variable declaration:.
      * ----------------------------------------
-     * Name			        Type	Description
+     * Name                 Type    Description
      * ----------------------------------------
-     * fried			    double	Fried parameter value received from master rank.
-     * aperture_radius		double	Radius of the aperture, in pixels.
-     * aperture_total		double	Area of the aperture;
-     * aperture_center_x	sizt	Center of the clipping region in x, in pixels.
-     * aperture_center_y   	sizt	Center of the clipping region in y, in pixels. 
-     * phase_center_x		sizt	Center of the simulated phase-screen in x, in pixels.
-     * phase_center_y		sizt	Center of the simulated phase-screen in y, in pixels.
+     * fried                double  Fried parameter value received from master rank.
+     * aperture_radius      double  Radius of the aperture, in pixels.
+     * aperture_total       double  Area of the aperture;
+     * aperture_center_x    sizt    Center of the clipping region in x, in pixels.
+     * aperture_center_y    sizt    Center of the clipping region in y, in pixels. 
+     * phase_center_x       sizt    Center of the simulated phase-screen in x, in pixels.
+     * phase_center_y       sizt    Center of the simulated phase-screen in y, in pixels.
      */
 
         double fried = 0.0;
