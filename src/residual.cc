@@ -210,6 +210,17 @@ int main(int argc, char *argv[]){
         const sizt_vector dims_phase_per_fried(dims_phase.begin() + 1, dims_phase.end());
         sizt_vector process_fried_map(dims_phase[0] + 1);
 
+    /*
+     * Vector declaration.
+     * ----------------------------------------------------
+     * Name                 Type                    Description
+     * ----------------------------------------------------
+     * basis_normalization  type_vector<double>     L2 norm of basis modes.
+     */
+
+        type_vector<double> basis_normalization(dims_basis[0]);
+        std::fill(basis_normalization.begin(), basis_normalization.end(), 0);
+
     /* --------------------------------------------
      * Validate the dimensions of the input arrays.
      * --------------------------------------------
@@ -232,11 +243,9 @@ int main(int argc, char *argv[]){
      * Name         Type            Description
      * ----------------------------------------
      * residual     Array<double>   Residual phase-screens, see 'lib_array.h' for datatype.
-     * basis_normed Array<double>   L2 normalized basis functions, see 'lib_array.h' for datatype.
      */
 
         Array<double> residual(phase);
-        Array<double> basis_normed(basis);
 
     /*
      * Variable declaration.
@@ -247,7 +256,7 @@ int main(int argc, char *argv[]){
      * id                   sizt    Rank of MPI process.
      */
 
-        sizt dims_basis_naxis = dims_basis.size();
+        sizt dims_basis_naxis  = dims_basis.size();
 
         for(int id = 1; id < processes_total; id++){
 
@@ -341,6 +350,15 @@ int main(int argc, char *argv[]){
 
             process_fried_map[id] = index_of_fried_in_queue;
 
+        /* ------------------------------------
+         * Update and display percent_assigned.
+         * ------------------------------------
+         */
+
+            percent_assigned  = (100.0 * (index_of_fried_in_queue + 1)) / dims_phase[0];
+            fprintf(stdout, "\r(Info)\tComputing residuals: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+            fflush(console);
+
         /* ----------------------------------
          * Increment index_of_fried_in_queue.
          * ----------------------------------
@@ -391,6 +409,15 @@ int main(int argc, char *argv[]){
 
 	        fried_completed++;
 
+        /* -------------------------------------
+         * Update and display percent_completed.
+         * -------------------------------------
+         */
+
+            percent_completed  = (100.0 * fried_completed) / dims_phase[0];
+            fprintf(stdout, "\r(Info)\tComputing residuals: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+            fflush(console);
+
         /* -------------------------------------------------------------------
 	     * Send next set of phase-screen simulations, if available, to worker.
          * -------------------------------------------------------------------
@@ -399,7 +426,7 @@ int main(int argc, char *argv[]){
 	        if(index_of_fried_in_queue < dims_phase[0]){
 
 
-            /* -------------------
+        /* -------------------
          * Send basis weights.
          * -------------------
          */
@@ -431,12 +458,27 @@ int main(int argc, char *argv[]){
                 
             }    
 	
-	        /* -----------------------------------------------------------------
-	         * Update process_fried_map, and increment index_of_fried_in_queue).
-             * ----------------------------------------------------------------- 
+	        /* -------------------------
+	         * Update process_fried_map.
+             * -------------------------
 	         */
 	
 		        process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
+
+            /* ------------------------------------
+             * Update and display percent_assigned.
+             * ------------------------------------
+             */
+
+                percent_assigned = (100.0 * (index_of_fried_in_queue + 1)) / dims_phase[0];
+                fprintf(stdout, "\r(Info)\tComputing residuals: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                fflush(console);
+
+            /* ----------------------------------
+	         * Increment index_of_fried_in_queue.
+             * ----------------------------------
+	         */
+
 		        index_of_fried_in_queue++;
       	    }
 	        else{
@@ -451,6 +493,14 @@ int main(int argc, char *argv[]){
 	        
             }
 
+        }
+
+        fprintf(console, "\n(Info)\tWriting to file:\t"); fflush(console);
+	    if(residual.wr_fits(config::write_residual_to.c_str(), config::output_clobber) != EXIT_SUCCESS){
+	        fprintf(console, "[Failed]\n");
+	    }
+	    else{
+	        fprintf(console, "[Done]\n");
         }
 
     }
@@ -470,7 +520,7 @@ int main(int argc, char *argv[]){
      * dims_basis_naxis     sizt    Number of axes of dims_basis.
      */
 
-        sizt        dims_basis_naxis;
+        sizt dims_basis_naxis;
         MPI_Recv(&dims_basis_naxis, 1, MPI_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     /*
@@ -479,11 +529,13 @@ int main(int argc, char *argv[]){
      * Name                     Type            Description
      * ----------------------------------------------------
      * dims_phase_per_fried     sizt_vector     Dimensions of phase-screen simulations, per fried.
+     * dims_phase_single        sizt_vector     Dimensions of a single phase-screen.
      * dims_weights             sizt_vector     Dimensions of the basis weights.
      * dims_basis               sizt_vector     Dimensions of basis functions.    
      */
 
         sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
+        sizt_vector dims_phase_single{config::sims_size_x, config::sims_size_y};
         sizt_vector dims_basis(dims_basis_naxis);
         sizt_vector dims_weights(1);
         
@@ -512,17 +564,65 @@ int main(int argc, char *argv[]){
 
         MPI_Recv(basis[0], basis.get_size(), MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
+    /*
+     * Vector declaration.
+     * ----------------------------------------
+     * Name         Type            Description
+     * ----------------------------------------
+     * basis_norm   Array<double>   L2 normalization of the basis functions.
+     */
+
+        sizt_vector basis_norm(dims_basis[0]);
+
+    /* ------------------------------------------------
+     * Compute L2 normalization of the basis functions.
+     * ------------------------------------------------
+     */
+
+        for(sizt ind = 0; ind < dims_basis[0]; ind++){
+            for(sizt xs = 0; xs < dims_basis[1]; xs++){
+                for(sizt ys = 0; ys < dims_basis[2]; ys++){
+                    basis_norm[ind] += basis(ind, xs, ys) * basis(ind, xs, ys);
+                }
+            }
+        }
+
+    /* --------------------
+     * Loop until shutdown.
+     * --------------------
+     */
+
         while(status.MPI_TAG != mpi_cmds::shutdown){
 
+        /* ------------------------------
+         * Get basis weights from master.
+         * ------------------------------
+         */
+
             MPI_Recv(weights[0], dims_weights[0], MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+        /* -----------------------------------------
+         * Get phase-screen simulations from master.
+         * -----------------------------------------
+         */
+
             MPI_Recv(phase[0], phase.get_size(), MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
             if(status.MPI_TAG == mpi_cmds::stayalive){
 
-            /*
+            /* ---------------------------------------------
              * Compute the residuals from the phase-screens.
+             * ---------------------------------------------
              */
-            
+                Array<double> phase_single(dims_phase_single);
+                for(sizt sim = 0; sim < dims_phase_per_fried[0]; sim++){
+
+                    memcpy(phase_single[0], phase[sim], phase_single.get_size()*sizeof(double));
+                    get_residual_phase_screen(phase_single, basis, weights, basis_norm);
+                    memcpy(phase[sim], phase_single[0], phase_single.get_size()*sizeof(double));
+
+                }
+
                 MPI_Send(phase[0], phase.get_size(), MPI_DOUBLE, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
 
             }

@@ -153,7 +153,7 @@ int main(int argc, char *argv[]){
 
         fprintf(console, "(Info)\tReading file %s:\t", config::read_fried_from.c_str());
         read_status = fried.rd_fits(config::read_fried_from.c_str());
-        if(read_status != EXIT_SUCCESS && fried.get_stat()){
+        if(read_status != EXIT_SUCCESS){
 	        fprintf(console, "[Failed, Err code: %d]\n", read_status);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
     	}
@@ -192,9 +192,9 @@ int main(int argc, char *argv[]){
      * -----------------------------------------------
      */
 
-	    fprintf(console, "(Info)\tReading file %s:\t", config::read_aperture_function_from.c_str());
+	    fprintf(console, "(Info)\tReading file %s:\t", config::read_aperture_function_from.c_str()); fflush(console);
 	    read_status = aperture.rd_fits(config::read_aperture_function_from.c_str());
-	    if(read_status != EXIT_SUCCESS && aperture.get_stat()){
+	    if(read_status != EXIT_SUCCESS){
 	        fprintf(console, "[Failed, Err code: %d]\n", read_status);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
 	    }
@@ -224,9 +224,9 @@ int main(int argc, char *argv[]){
 
 #endif
         
-        percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
-        percent_completed = (100.0 * fried_completed) / fried.get_size();
-        fprintf(stdout, "\r(Info)\tSimulating phasescreens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); fflush(console);
+        percent_assigned  = (100.0 * (index_of_fried_in_queue + 1)) / fried.get_size();
+        percent_completed = (100.0 * (fried_completed + 1)) / fried.get_size();
+        fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); fflush(console);
     
     /*
      * Variable declaration:
@@ -288,8 +288,8 @@ int main(int argc, char *argv[]){
              * ------------------------------------
 	         */
 
-                percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
-                fprintf(stdout, "\r(Info)\tSimulating phasescreens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                percent_assigned  = (100.0 * (index_of_fried_in_queue + 1)) / fried.get_size();
+                fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
                 fflush(console);
 
             /* ----------------------------------
@@ -368,8 +368,8 @@ int main(int argc, char *argv[]){
          * ------------------------------------- 
 	     */
 
-	        percent_completed = (100.0 * fried_completed) / fried.get_size();
-	        fprintf(stdout, "\r(Info)\tSimulating phasescreens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+	        percent_completed = (100.0 * (fried_completed)) / fried.get_size();
+	        fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
 	        fflush(console);
 
 	    /* --------------------------------------------------------------------
@@ -393,8 +393,8 @@ int main(int argc, char *argv[]){
 	
 		        process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
 
-                percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
-                fprintf(stdout, "\r(Info)\tSimulating phasescreens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                percent_assigned  = (100.0 * (index_of_fried_in_queue + 1)) / fried.get_size();
+                fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
                 fflush(console);
 
 		        index_of_fried_in_queue++;

@@ -109,19 +109,20 @@ void create_phase_screen_fourier(Array<cmpx>& fourier, double fried, double sim_
 
 }
 
-void create_residual_phase_screen(Array<double>& phase, Array<double>& basis, Array<double>& weights){
+void get_residual_phase_screen(Array<double>& phase, Array<double>& basis, Array<double>& mode_cfs_weights, sizt_vector norm){
 
     sizt_vector dims_basis = basis.get_dims();
-    sizt_vector dims_basis_single(dims_basis.begin() + 1, dims_basis.end());
+    sizt_vector dims_mode{dims_basis[1], dims_basis[2]};
+    sizt_vector dims_mode_cfs{dims_basis[0]};
 
-    Array<double> basis_single(dims_basis_single);
+    Array<double> mode(dims_mode);
+    Array<double> mode_cfs(dims_mode_cfs);
 
     for(sizt ind = 0; ind < dims_basis[0]; ind++){
 
-        memcpy(basis_single.root_ptr, basis.root_ptr + ind * basis_single.get_size(), basis_single.get_size() * sizeof(double));
-
-        double mode_amplitude = (phase * basis_single).get_total();
-        phase -= basis_single * (weights(ind) * mode_amplitude);
+        memcpy(mode[0], basis[ind], mode.get_size() * sizeof(double));
+        mode_cfs(ind) = (phase * mode).get_total()  / norm[ind];
+        phase -= mode * (mode_cfs(ind) * mode_cfs_weights(ind));
 
     }
 }
