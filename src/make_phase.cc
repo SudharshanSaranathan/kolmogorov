@@ -60,13 +60,13 @@ int main(int argc, char *argv[]){
 /*
  * Variable declaration:
  * ----------------------------------------
- * Name		        Type		Description
+ * Name             Type        Description
  * ----------------------------------------
- * status		    MPI_status	See MPI documentation.
- * process_rank	    int		    Rank of MPI processes.
- * process_total	int		    Store the total number of MPI processes
- * mpi_recv_count	int		    Store the count of data received in MPI_Recv, see MPI documentation for explanation.
- * read_status	    int		    File read status.
+ * status           MPI_status  See MPI documentation.
+ * process_rank     int         Rank of MPI processes.
+ * process_total    int         Store the total number of MPI processes
+ * mpi_recv_count   int         Store the count of data received in MPI_Recv, see MPI documentation for explanation.
+ * read_status      int         File read status.
  */
    
     MPI_Status status;
