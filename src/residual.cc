@@ -309,7 +309,7 @@ int main(int argc, char *argv[]){
 
             if(weights[index_of_fried_in_queue] != nullptr){
                 
-                MPI_Send(weights.root_ptr+index_of_fried_in_queue*dims_basis[0], dims_basis[0], MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
             }else{
 
@@ -325,7 +325,7 @@ int main(int argc, char *argv[]){
 
             if(phase[index_of_fried_in_queue] != nullptr){
                 
-                MPI_Send(phase.root_ptr+index_of_fried_in_queue*sizeof_vector(dims_phase_per_fried), sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
             }else{
 
