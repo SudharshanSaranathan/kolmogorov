@@ -2,6 +2,7 @@
 #define _SIMULATOR_
 
 #include <random>
+#include <cstring>
 #include <complex>
 
 #include "config.h"
@@ -10,17 +11,40 @@
 #define _USE_MATH_DEFINES
 
 template <class type> 
-void create_pupil_function(Array<type>& pupil, double apodize_radius){
+void create_aperture_function(Array<type>& aperture, double aperture_radius){
 
-    sizt_vector pupil_dims = pupil.get_dims();
-    double xc = pupil_dims[0]/2.;
-    double yc = pupil_dims[1]/2.;
-    double ds = 0.0;
+/*
+ * Vector declaration.
+ * --------------------------------------------
+ * Name             Type            Description
+ * --------------------------------------------
+ * aperture_dims    sizt_vector     Dimensions of the aperture
+ */
 
-    for(sizt xs = 0; xs < pupil_dims[0]; xs++){
-        for(sizt ys = 0; ys < pupil_dims[1]; ys++){
-            ds = sqrt(pow(xs - xc, 2) + pow(ys - yc, 2));
-            pupil(xs, ys) = ds < apodize_radius ? static_cast<type>(1) : static_cast<type>(0);
+    sizt_vector aperture_dims = aperture.get_dims();
+
+/*
+ * Variable declaration.
+ * ------------------------------------------------
+ * Name                 Type        Description
+ * ------------------------------------------------
+ * aperture_center_x    double      Center of aperture, abscissa.
+ * aperture_center_y    double      Center of aperture, ordinate.
+ * distance_center      double      Distance to the center of aperture.
+ */ 
+
+    double aperture_center_x = double(aperture_dims[0])/2.0;
+    double aperture_center_y = double(aperture_dims[1])/2.0;
+    double distance_center   = 0.0;
+/* -----------------------
+ * Make aperture function.
+ * -----------------------
+ */
+
+    for(sizt xs = 0; xs < aperture_dims[0]; xs++){
+        for(sizt ys = 0; ys < aperture_dims[1]; ys++){
+            distance_center = sqrt(pow(xs - aperture_center_x, 2) + pow(ys - aperture_center_y, 2));
+            aperture(xs, ys) = distance_center <= aperture_radius ? static_cast<type>(1) : static_cast<type>(0);
         }
     }
 }
@@ -84,4 +108,22 @@ void create_phase_screen_fourier(Array<cmpx>& fourier, double fried, double sim_
     }
 
 }
+
+void create_residual_phase_screen(Array<double>& phase, Array<double>& basis, Array<double>& weights){
+
+    sizt_vector dims_basis = basis.get_dims();
+    sizt_vector dims_basis_single(dims_basis.begin() + 1, dims_basis.end());
+
+    Array<double> basis_single(dims_basis_single);
+
+    for(sizt ind = 0; ind < dims_basis[0]; ind++){
+
+        memcpy(basis_single.root_ptr, basis.root_ptr + ind * basis_single.get_size(), basis_single.get_size() * sizeof(double));
+
+        double mode_amplitude = (phase * basis_single).get_total();
+        phase -= basis_single * (weights(ind) * mode_amplitude);
+
+    }
+}
+
 #endif

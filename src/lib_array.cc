@@ -123,24 +123,39 @@ sizt         Array<type>:: get_dims(sizt xs){
     if(xs >= dims.size())
         return 0;
     else
-        return(dims[xs]);
-    
+        return(dims[xs]);   
 }
 
 template <class type>
-type	     Array<type>::get_total(){
+type	     Array<type>:: get_total(){
 
     type total = static_cast<type>(0);
     for(sizt ind = 0; ind < this->size; ind++){
-	total += this->root_ptr[ind];
+	    total += this->root_ptr[ind];
     }
     return(total);
 }
 
 template <class type>
-sizt_vector Array<type>:: get_dims(){
+sizt_vector  Array<type>:: get_dims(){
     return(this->dims);
 }
+
+template <class type>
+type* Array<type>::operator[](const sizt ind){
+    
+    switch(this->dims.size()){
+
+        case 1:     return(ind < this->dims[0] ? this->data_ptr_1D+ind : nullptr);
+        case 2:     return(ind < this->dims[0] ? this->data_ptr_2D[ind] : nullptr);
+        case 3:     return(ind < this->dims[0] ? this->data_ptr_3D[ind][0] : nullptr);
+        case 4:     return(ind < this->dims[0] ? this->data_ptr_4D[ind][0][0] : nullptr);
+        default:    return(nullptr);
+
+    }
+
+}
+
 
 template <class type>
 type& Array<type>::operator()(const sizt xs){
