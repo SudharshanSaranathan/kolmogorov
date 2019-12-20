@@ -123,12 +123,12 @@ int main(int argc, char *argv[]){
     /*
      * Variable declaration:
      * ------------------------------------------------
-     * Name			            Type	    Description
+     * Name                     Type        Description
      * ------------------------------------------------
-     * index_of_fried_in_queue	long	    Index of the next fried parameter.
-     * fried_completed		    long	    Number of fried parameters processed.
+     * index_of_fried_in_queue  long        Index of the next fried parameter.
+     * fried_completed          long        Number of fried parameters processed.
      * percent_assigned         double      Percentage of fried parameters assigned to workers.
-     * percent_completed		double	    Percentage of fried parameters completed by workers.
+     * percent_completed        double      Percentage of fried parameters completed by workers.
      */
 
         long   index_of_fried_in_queue  = 0;
@@ -166,9 +166,9 @@ int main(int argc, char *argv[]){
     * -------------------------------------------------
     * Name			        Type			Description
     * -------------------------------------------------
-    * dims_phase		    sizt_vector	    Dimensions of phase-screens, in pixels.
-    * dims_phase_per_fried	sizt_vector	    Dimensions of phase-screens, per fried, in pixels.
-    * process_fried_map	    sizt_vector	    Map of which MPI process is working on which fried parameter.
+    * dims_phase            sizt_vector     Dimensions of phase-screens, in pixels.
+    * dims_phase_per_fried  sizt_vector     Dimensions of phase-screens, per fried, in pixels.
+    * process_fried_map     sizt_vector     Map of which MPI process is working on which fried parameter.
     */
     
 	    const sizt_vector dims_phase{fried.get_size(), config::sims_per_fried, config::sims_size_x, config::sims_size_y};
@@ -180,9 +180,9 @@ int main(int argc, char *argv[]){
     /*
      * Array declaration:
      * ------------------------------------
-     * Name		Type			Description
+     * Name         Type            Description
      * ------------------------------------
-     * aperture		Array<double>		Aperture function array, see "lib_array.h" for datatype.
+     * aperture     Array<double>   Aperture function array, see "lib_array.h" for datatype.
      */
 	
         Array<double> aperture;
@@ -201,9 +201,9 @@ int main(int argc, char *argv[]){
 
     /*
      * Vector declaration:
-     * ------------------------------------
+     * --------------------------------------------
      * Name		        Type			Description
-     * ------------------------------------
+     * --------------------------------------------
      * dims_aperture	sizt_vector	    Dimensions of the aperture, in pixels.
      */
 
@@ -370,7 +370,7 @@ int main(int argc, char *argv[]){
 	     */
 
 	        percent_completed = (100.0 * fried_completed) / fried.get_size();
-	        fprintf(stdout, "\r(Info)\tSimulating phasescreens: \tIn Progress [%0.1lf %%]", percent_completed);
+	        fprintf(stdout, "\r(Info)\tSimulating phasescreens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
 	        fflush(console);
 
 	    /* --------------------------------------------------------------------
