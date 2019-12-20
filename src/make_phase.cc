@@ -283,21 +283,22 @@ int main(int argc, char *argv[]){
 
 		        process_fried_map[id] = index_of_fried_in_queue;
 
-            /* ------------------------------------
-	         * Update and display percent_assigned.
-             * ------------------------------------
-	         */
-
-                percent_assigned  = (100.0 * (index_of_fried_in_queue + 1)) / fried.get_size();
-                fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-                fflush(console);
-
             /* ----------------------------------
 	         * Increment index_of_fried_in_queue.
              * ----------------------------------
 	         */
 
                 index_of_fried_in_queue++;
+
+            /* ------------------------------------
+	         * Update and display percent_assigned.
+             * ------------------------------------
+	         */
+
+                percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
+                fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                fflush(console);
+
             }
         }
 
@@ -386,25 +387,36 @@ int main(int argc, char *argv[]){
 
 		        MPI_Send(fried[index_of_fried_in_queue], 1, MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
 	
-	        /* -----------------------------------------------------------------
-	         * Update process_fried_map, and increment index_of_fried_in_queue).
-             * ----------------------------------------------------------------- 
+	        /* -------------------------
+	         * Update process_fried_map.
+             * -------------------------
 	         */
 	
 		        process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
 
-                percent_assigned  = (100.0 * (index_of_fried_in_queue + 1)) / fried.get_size();
-                fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-                fflush(console);
+	        /* ----------------------------------
+	         * Increment index_of_fried_in_queue.
+             * ----------------------------------
+	         */
 
 		        index_of_fried_in_queue++;
-      	    }
-	        else{
-	    
-	        /* --------------------------------------------------------------
-	         * If no more fried parameters are available, shutdown processes.
-             * --------------------------------------------------------------
+
+	        /* ------------------------------------
+	         * Update and display percent_assigned.
+             * ------------------------------------
 	         */
+
+                percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
+                fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                fflush(console);
+      	    }
+	        
+        /* --------------------------------------------------------------
+	     * If no more fried parameters are available, shutdown processes.
+         * --------------------------------------------------------------
+	     */
+
+	        else{
 
 		        MPI_Send(nullptr, 0, MPI_CHAR, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
 	        
