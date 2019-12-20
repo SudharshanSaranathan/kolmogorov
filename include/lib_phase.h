@@ -11,7 +11,7 @@
 #define _USE_MATH_DEFINES
 
 template <class type> 
-void create_aperture_function(Array<type>& aperture, double aperture_radius){
+void make_aperture_function(Array<type>& aperture, double aperture_radius){
 
 /*
  * Vector declaration.
@@ -49,7 +49,7 @@ void create_aperture_function(Array<type>& aperture, double aperture_radius){
     }
 }
 
-void create_phase_screen_fourier_shifted(Array<cmpx>& fourier, double fried, double sim_size){
+void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, double fried, double sim_size){
 
     Array<cmpx> fourier_copy(fourier);
     sizt_vector fourier_dims = fourier.get_dims();
@@ -70,10 +70,11 @@ void create_phase_screen_fourier_shifted(Array<cmpx>& fourier, double fried, dou
             double sinphi = distribution(generator);
  
             cmpx phase(amp*cosphi, amp*sinphi);
-            fourier_copy(xpix, ypix) = phase;
+            fourier(sizt(xpix + fourier_dims[0] - xc) % fourier_dims[0], sizt(ypix + fourier_dims[1] - yc) % fourier_dims[1]) = phase;
         }
     }
 
+    /*
     for(sizt xs = 0; xs < fourier_dims[0]; xs++){
         for(sizt ys = 0; ys < fourier_dims[1]; ys++){
             sizt xsn = (xs + (sizt)xc) % fourier_dims[0];
@@ -81,9 +82,10 @@ void create_phase_screen_fourier_shifted(Array<cmpx>& fourier, double fried, dou
             fourier(xs, ys) = fourier_copy(xsn, ysn);
         }
     }
+    */
 }
 
-void create_phase_screen_fourier(Array<cmpx>& fourier, double fried, double sim_size){
+void make_phase_screen_fourier(Array<cmpx>& fourier, double fried, double sim_size){
 
     sizt_vector fourier_dims = fourier.get_dims();
 
@@ -109,7 +111,7 @@ void create_phase_screen_fourier(Array<cmpx>& fourier, double fried, double sim_
 
 }
 
-void get_residual_phase_screen(Array<double>& phase, Array<double>& basis, Array<double>& mode_cfs_weights, sizt_vector norm){
+void make_residual_phase_screen(Array<double>& phase, Array<double>& basis, Array<double>& mode_cfs_weights, sizt_vector norm){
 
     sizt_vector dims_basis = basis.get_dims();
     sizt_vector dims_mode{dims_basis[1], dims_basis[2]};

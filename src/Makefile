@@ -19,7 +19,7 @@ OBJS   = ${patsubst %,${OBJDIR}/%,${OBJS_}}
 LIBTESTOBJS_   = lib_array.o test_lib_array.o
 MEMTESTOBJS_   = test_lib_mem.o
 MAKEPHASEOBJS_ = config.o lib_array.o make_phase.o
-MAKERESDLOBJS_ = config.o lib_array.o residual.o
+MAKERESDLOBJS_ = config.o lib_array.o make_residual.o
 
 LIBTESTOBJS    = ${patsubst %,${OBJDIR}/%,${LIBTESTOBJS_}}
 MEMTESTOBJS    = ${patsubst %,${OBJDIR}/%,${MEMTESTOBJS_}}
@@ -41,9 +41,9 @@ test_lib_array: ${LIBTESTOBJS}
 make_phase: ${MAKEPHASEOBJS}
 	${CC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
 
-residual: ${MAKERESDLOBJS}
+make_residual: ${MAKERESDLOBJS}
 	${CC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
 
 clean:
 	rm -rf ${OBJS}
-	rm -rf ${BINDIR}/memtest ${BINDIR}/arraytest ${BINDIR}/make_phase
+	rm -rf ${BINDIR}/test_lib_mem ${BINDIR}/test_lib_array ${BINDIR}/make_phase ${BINDIR}/make_residual

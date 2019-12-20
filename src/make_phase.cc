@@ -224,8 +224,8 @@ int main(int argc, char *argv[]){
 
 #endif
         
-        percent_assigned  = (100.0 * (index_of_fried_in_queue + 1)) / fried.get_size();
-        percent_completed = (100.0 * (fried_completed + 1)) / fried.get_size();
+        percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
+        percent_completed = (100.0 * fried_completed) / fried.get_size();
         fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); fflush(console);
     
     /*
@@ -369,7 +369,7 @@ int main(int argc, char *argv[]){
          * ------------------------------------- 
 	     */
 
-	        percent_completed = (100.0 * (fried_completed)) / fried.get_size();
+	        percent_completed = (100.0 * fried_completed) / fried.get_size();
 	        fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
 	        fflush(console);
 
@@ -537,7 +537,6 @@ int main(int argc, char *argv[]){
         sizt phase_center_x    = sizt(dims_phase[0] / 2.0);
         sizt phase_center_y    = sizt(dims_phase[1] / 2.0);
 
-
     /* --------------------------------
      * Get fried parameter from master.
      * --------------------------------
@@ -571,7 +570,7 @@ int main(int argc, char *argv[]){
              * -------------------------------
 	        */
              
-	            create_phase_screen_fourier_shifted(phase_fourier, fried, config::phase_size);
+	            make_phase_screen_fourier_shifted(phase_fourier, fried, config::phase_size);
                 fftw_execute_dft(forward, reinterpret_cast<fftw_complex*>(phase_fourier.root_ptr),\
                                           reinterpret_cast<fftw_complex*>(phase.root_ptr));
 
