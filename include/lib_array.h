@@ -117,9 +117,6 @@ public:
 
 public:
     type* operator[](const sizt);
-    type* operator[](const sizt, const sizt);
-    type* operator[](const sizt, const sizt, const sizt);
-    type* operator[](const sizt, const sizt, const sizt, const sizt);
 
     type& operator()(const sizt);
     type& operator()(const sizt, const sizt);

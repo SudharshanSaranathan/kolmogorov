@@ -127,12 +127,14 @@ int main(int argc, char *argv[]){
      * ------------------------------------------------
      * index_of_fried_in_queue	long	    Index of the next fried parameter.
      * fried_completed		    long	    Number of fried parameters processed.
-     * progress_percent		    double	    Progress percentage.
+     * percent_assigned         double      Percentage of fried parameters assigned to workers.
+     * percent_completed		double	    Percentage of fried parameters completed by workers.
      */
 
-        long   index_of_fried_in_queue   = 0;
-        long   fried_completed  = 0;
-        double progress_percent = 0.0;
+        long   index_of_fried_in_queue  = 0;
+        long   fried_completed          = 0;
+        double percent_assigned         = 0.0;
+        double percent_completed        = 0.0;
 
     /*
      * Array declaration:
@@ -214,7 +216,6 @@ int main(int argc, char *argv[]){
 
 	    if(dims_aperture[0] != config::sims_size_x && dims_aperture[1] != config::sims_size_y){
 	        fprintf(console, "[Failed, expected aperture with dimensions [%ld %ld]]\n", config::sims_size_x, config::sims_size_y);
-	        fflush(console);
 	        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 	    }
 	    else{
@@ -230,6 +231,11 @@ int main(int argc, char *argv[]){
      * ----------------------------
      * id	    int	    Rank of MPI processes.
      */
+
+        percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
+        percent_completed = (100.0 * fried_completed) / fried.get_size();
+
+	    fprintf(stdout, "\r(Info)\tSimulating phasescreens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); fflush(console);
 
         for(int id = 1; id < processes_total; id++){
 
@@ -278,9 +284,18 @@ int main(int argc, char *argv[]){
 
 		        process_fried_map[id] = index_of_fried_in_queue;
 
-            /* --------------------------------------
-	         * Increment the index_of_fried_in_queue.
-             * --------------------------------------
+            /* ------------------------------------
+	         * Update and display percent_assigned.
+             * ------------------------------------
+	         */
+
+                percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
+                fprintf(stdout, "\r(Info)\tSimulating phasescreens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                fflush(console);
+
+            /* ----------------------------------
+	         * Increment index_of_fried_in_queue.
+             * ----------------------------------
 	         */
 
                 index_of_fried_in_queue++;
@@ -301,10 +316,6 @@ int main(int argc, char *argv[]){
      * !(3, 4, 5) Distribute fried parameters to workers, store returned simulations.
      * ------------------------------------------------------------------------------
      */
-
-	    progress_percent = (100.0 * fried_completed) / fried.get_size();
-	    fprintf(stdout, "\r(Info)\tSimulating phasescreens: \tIn Progress [%0.1lf %%]", progress_percent);
-	    fflush(console);
 
         while(fried_completed < fried.get_size()){
         	  
@@ -340,6 +351,7 @@ int main(int argc, char *argv[]){
                 MPI_Recv(phase[fried_index], sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
             }else{
+                
                 fprintf(stdout, "\n(Error)\tNull buffer, calling MPI_Abort()\n");
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
@@ -352,13 +364,13 @@ int main(int argc, char *argv[]){
 
 	        fried_completed++;
       
-	    /* ---------------------------------------------
-	     * Update progress_percent, and print to stdout.
-         * --------------------------------------------- 
+	    /* -------------------------------------
+	     * Update and display percent_completed.
+         * ------------------------------------- 
 	     */
 
-	        progress_percent = (100.0 * fried_completed) / fried.get_size();
-	        fprintf(stdout, "\r(Info)\tSimulating phasescreens: \tIn Progress [%0.1lf %%]", progress_percent);
+	        percent_completed = (100.0 * fried_completed) / fried.get_size();
+	        fprintf(stdout, "\r(Info)\tSimulating phasescreens: \tIn Progress [%0.1lf %%]", percent_completed);
 	        fflush(console);
 
 	    /* --------------------------------------------------------------------
@@ -381,6 +393,11 @@ int main(int argc, char *argv[]){
 	         */
 	
 		        process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
+
+                percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
+                fprintf(stdout, "\r(Info)\tSimulating phasescreens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                fflush(console);
+
 		        index_of_fried_in_queue++;
       	    }
 	        else{
@@ -400,7 +417,7 @@ int main(int argc, char *argv[]){
      * ----------------------------------------
      */
 
-	    fprintf(console, "\n(Info)\tWriting phase to file:\t\t");
+	    fprintf(console, "\n(Info)\tWriting phase to file:\t\t"); fflush(console);
 	    if(phase.wr_fits(config::write_phase_to.c_str(), config::output_clobber) != EXIT_SUCCESS){
 	        fprintf(console, "[Failed]\n");
 	    }
