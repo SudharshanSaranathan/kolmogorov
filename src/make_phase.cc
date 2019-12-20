@@ -223,7 +223,11 @@ int main(int argc, char *argv[]){
 	    }
 
 #endif
-
+        
+        percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
+        percent_completed = (100.0 * fried_completed) / fried.get_size();
+        fprintf(stdout, "\r(Info)\tSimulating phasescreens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); fflush(console);
+    
     /*
      * Variable declaration:
      * ----------------------------
@@ -231,11 +235,6 @@ int main(int argc, char *argv[]){
      * ----------------------------
      * id       int     Rank of MPI processes.
      */
-
-        percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
-        percent_completed = (100.0 * fried_completed) / fried.get_size();
-
-	    fprintf(stdout, "\r(Info)\tSimulating phasescreens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); fflush(console);
 
         for(int id = 1; id < processes_total; id++){
 
