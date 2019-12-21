@@ -346,8 +346,18 @@ int main(int argc, char *argv[]){
 
         for(int id = 1; id < processes_total; id++){
 
-            MPI_Send(basis[0], basis.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+            if(basis[0] != nullptr){
 
+                MPI_Send(basis[0], basis.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+
+            }else{
+
+                fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
+                fflush (console);
+                
+                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+            }
         }
 
     /* ----------------------------------------------------
@@ -370,7 +380,7 @@ int main(int argc, char *argv[]){
 
             }else{
 
-                fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
                 fflush (console);
                 
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -388,7 +398,7 @@ int main(int argc, char *argv[]){
 
             }else{
 
-                fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
                 fflush (console);
                 
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -491,7 +501,7 @@ int main(int argc, char *argv[]){
 
                 }else{
 
-                    fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
                     fflush (console);
             
                     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -509,7 +519,7 @@ int main(int argc, char *argv[]){
 
                 }else{
 
-                    fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
                     fflush (console);
                     
                     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -548,9 +558,20 @@ int main(int argc, char *argv[]){
              * ----------------------------------------------------------
 	         */
                 
-                MPI_Send(weights[0], dims_basis[0], MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
-		        MPI_Send(phase[0], sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                if(weights[0] != nullptr && phase[0] != nullptr){
+
+                    MPI_Send(weights[0], dims_basis[0], MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+		            MPI_Send(phase[0], sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
                 
+                }else{
+
+                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
+                    fflush (console);
+                
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+                }
+
             /* -------------------------
              * Decrement processes_total
              * -------------------------
@@ -704,8 +725,15 @@ int main(int argc, char *argv[]){
 
                 }
 
-                MPI_Send(phase[0], phase.get_size(), MPI_DOUBLE, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+                if(phase[0] != nullptr){
 
+                    MPI_Send(phase[0], phase.get_size(), MPI_DOUBLE, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+
+                }else{
+
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+                }
             }
         }
     }

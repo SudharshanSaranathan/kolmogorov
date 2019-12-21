@@ -280,11 +280,33 @@ int main(int argc, char *argv[]){
 
             if(id > fried.get_size()){
 
-                MPI_Send(fried[0], 1, MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                if(fried[0] != nullptr){
+
+                    MPI_Send(fried[0], 1, MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+
+                }else{
+
+                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
+                    fflush (console);
+
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+                }
 
 #ifdef _APERTURE_
+                
+                if(aperture[0] != nullptr){
 
-		        MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+		            MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+
+                }else{
+
+                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
+                    fflush (console);
+
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+                }
 
 #endif
 	        /* -------------------------------------
@@ -303,11 +325,33 @@ int main(int argc, char *argv[]){
             
             else{
 
-                MPI_Send(fried[index_of_fried_in_queue], 1, MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                if(fried[index_of_fried_in_queue] != nullptr){
+
+                    MPI_Send(fried[index_of_fried_in_queue], 1, MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+
+                }else{
+
+                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
+                    fflush (console);
+
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+                }
 
 #ifdef _APERTURE_
 
-		        MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                if(aperture[0] != nullptr){
+                    
+		            MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+
+                }else{
+
+                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
+                    fflush (console);
+
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+                }
 
 #endif
 
@@ -426,8 +470,19 @@ int main(int argc, char *argv[]){
              * ---------------------------------------------------------------------------- 
 	         */
 
-		        MPI_Send(fried[index_of_fried_in_queue], 1, MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                if(fried[index_of_fried_in_queue] != nullptr){
+
+		            MPI_Send(fried[index_of_fried_in_queue], 1, MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
 	
+                }else{
+
+                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
+                    fflush (console);
+
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+                }
+
 	        /* -------------------------
 	         * Update process_fried_map.
              * -------------------------
@@ -682,7 +737,15 @@ int main(int argc, char *argv[]){
          * ----------------------------------
 	     */
 
-	        MPI_Send(phase_per_fried[0], phase_per_fried.get_size(), MPI_DOUBLE, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+            if(phase_per_fried[0] != nullptr){
+
+	            MPI_Send(phase_per_fried[0], phase_per_fried.get_size(), MPI_DOUBLE, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+
+            }else{
+
+                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+               
+            }
 
 	    /* -------------------------------------
 	     * Get next fried parameter from master.
@@ -690,6 +753,7 @@ int main(int argc, char *argv[]){
 	     */
 
 	        MPI_Recv(&fried, 1,  MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        
         }
 
         /* ------------------------

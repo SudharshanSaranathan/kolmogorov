@@ -250,7 +250,18 @@ int main(int argc, char *argv[]){
 
             if(id > dims_residual[0]){
 
-                MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                if(aperture[0] != nullptr){
+                
+                    MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+
+                }else{
+
+                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
+                    fflush (console);
+                
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+                }
 
             /* -------------------------------------
              * Decrement number of processes in use.
@@ -267,9 +278,18 @@ int main(int argc, char *argv[]){
          */
 
             else{
+                if(aperture[0] != nullptr){
 
-                MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
+                }else{
+
+                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
+                    fflush (console);
+                
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                
+                }
             }
 
         }
@@ -431,9 +451,19 @@ int main(int argc, char *argv[]){
 	         * If no more residuals to be calculated, shutdown processes.
              * ----------------------------------------------------------
 	         */
-		        
-                MPI_Send(residual[0], sizeof_vector(dims_residual_per_fried), MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+		        if(residual[0] != nullptr){
+
+                    MPI_Send(residual[0], sizeof_vector(dims_residual_per_fried), MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
 	        
+                }else{
+
+                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
+                    fflush (console);
+                
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                
+                }
+
             }
 
         }
@@ -573,7 +603,15 @@ int main(int argc, char *argv[]){
 
                 }
                 
-                MPI_Send(psf_per_fried[0], psf_per_fried.get_size(), MPI_DOUBLE, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+                if(psf_per_fried[0] != nullptr){
+                
+                    MPI_Send(psf_per_fried[0], psf_per_fried.get_size(), MPI_DOUBLE, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+                
+                }else{
+
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                
+                }
 
             }
         }
