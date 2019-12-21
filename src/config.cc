@@ -8,7 +8,7 @@ string config::read_weights_from   = "weights.fits";
 string config::read_fftwisdom_from = "fftw.wisdom";
 string config::read_aperture_function_from = "pupil.fits";
 
-string config::write_log_to      = "phase.log";
+string config::write_log_to      = "log.file";
 string config::write_phase_to    = "phase.fits";
 string config::write_residual_to = "residual.fits";
 string config::write_psf_to      = "psf.fits";
