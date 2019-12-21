@@ -41,11 +41,11 @@
  * --------------
  * Program logic:
  * -------------- 
- * 1. Parse config file.
- * 2. Read fried parameters into memory.
- * 3. Distribute fried parameter to workers.
- * 4. Store the simulations returned by workers.
- * 5. Repeat steps 3-4 until all fried parameters have been simulated. 
+ * 1. Read and parse the config file.
+ * 2. Read fried parameters from file.
+ * 3. Distribute the fried parameters to workers.
+ * 4. Store the simulated phase-screens returned by workers.
+ * 5. Repeat steps 3-4 for all fried parameters.
  * 6. Save simulations to disk.
  *
  * -----------------------
@@ -316,9 +316,11 @@ int main(int argc, char *argv[]){
 
         Array<double> phase(dims_phase);
 
-    /* ------------------------------------------------------------------------------
-     * !(3, 4, 5) Distribute fried parameters to workers, store returned simulations.
-     * ------------------------------------------------------------------------------
+    /* ------------------------------------------------
+     * !(3) Distribute the fried parameters to workers.
+     * !(4) Store the simulated phase-screens returned by workers.
+     * !(5) Repeat steps 3-4 for all fried parameters.
+     * -----------------------------------------------
      */
 
         while(fried_completed < fried.get_size()){
@@ -434,9 +436,9 @@ int main(int argc, char *argv[]){
             }
 	    }
 
-    /* ---------------------------------------- 
-     * !(6) Write phase-screens to output file.
-     * ----------------------------------------
+    /* ------------------------------ 
+     * !(6) Save simulations to disk.
+     * ------------------------------
      */
 
 	    fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_phase_to.c_str()); fflush(console);
