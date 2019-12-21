@@ -624,8 +624,8 @@ int main(int argc, char *argv[]){
 
         fftw_import_wisdom_from_filename(config::read_fftwisdom_from.c_str());
         fftw_plan forward = fftw_plan_dft_2d(dims_phase[0], dims_phase[1],\
-                                             reinterpret_cast<fftw_complex*>(phase_fourier.root_ptr),\
-                                             reinterpret_cast<fftw_complex*>(phase.root_ptr),\
+                                             reinterpret_cast<fftw_complex*>(phase_fourier[0]),\
+                                             reinterpret_cast<fftw_complex*>(phase[0]),\
                                              FFTW_FORWARD, FFTW_MEASURE);
    
     /*
@@ -685,8 +685,8 @@ int main(int argc, char *argv[]){
 	        */
              
 	            make_phase_screen_fourier_shifted(phase_fourier, fried, config::phase_size);
-                fftw_execute_dft(forward, reinterpret_cast<fftw_complex*>(phase_fourier.root_ptr),\
-                                          reinterpret_cast<fftw_complex*>(phase.root_ptr));
+                fftw_execute_dft(forward, reinterpret_cast<fftw_complex*>(phase_fourier[0]),\
+                                          reinterpret_cast<fftw_complex*>(phase[0]));
 
 #ifdef _APERTURE_
 	
