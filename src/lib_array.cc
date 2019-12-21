@@ -560,5 +560,7 @@ int 	     Array<type>::wr_fits(const char *name, bool clobber){
     fits_close_file(fileptr, &status);
     return(status);
 }
+
 template class Array<cmpx>;
+template class Array<float>;
 template class Array<double>;
