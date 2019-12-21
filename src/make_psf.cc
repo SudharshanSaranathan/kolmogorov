@@ -104,15 +104,25 @@ int main(int argc, char *argv[]){
 
     if(argc < 2){
 	    fprintf(console, "(Error)\tExpected configuration file, aborting!\n");
-	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+	    fflush (console);
+        
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
     fprintf(console, "(Info)\tReading configuration:\t");
+    fflush (console);
+    
     if(config_parse(argv[1]) == EXIT_FAILURE){
 	    fprintf(console, "[Failed]\n");
+        fflush (console);
+
 	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
     }else{
-	    fprintf(console, "[Done]\n");
+	    
+        fprintf(console, "[Done]\n");
+        fflush (console);
+
     }
 
 /* 
@@ -157,12 +167,21 @@ int main(int argc, char *argv[]){
      */
 
         fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::write_residual_to.c_str());
+        fflush (console);
+
         read_status = residual.rd_fits(config::write_residual_to.c_str());
         if(read_status != EXIT_SUCCESS){
+            
             fprintf(console, "Failed with err code: %d]\n", read_status);
+            fflush (console);
+
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        
         }else{
+            
             fprintf(console, "Done]\n");
+            fflush (console);
+
         }
 
 
@@ -172,12 +191,21 @@ int main(int argc, char *argv[]){
      */
 
         fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_aperture_function_from.c_str());
+        fflush (console);
+
         read_status = aperture.rd_fits(config::read_aperture_function_from.c_str());
         if(read_status != EXIT_SUCCESS){
+            
             fprintf(console, "Failed with err code: %d]\n", read_status);
+            fflush (console);
+
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        
         }else{
+
             fprintf(console, "Done]\n");
+            fflush (console);
+
         }
 
     /*
@@ -267,6 +295,8 @@ int main(int argc, char *argv[]){
             }else{
 
                 fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                fflush (console);
+
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
                 
             }
@@ -284,8 +314,9 @@ int main(int argc, char *argv[]){
          */
 
             percent_assigned  = (100.0 * (index_of_fried_in_queue + 1)) / dims_residual[0];
-            fprintf(stdout, "\r(Info)\tComputing PSFs:\t\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-            fflush(console);
+            
+            fprintf(console, "\r(Info)\tComputing PSFs:\t\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+            fflush (console);
 
         /* ----------------------------------
          * Increment index_of_fried_in_queue.
@@ -341,8 +372,9 @@ int main(int argc, char *argv[]){
          */
 
             percent_completed  = (100.0 * fried_completed) / dims_residual[0];
-            fprintf(stdout, "\r(Info)\tComputing PSFs:\t\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-            fflush(console);
+           
+            fprintf(console, "\r(Info)\tComputing PSFs:\t\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+            fflush (console);
 
         /* -----------------------------------------------------------------
 	     * Send next set of phase-screen residuals, if available, to worker.
@@ -363,6 +395,8 @@ int main(int argc, char *argv[]){
                 }else{
 
                     fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                    fflush (console);
+
                     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
                 
                 }    
@@ -380,8 +414,9 @@ int main(int argc, char *argv[]){
              */
 
                 percent_assigned = (100.0 * (index_of_fried_in_queue + 1)) / dims_residual[0];
-                fprintf(stdout, "\r(Info)\tComputing PSFs:\t\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-                fflush(console);
+
+                fprintf(console, "\r(Info)\tComputing PSFs:\t\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                fflush (console);
 
             /* ----------------------------------
 	         * Increment index_of_fried_in_queue.
@@ -408,18 +443,21 @@ int main(int argc, char *argv[]){
      * -----------------------
      */
 
-        fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_psf_to.c_str()); fflush(console);
-        write_status = psf.wr_fits(config::write_psf_to.c_str(), config::output_clobber);
+        fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_psf_to.c_str());
+        fflush (console);
 
+        write_status = psf.wr_fits(config::write_psf_to.c_str(), config::output_clobber);
         if(write_status != EXIT_SUCCESS){
 	    
             fprintf(console, "Failed with err code: %d]\n", write_status);
+            fflush (console);
 	    
         }
 	    else{
 	    
             fprintf(console, "Done]\n");
-        
+            fflush (console);
+
         }
 
     }

@@ -107,11 +107,20 @@ int main(int argc, char *argv[]){
     }
 
     fprintf(console, "(Info)\tReading configuration:\t[%s, ", argv[1]);
+    fflush (console);
+    
     if(config_parse(argv[1]) == EXIT_FAILURE){
-	    fprintf(console, "Failed]\n");
+	    
+        fprintf(console, "Failed]\n");
+        fflush (console);
+
 	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    
     }else{
-	    fprintf(console, "Done]\n");
+
+        fprintf(console, "Done]\n");
+        fflush (console);
+
     }
     
 /*
@@ -154,14 +163,23 @@ int main(int argc, char *argv[]){
      */
 
         fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_fried_from.c_str());
+        fflush (console);
+        
         read_status = fried.rd_fits(config::read_fried_from.c_str());
         if(read_status != EXIT_SUCCESS){
-	        fprintf(console, "Failed with err code: %d]\n", read_status);
+
+            fprintf(console, "Failed with err code: %d]\n", read_status);
+            fflush (console);
+            
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
-    	}
+
+        }
 	    else{
+
 	        fprintf(console, "Done]\n");
-	    }
+	        fflush (console);
+        
+        }
 
     /*
     * Vector declaration:
@@ -194,11 +212,17 @@ int main(int argc, char *argv[]){
      * -----------------------------------------------
      */
 
-	    fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_aperture_function_from.c_str()); fflush(console);
+	    fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_aperture_function_from.c_str());
+        fflush (console);
+
 	    read_status = aperture.rd_fits(config::read_aperture_function_from.c_str());
 	    if(read_status != EXIT_SUCCESS){
+
 	        fprintf(console, "Failed with err code: %d]\n", read_status);
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
+            fflush (console);
+            
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
 	    }
 
     /*
@@ -219,18 +243,25 @@ int main(int argc, char *argv[]){
 	    if(dims_aperture[0] != config::sims_size_x && dims_aperture[1] != config::sims_size_y){
 	        
             fprintf(console, "Failed, expected aperture with size [%ld %ld]]\n", config::sims_size_x, config::sims_size_y);
-	        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+            fflush (console);
+
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
 	    }
 	    else{
-	        fprintf(console, "Done]\n");
-	    }
+
+            fprintf(console, "Done]\n");
+            fflush (console);
+
+        }
 
 #endif
         
         percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
         percent_completed = (100.0 * fried_completed) / fried.get_size();
-        fprintf(stdout, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); fflush(console);
+        
+        fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed);
+        fflush (console);
     
     /*
      * Variable declaration:
@@ -300,8 +331,9 @@ int main(int argc, char *argv[]){
 	         */
 
                 percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
-                fprintf(stdout, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-                fflush(console);
+       
+                fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                fflush (console);
 
             }
         }
@@ -358,7 +390,9 @@ int main(int argc, char *argv[]){
 
             }else{
                 
-                fprintf(stdout, "\n(Error)\tNull buffer, calling MPI_Abort()\n");
+                fprintf(console, "\n(Error)\tNull buffer, calling MPI_Abort()\n");
+                fflush (console);
+       
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
             }
@@ -376,8 +410,9 @@ int main(int argc, char *argv[]){
 	     */
 
 	        percent_completed = (100.0 * fried_completed) / fried.get_size();
-	        fprintf(stdout, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-	        fflush(console);
+	        
+            fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+	        fflush (console);
 
 	    /* --------------------------------------------------------------------
 	     * Assign new fried parameter, if available, to worker, else, shutdown. 
@@ -413,9 +448,11 @@ int main(int argc, char *argv[]){
 	         */
 
                 percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
-                fprintf(stdout, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-                fflush(console);
-      	    }
+                
+                fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                fflush (console);
+      	    
+            }
 	        
         /* --------------------------------------------------------------
 	     * If no more fried parameters are available, shutdown processes.
@@ -441,17 +478,20 @@ int main(int argc, char *argv[]){
      * ------------------------------
      */
 
-	    fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_phase_to.c_str()); fflush(console);
-        write_status = phase.wr_fits(config::write_phase_to.c_str(), config::output_clobber);
+	    fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_phase_to.c_str());
+        fflush (console);
 
+        write_status = phase.wr_fits(config::write_phase_to.c_str(), config::output_clobber);
 	    if(write_status != EXIT_SUCCESS){
 
 	        fprintf(console, "Failed with err code: %d]\n", write_status);
-	    
+	        fflush (console);
+
         }
 	    else{
 
 	        fprintf(console, "Done]\n");
+            fflush (console);
 
         }
 

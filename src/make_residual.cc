@@ -102,16 +102,29 @@ int main(int argc, char *argv[]){
  */
 
     if(argc < 2){
-	    fprintf(console, "(Error)\tExpected configuration file, aborting!\n");
-	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+        fprintf(console, "(Error)\tExpected configuration file, aborting!\n");
+        fflush (console);
+
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    
     }
 
     fprintf(console, "(Info)\tReading configuration:\t[%s, ", argv[1]);
+    fflush (console);
+
     if(config_parse(argv[1]) == EXIT_FAILURE){
-	    fprintf(console, "Failed]\n");
-	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+        fprintf(console, "Failed]\n");
+        fflush (console);
+
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    
     }else{
-	    fprintf(console, "Done]\n");
+	
+        fprintf(console, "Done]\n");
+        fflush (console);
+
     }
 
 /* 
@@ -158,12 +171,21 @@ int main(int argc, char *argv[]){
      */
 
         fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::write_phase_to.c_str());
+        fflush (console);
+
         read_status = phase.rd_fits(config::write_phase_to.c_str());
         if(read_status != EXIT_SUCCESS){
+            
             fprintf(console, "Failed with err code: %d]\n", read_status);
+            fflush (console);
+            
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
         }else{
+            
             fprintf(console, "Done]\n");
+            fflush (console);
+
         }
 
     /* ------------------------------------
@@ -172,12 +194,21 @@ int main(int argc, char *argv[]){
      */
 
         fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_basis_from.c_str());
+        fflush (console);
+
         read_status = basis.rd_fits(config::read_basis_from.c_str());
         if(read_status != EXIT_SUCCESS){
+        
             fprintf(console, "Failed with err code: %d]\n", read_status);
+            fflush (console);
+        
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
         }else{
+            
             fprintf(console, "Done]\n");
+            fflush (console);
+
         }
 
     /* ----------------------------------
@@ -186,12 +217,20 @@ int main(int argc, char *argv[]){
      */
 
         fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_weights_from.c_str());
+        fflush (console);
+        
         read_status = weights.rd_fits(config::read_weights_from.c_str());
         if(read_status != EXIT_SUCCESS){
+        
             fprintf(console, "Failed with err code: %d]\n", read_status);
+            fflush (console);
+                
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        
         }else{
+            
             fprintf(console, "Done]\n");
+            fflush (console);
         }
 
     /*
@@ -220,6 +259,8 @@ int main(int argc, char *argv[]){
         if(dims_phase[2] != config::sims_size_x  || dims_phase[3] != config::sims_size_y){
      
             fprintf(console, "(Error)\texpected phase-screens with size [%ld %ld], calling MPI_Abort()\n", config::sims_size_x, config::sims_size_y);
+            fflush (console);
+
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
         }
@@ -227,6 +268,8 @@ int main(int argc, char *argv[]){
         if(dims_basis[1] != config::sims_size_x  || dims_basis[2] != config::sims_size_y){
      
             fprintf(console, "(Error)\texpected basis functions with size [%ld %ld], calling MPI_Abort()\n", config::sims_size_x, config::sims_size_y);
+            fflush (console);
+            
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
         }
@@ -234,6 +277,8 @@ int main(int argc, char *argv[]){
         if(dims_weights[0] != dims_phase[0] || dims_weights[1] != dims_basis[0]){
             
             fprintf(console, "(Error)\texpected weights with dimensions [%ld %ld], calling MPI_Abort()\n", dims_phase[0], dims_basis[1]);
+            fflush (console);
+            
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     
         }
@@ -326,6 +371,8 @@ int main(int argc, char *argv[]){
             }else{
 
                 fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                fflush (console);
+                
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
             }
@@ -342,6 +389,8 @@ int main(int argc, char *argv[]){
             }else{
 
                 fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                fflush (console);
+                
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
                 
             }
@@ -359,8 +408,9 @@ int main(int argc, char *argv[]){
          */
 
             percent_assigned  = (100.0 * (index_of_fried_in_queue + 1)) / dims_phase[0];
-            fprintf(stdout, "\r(Info)\tComputing residuals: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-            fflush(console);
+            
+            fprintf(console, "\r(Info)\tComputing residuals: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+            fflush (console);
 
         /* ----------------------------------
          * Increment index_of_fried_in_queue.
@@ -418,8 +468,9 @@ int main(int argc, char *argv[]){
          */
 
             percent_completed  = (100.0 * fried_completed) / dims_phase[0];
-            fprintf(stdout, "\r(Info)\tComputing residuals:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-            fflush(console);
+            
+            fprintf(console, "\r(Info)\tComputing residuals:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+            fflush (console);
 
         /* -------------------------------------------------------------------
 	     * Send next set of phase-screen simulations, if available, to worker.
@@ -441,6 +492,8 @@ int main(int argc, char *argv[]){
                 }else{
 
                     fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                    fflush (console);
+            
                     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
                 }
@@ -457,6 +510,8 @@ int main(int argc, char *argv[]){
                 }else{
 
                     fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                    fflush (console);
+                    
                     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
                 
                 }    
@@ -474,8 +529,9 @@ int main(int argc, char *argv[]){
              */
 
                 percent_assigned = (100.0 * (index_of_fried_in_queue + 1)) / dims_phase[0];
-                fprintf(stdout, "\r(Info)\tComputing residuals:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-                fflush(console);
+                
+                fprintf(console, "\r(Info)\tComputing residuals:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                fflush (console);
 
             /* ----------------------------------
 	         * Increment index_of_fried_in_queue.
@@ -511,18 +567,21 @@ int main(int argc, char *argv[]){
      * -----------------------------------------
      */
 
-        fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_residual_to.c_str()); fflush(console);
+        fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_residual_to.c_str());
+        fflush (console);
+        
         write_status = residual.wr_fits(config::write_residual_to.c_str(), config::output_clobber);
-
 	    if(write_status != EXIT_SUCCESS){
 	        
             fprintf(console, "Failed with err code: %d]\n", write_status);
-	    
+	        fflush (console);
+
         }
 	    else{
 	     
             fprintf(console, "Done]\n");
-        
+            fflush (console);
+
         }
 
     }
