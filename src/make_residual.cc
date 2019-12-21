@@ -106,12 +106,12 @@ int main(int argc, char *argv[]){
 	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
-    fprintf(console, "(Info)\tReading configuration:\t");
+    fprintf(console, "(Info)\tReading configuration:\t[%s, ", argv[1]);
     if(config_parse(argv[1]) == EXIT_FAILURE){
-	    fprintf(console, "[Failed]\n");
+	    fprintf(console, "Failed]\n");
 	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }else{
-	    fprintf(console, "[Done]\n");
+	    fprintf(console, "Done]\n");
     }
 
 /* 
