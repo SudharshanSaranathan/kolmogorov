@@ -41,13 +41,13 @@
  * --------------
  * Program logic:
  * -------------- 
- * 1. Parse config file.
+ * 1. Read and parse the config file.
  * 2. Read phase-screen residuals from file.
- * 4. Read aperture function from file.
- * 5. Distribute phase-screens to workers.
- * 6. Get PSFs from workers, store in memory.
- * 7. Repeat steps 5-6 for all phase-screens.
- * 8. Save PSFs to disk.
+ * 3. Read aperture function from file.
+ * 4. Distribute residual phase-screens to workers.
+ * 5. Store PSFs returned by workers.
+ * 6. Repeat steps 4-5 for all residual phase-screens.
+ * 7. Save PSFs to disk.
  *
  * -----------------------
  * Additional information:
@@ -97,9 +97,9 @@ int main(int argc, char *argv[]){
     fprintf(console, "- Phase-screen PSFs computation program -\n");
     fprintf(console, "------------------------------------------------------\n");
 
-/* -------------------------------
- * !(1) Read and parse config file.
- * -------------------------------
+/* ------------------------------------
+ * !(1) Read and parse the config file.
+ * ------------------------------------
  */
 
     if(argc < 2){
@@ -152,7 +152,7 @@ int main(int argc, char *argv[]){
         Array<double> aperture;
 
     /* -------------------------------------------
-     * !(2) Read phase-screen residuals from file.
+     * !(2) Read residual phase-screens from file.
      * -------------------------------------------
      */
 
@@ -246,9 +246,11 @@ int main(int argc, char *argv[]){
 
         }
 
-    /* ----------------------
-     * Loop over MPI workers.
-     * ----------------------
+    /* --------------------------------------------------
+     * !(4) Distribute residual phase-screens to workers.
+     * !(5) Store PSFs returned by workers.
+     * !(6) Repeat steps 4-5 for all residual phase-screens.
+     * -----------------------------------------------------
      */
 
         for(int id = 1; id < processes_total; id++){
@@ -400,6 +402,11 @@ int main(int argc, char *argv[]){
             }
 
         }
+
+    /* -----------------------
+     * !(7) Save PSFs to disk.
+     * -----------------------
+     */
 
         fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_psf_to.c_str()); fflush(console);
         write_status = psf.wr_fits(config::write_psf_to.c_str(), config::output_clobber);
