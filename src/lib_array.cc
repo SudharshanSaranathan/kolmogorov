@@ -520,14 +520,16 @@ template <class type>
 int 	     Array<type>::wr_fits(const char *name, bool clobber){
 
 /*
- * Initialize variables
- *
- * Name		Type		Purpose
- * status	int		Variable to store the execution status of FITS routines. 
- * fileptr	fitsfile	Pointer  to the FITS file being created.
- * filename	std::string	Variable to store the name of the FITS file.
- * dimensions	std::vector	Array to store the dimensions of the array, reversed.
+ * Variable declaration.
+ * ----------------------------------------
+ * Name	        Type            Description
+ * ----------------------------------------
+ * status	    int             Execution status of FITS routines. 
+ * fileptr	    fitsfile        FITS file pointer.
+ * filename	    std::string     FITS file name.
+ * dimensions	std::vector     Dimensions of the array, reversed.
  */
+
     int         status  = 0;
     fitsfile   *fileptr = nullptr;
     std::string filename(name);
@@ -536,26 +538,32 @@ int 	     Array<type>::wr_fits(const char *name, bool clobber){
     filename = clobber == true ? "!" + filename : filename;
     std::reverse(std::begin(dimensions), std::end(dimensions));
 
-/*
+/* -------------------------
  * Create FITS file pointer.
+ * -------------------------
  */
+
     fits_create_file(&fileptr, filename.c_str(), &status);
     if(status != 0)
-	return(status);
+        return(status);
 
-/*
+/* ------------------
  * Create FITS image.
+ * ------------------
  */
+
     fits_create_img(fileptr, -64, dimensions.size(), (long int*)dimensions.data(), &status);
     if(status != 0)
-	return(status);
+        return(status);
     
-/*
+/* -------------------
  * Write data to file.
+ * -------------------
  */
+
     fits_write_img(fileptr, TDOUBLE, 1, this->size, this->root_ptr, &status);
     if(status != 0)
-	return(status);
+        return(status);
     
     fits_close_file(fileptr, &status);
     return(status);
