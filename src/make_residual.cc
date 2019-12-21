@@ -39,14 +39,14 @@
  * --------------
  * Program logic:
  * -------------- 
- * 1. Parse config file.
- * 2. Read phase-screens from file.
+ * 1. Read and parse the config file.
+ * 2. Read phase-screen simulations from file.
  * 3. Read basis functions from file.
  * 4. Read basis weights from file.
- * 5. Distribute phase-screens to workers.
- * 6. Get residuals from workers, store in memory.
- * 7. Repeat steps 5-6 for all phase-screens.
- * 8. Save residuals to disk.
+ * 5. Distribute phase-screen simulations to workers.
+ * 6. Store residual phase-screens returned by workers.
+ * 7. Repeat steps 5-6 for all phase-screen simulations.
+ * 8. Save residual phase-screens to disk.
  *
  * -----------------------
  * Additional information:
@@ -96,9 +96,9 @@ int main(int argc, char *argv[]){
     fprintf(console, "- Phase-screen residuals computation program -\n");
     fprintf(console, "------------------------------------------------------\n");
 
-/* -------------------------------
- * !(1) Read and parse config file.
- * -------------------------------
+/* ------------------------------------
+ * !(1) Read and parse the config file.
+ * ------------------------------------
  */
 
     if(argc < 2){
@@ -152,9 +152,9 @@ int main(int argc, char *argv[]){
         Array<double> basis;
         Array<double> weights;
 
-    /* ----------------------------------------
-     * Read phase-screen simulations from file.
-     * ----------------------------------------
+    /* ---------------------------------------------
+     * !(2) Read phase-screen simulations from file.
+     * ---------------------------------------------
      */
 
         fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::write_phase_to.c_str());
@@ -166,9 +166,9 @@ int main(int argc, char *argv[]){
             fprintf(console, "Done]\n");
         }
 
-    /* -------------------------------
-     * Read basis functions from file.
-     * -------------------------------
+    /* ------------------------------------
+     * !(3) Read basis functions from file.
+     * ------------------------------------
      */
 
         fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_basis_from.c_str());
@@ -180,9 +180,9 @@ int main(int argc, char *argv[]){
             fprintf(console, "Done]\n");
         }
 
-    /* -----------------------------
-     * Read basis weights from file.
-     * -----------------------------
+    /* ----------------------------------
+     * !(4) Read basis weights from file.
+     * ----------------------------------
      */
 
         fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_weights_from.c_str());
@@ -305,9 +305,11 @@ int main(int argc, char *argv[]){
 
         }
 
-    /* ----------------------
-     * Loop over MPI workers.
-     * ----------------------
+    /* ----------------------------------------------------
+     * !(5) Distribute phase-screen simulations to workers.
+     * !(6) Store residual phase-screens returned by workers.
+     * !(7) Repeat steps 5-6 for all phase-screen simulations.
+     * -------------------------------------------------------
      */
 
         for(int id = 1; id < processes_total; id++){
@@ -328,9 +330,9 @@ int main(int argc, char *argv[]){
 
             }
 
-        /* -------------------
-         * Send phase-screens.
-         * -------------------
+        /* ------------------------------
+         * Send phase-screen simulations.
+         * ------------------------------
          */
 
             if(phase[index_of_fried_in_queue] != nullptr){
@@ -427,37 +429,37 @@ int main(int argc, char *argv[]){
 	        if(index_of_fried_in_queue < dims_phase[0]){
 
 
-        /* -------------------
-         * Send basis weights.
-         * -------------------
-         */
+           /* -------------------
+            * Send basis weights.
+            * -------------------
+            */
 
-            if(weights[index_of_fried_in_queue] != nullptr){
+                if(weights[index_of_fried_in_queue] != nullptr){
                 
-                MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
-            }else{
+                }else{
 
-                fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                    fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
-            }
+                }
 
-        /* -------------------
-         * Send phase-screens.
-         * -------------------
-         */
+           /* -------------------
+            * Send phase-screens.
+            * -------------------
+            */
 
-            if(phase[index_of_fried_in_queue] != nullptr){
+                if(phase[index_of_fried_in_queue] != nullptr){
                 
-                MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
-            }else{
+                }else{
 
-                fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                    fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
                 
-            }    
+                }    
 	
 	        /* -------------------------
 	         * Update process_fried_map.
@@ -481,7 +483,8 @@ int main(int argc, char *argv[]){
 	         */
 
 		        index_of_fried_in_queue++;
-      	    }
+      	    
+            }
 	        else{
 	    
 	        /* ----------------------------------------------------------
@@ -502,6 +505,11 @@ int main(int argc, char *argv[]){
             }
 
         }
+
+    /* -----------------------------------------
+     * !(8) Save residual phase-screens to disk.
+     * -----------------------------------------
+     */
 
         fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_residual_to.c_str()); fflush(console);
         write_status = residual.wr_fits(config::write_residual_to.c_str(), config::output_clobber);
