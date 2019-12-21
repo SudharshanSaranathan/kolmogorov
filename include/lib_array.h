@@ -67,11 +67,12 @@ private:
  * ------------------------------------
  * Name         Type        Description
  * ------------------------------------
- * data_ptr_1D  type*       Pointer to 1D array.    
- * data_ptr_2D  type**      Pointer to 2D array.        
- * data_ptr_3D  type***     Pointer to 3D array.
- * data_ptr_4D  type****    Pointer to 4D array.
- * 
+ * data_ptr_1D  type*       1D pointer.  
+ * data_ptr_2D  type**      2D array of pointers.       
+ * data_ptr_3D  type***     3D array of pointers.
+ * data_ptr_4D  type****    4D array of pointers.
+ * root_ptr     type*       1D pointer to underlying contiguous data array. 
+ *
  * -------------------
  * Additional Comments
  * -------------------
@@ -84,22 +85,6 @@ private:
     type**   data_ptr_2D = nullptr;
     type***  data_ptr_3D = nullptr;
     type**** data_ptr_4D = nullptr;
-
-public:
-/*
- * Pointers declaration.
- * ------------------------------------
- * Name         Type        Description
- * ------------------------------------
- * root_ptr     type*       Pointer for 1D array
- * 
- * -------------------
- * Additional Comments
- * -------------------
- * root_ptr stores the actual data, irrespective of dimensions,
- * as a 1D contiguous array. 
- */
-
     type*    root_ptr    = nullptr;
 
 public:
