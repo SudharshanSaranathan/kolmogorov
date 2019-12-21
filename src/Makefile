@@ -16,15 +16,18 @@ OBJS_  = config.o lib_array.o test_lib_mem.o test_lib_array.o
 DEPS   = ${patsubst %,${INCDIR}/%,${DEPS_}}
 OBJS   = ${patsubst %,${OBJDIR}/%,${OBJS_}}
 
-LIBTESTOBJS_   = lib_array.o test_lib_array.o
-MEMTESTOBJS_   = test_lib_mem.o
-MAKEPHASEOBJS_ = config.o lib_array.o make_phase.o
-MAKERESDLOBJS_ = config.o lib_array.o make_residual.o
+LIB_TEST_OBJS_   = lib_array.o test_lib_array.o
+MEM_TEST_OBJS_   = test_lib_mem.o
 
-LIBTESTOBJS    = ${patsubst %,${OBJDIR}/%,${LIBTESTOBJS_}}
-MEMTESTOBJS    = ${patsubst %,${OBJDIR}/%,${MEMTESTOBJS_}}
-MAKEPHASEOBJS  = ${patsubst %,${OBJDIR}/%,${MAKEPHASEOBJS_}}
-MAKERESDLOBJS  = ${patsubst %,${OBJDIR}/%,${MAKERESDLOBJS_}}
+MAKE_PHASE_OBJS_ = config.o lib_array.o make_phase.o
+MAKE_RES_OBJS_   = config.o lib_array.o make_residual.o
+MAKE_PSF_OBJS_   = config.o lib_array.o make_psf.o
+
+LIB_TEST_OBJS    = ${patsubst %,${OBJDIR}/%,${LIB_TEST_OBJS_}}
+MEM_TEST_OBJS    = ${patsubst %,${OBJDIR}/%,${MEM_TEST_OBJS_}}
+MAKE_PHASE_OBJS  = ${patsubst %,${OBJDIR}/%,${MAKE_PHASE_OBJS_}}
+MAKE_RES_OBJS    = ${patsubst %,${OBJDIR}/%,${MAKE_RES_OBJS_}}
+MAKE_PSF_OBJS    = ${patsubst %,${OBJDIR}/%,${MAKE_PSF_OBJS_}}
 
 
 .PHONY: all
@@ -32,18 +35,30 @@ MAKERESDLOBJS  = ${patsubst %,${OBJDIR}/%,${MAKERESDLOBJS_}}
 ${OBJDIR}/%.o: %.cc ${DEPS}
 	${CC} ${CSTD} -c -o $@ $< ${IFLAGS} ${OFLAGS} ${LIBS}
 
-test_lib_mem: ${MEMTESTOBJS}
+test_lib_mem: ${MEM_TEST_OBJS}
 	${CC} ${CSTD} -o ${BINDIR}/$@ $< ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
 
-test_lib_array: ${LIBTESTOBJS}
+test_lib_array: ${LIB_TEST_OBJS}
 	${CC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
 
-make_phase: ${MAKEPHASEOBJS}
+make_phase: ${MAKE_PHASE_OBJS}
 	${CC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
 
-make_residual: ${MAKERESDLOBJS}
+make_residual: ${MAKE_RES_OBJS}
+	${CC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
+
+make_psf: ${MAKE_PSF_OBJS}
 	${CC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
 
 clean:
 	rm -rf ${OBJS}
-	rm -rf ${BINDIR}/test_lib_mem ${BINDIR}/test_lib_array ${BINDIR}/make_phase ${BINDIR}/make_residual
+	rm -rf ${MEM_TEST_OBJS}
+	rm -rf ${LIB_TEST_OBJS}
+	rm -rf ${MAKE_PHASE_OBJS}
+	rm -rf ${MAKE_RES_OBJS}
+	rm -rf ${MAKE_PSF_OBJS}
+	rm -rf ${BINDIR}/test_lib_mem 
+	rm -rf ${BINDIR}/test_lib_array
+	rm -rf ${BINDIR}/make_phase
+	rm -rf ${BINDIR}/make_residual
+	rm -rf ${BINDIR}/make_psf

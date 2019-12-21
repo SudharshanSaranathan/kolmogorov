@@ -510,8 +510,9 @@ int          Array<type>::rd_fits(const char *filename){
     if(status != 0)
         return(status);
 
-    fits_close_file(file, &status);
     *this = data;
+    
+    fits_close_file(file, &status);
     return(EXIT_SUCCESS);
 }
 

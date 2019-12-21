@@ -26,7 +26,7 @@
  * ------
  * Usage:
  * ------
- * mpiexec -np <cores>> ./make_phase <config_file>
+ * mpiexec -np <cores> ./make_phase <config_file>
  *
  * -------
  * Inputs:
@@ -67,6 +67,7 @@ int main(int argc, char *argv[]){
  * process_total    int         Store the total number of MPI processes
  * mpi_recv_count   int         Store the count of data received in MPI_Recv, see MPI documentation for explanation.
  * read_status      int         File read status.
+ * write_status     int         File write status.
  */
    
     MPI_Status status;
@@ -74,6 +75,7 @@ int main(int argc, char *argv[]){
     int processes_total = 0;
     int mpi_recv_count = 0;
     int read_status = 0;
+    int write_status = 0;
 
 /* -------------------------
  * Initialize MPI framework.
@@ -104,12 +106,12 @@ int main(int argc, char *argv[]){
 	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
-    fprintf(console, "(Info)\tReading configuration:\t\t");
+    fprintf(console, "(Info)\tReading configuration:\t[%s, ", argv[1]);
     if(config_parse(argv[1]) == EXIT_FAILURE){
-	    fprintf(console, "[Failed]\n");
+	    fprintf(console, "Failed]\n");
 	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }else{
-	    fprintf(console, "[Done]\n");
+	    fprintf(console, "Done]\n");
     }
     
 /*
@@ -151,14 +153,14 @@ int main(int argc, char *argv[]){
      * -------------------------------------
      */
 
-        fprintf(console, "(Info)\tReading file %s:\t", config::read_fried_from.c_str());
+        fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_fried_from.c_str());
         read_status = fried.rd_fits(config::read_fried_from.c_str());
         if(read_status != EXIT_SUCCESS){
-	        fprintf(console, "[Failed, Err code: %d]\n", read_status);
+	        fprintf(console, "Failed with err code: %d]\n", read_status);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
     	}
 	    else{
-	        fprintf(console, "[Done]\n");
+	        fprintf(console, "Done]\n");
 	    }
 
     /*
@@ -192,10 +194,10 @@ int main(int argc, char *argv[]){
      * -----------------------------------------------
      */
 
-	    fprintf(console, "(Info)\tReading file %s:\t", config::read_aperture_function_from.c_str()); fflush(console);
+	    fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_aperture_function_from.c_str()); fflush(console);
 	    read_status = aperture.rd_fits(config::read_aperture_function_from.c_str());
 	    if(read_status != EXIT_SUCCESS){
-	        fprintf(console, "[Failed, Err code: %d]\n", read_status);
+	        fprintf(console, "Failed with err code: %d]\n", read_status);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
 	    }
 
@@ -215,18 +217,20 @@ int main(int argc, char *argv[]){
      */
 
 	    if(dims_aperture[0] != config::sims_size_x && dims_aperture[1] != config::sims_size_y){
-	        fprintf(console, "[Failed, expected aperture with dimensions [%ld %ld]]\n", config::sims_size_x, config::sims_size_y);
+	        
+            fprintf(console, "Failed, expected aperture with size [%ld %ld]]\n", config::sims_size_x, config::sims_size_y);
 	        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
 	    }
 	    else{
-	        fprintf(console, "[Done]\n");
+	        fprintf(console, "Done]\n");
 	    }
 
 #endif
         
         percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
         percent_completed = (100.0 * fried_completed) / fried.get_size();
-        fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); fflush(console);
+        fprintf(stdout, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); fflush(console);
     
     /*
      * Variable declaration:
@@ -296,7 +300,7 @@ int main(int argc, char *argv[]){
 	         */
 
                 percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
-                fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                fprintf(stdout, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
                 fflush(console);
 
             }
@@ -370,7 +374,7 @@ int main(int argc, char *argv[]){
 	     */
 
 	        percent_completed = (100.0 * fried_completed) / fried.get_size();
-	        fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+	        fprintf(stdout, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
 	        fflush(console);
 
 	    /* --------------------------------------------------------------------
@@ -407,7 +411,7 @@ int main(int argc, char *argv[]){
 	         */
 
                 percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
-                fprintf(stdout, "\r(Info)\tSimulating phase-screens: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+                fprintf(stdout, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
                 fflush(console);
       	    }
 	        
@@ -420,6 +424,13 @@ int main(int argc, char *argv[]){
 
 		        MPI_Send(nullptr, 0, MPI_CHAR, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
 	        
+            /* --------------------------
+             * Decrement processes_total;
+             * --------------------------
+             */
+
+                processes_total--;
+
             }
 	    }
 
@@ -428,12 +439,18 @@ int main(int argc, char *argv[]){
      * ----------------------------------------
      */
 
-	    fprintf(console, "\n(Info)\tWriting phase to file:\t\t"); fflush(console);
-	    if(phase.wr_fits(config::write_phase_to.c_str(), config::output_clobber) != EXIT_SUCCESS){
-	        fprintf(console, "[Failed]\n");
-	    }
+	    fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_phase_to.c_str()); fflush(console);
+        write_status = phase.wr_fits(config::write_phase_to.c_str(), config::output_clobber);
+
+	    if(write_status != EXIT_SUCCESS){
+
+	        fprintf(console, "Failed with err code: %d]\n", write_status);
+	    
+        }
 	    else{
-	        fprintf(console, "[Done]\n");
+
+	        fprintf(console, "Done]\n");
+
         }
 
     /*
@@ -632,6 +649,13 @@ int main(int argc, char *argv[]){
 
 	        MPI_Recv(&fried, 1,  MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         }
+
+        /* ------------------------
+         * Write FFT wisdom to file
+         * ------------------------
+         */
+            
+            fftw_export_wisdom_to_filename(config::read_fftwisdom_from.c_str());
     }
 
     MPI_Finalize();

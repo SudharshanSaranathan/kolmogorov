@@ -17,6 +17,7 @@ public:
     static string write_log_to;
     static string write_phase_to;
     static string write_residual_to;
+    static string write_psf_to;
 
     static uint   sims_per_fried;
     static uint   sims_size_x;
@@ -28,6 +29,7 @@ public:
 
     static bool   output_save;
     static bool   output_clobber;
+    static bool   get_airy_disk;
 
 } config;
 
