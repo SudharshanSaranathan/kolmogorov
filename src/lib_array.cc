@@ -482,11 +482,40 @@ int          Array<type>::wr_bin(const char *filename, bool clobber){
 template <class type>
 int          Array<type>::rd_fits(const char *filename){
 
+    int fits_bitpix   = 0;
+    int fits_datatype = 0;
+
+    if(std::is_same<type, float>::value){
+
+        fits_bitpix   = -32;
+        fits_datatype = TFLOAT;
+
+    }else if(std::is_same<type, double>::value){
+
+        fits_bitpix   = -64;
+        fits_datatype = TDOUBLE;
+
+    }else if(std::is_same<type, std::complex<float>>::value){
+
+        fits_bitpix   = -32;
+        fits_datatype = TCOMPLEX;
+
+    }else if(std::is_same<type, std::complex<double>>::value){
+
+        fits_bitpix   = -64;
+        fits_datatype = TDBLCOMPLEX;
+
+    }else{
+
+        return(EXIT_FAILURE);
+
+    }
+
     fitsfile *file = nullptr;
+    sizt count = 1;
     int n_axis = 0;
     int status = 0;
 
-    sizt        count = 1;
     sizt_vector fpix;
     sizt_vector dims;
 
@@ -506,7 +535,7 @@ int          Array<type>::rd_fits(const char *filename){
 
     count = sizeof_vector(dims);
     fpix.resize(n_axis); std::fill(fpix.begin(), fpix.end(), 1);
-    fits_read_pix(file, TDOUBLE, (long int*)fpix.data(), count, nullptr, data.root_ptr, nullptr, &status);
+    fits_read_pix(file, fits_datatype, (long int*)fpix.data(), count, nullptr, data.root_ptr, nullptr, &status);
     if(status != 0)
         return(status);
 
@@ -518,6 +547,35 @@ int          Array<type>::rd_fits(const char *filename){
 
 template <class type>
 int 	     Array<type>::wr_fits(const char *name, bool clobber){
+
+    int fits_bitpix   = 0;
+    int fits_datatype = 0;
+
+    if(std::is_same<type, float>::value){
+
+        fits_bitpix   = -32;
+        fits_datatype = TFLOAT;
+
+    }else if(std::is_same<type, double>::value){
+
+        fits_bitpix   = -64;
+        fits_datatype = TDOUBLE;
+
+    }else if(std::is_same<type, std::complex<float>>::value){
+
+        fits_bitpix   = -32;
+        fits_datatype = TCOMPLEX;
+
+    }else if(std::is_same<type, std::complex<double>>::value){
+
+        fits_bitpix   = -64;
+        fits_datatype = TDBLCOMPLEX;
+
+    }else{
+
+        return(EXIT_FAILURE);
+
+    }
 
 /*
  * Variable declaration.
@@ -552,7 +610,7 @@ int 	     Array<type>::wr_fits(const char *name, bool clobber){
  * ------------------
  */
 
-    fits_create_img(fileptr, -64, dimensions.size(), (long int*)dimensions.data(), &status);
+    fits_create_img(fileptr, fits_bitpix, dimensions.size(), (long int*)dimensions.data(), &status);
     if(status != 0)
         return(status);
     
@@ -561,7 +619,7 @@ int 	     Array<type>::wr_fits(const char *name, bool clobber){
  * -------------------
  */
 
-    fits_write_img(fileptr, TDOUBLE, 1, this->size, this->root_ptr, &status);
+    fits_write_img(fileptr, fits_datatype, 1, this->size, this->root_ptr, &status);
     if(status != 0)
         return(status);
     
