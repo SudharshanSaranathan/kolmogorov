@@ -613,9 +613,9 @@ int main(int argc, char *argv[]){
                    
                     }                
 
-                /* -------------------------------------------------
+                /* ---------------------------------------------
                  * Copy psf_single back into psf_per_fried[ind].
-                 * -------------------------------------------------
+                 * ---------------------------------------------
                  */
 
                     memcpy(psf_per_fried[ind], psf_single[0], psf_single.get_size() * sizeof(precision));
@@ -634,9 +634,9 @@ int main(int argc, char *argv[]){
             }
 
 
-        /* ------------------------
-         * Write FFT wisdom to file
-         * ------------------------
+        /* -------------------------
+         * Write FFT wisdom to file.
+         * -------------------------
          */
             
             fftw_export_wisdom_to_filename(config::read_fft_psf_wisdom_from.c_str());

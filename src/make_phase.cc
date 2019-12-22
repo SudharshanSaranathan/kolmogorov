@@ -762,9 +762,9 @@ int main(int argc, char *argv[]){
         
         }
 
-        /* ------------------------
-         * Write FFT wisdom to file
-         * ------------------------
+        /* -------------------------
+         * Write FFT wisdom to file.
+         * -------------------------
          */
             
             fftw_export_wisdom_to_filename(config::read_fft_phase_wisdom_from.c_str());
