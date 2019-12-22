@@ -104,8 +104,10 @@ int main(int argc, char *argv[]){
  */
 
     if(argc < 2){
-	    fprintf(console, "(Error)\tExpected configuration file, calling MPI_Abort()\n");
-	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+
+        fprintf(console, "(Error)\tExpected configuration file, calling MPI_Abort()\n");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+   
     }
 
     fprintf(console, "(Info)\tReading configuration:\t[%s, ", argv[1]);
@@ -116,7 +118,7 @@ int main(int argc, char *argv[]){
         fprintf(console, "Failed]\n");
         fflush (console);
 
-	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     
     }else{
 
@@ -176,10 +178,10 @@ int main(int argc, char *argv[]){
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
 
         }
-	    else{
-
-	        fprintf(console, "Done]\n");
-	        fflush (console);
+        else{
+            
+            fprintf(console, "Done]\n");
+            fflush (console);
         
         }
 
@@ -193,9 +195,9 @@ int main(int argc, char *argv[]){
     * process_fried_map     sizt_vector     Map of which MPI process is working on which fried parameter.
     */
     
-	    const sizt_vector dims_phase{fried.get_size(), config::sims_per_fried, config::sims_size_x, config::sims_size_y};
-	    const sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
-	    sizt_vector process_fried_map(fried.get_size() + 1);
+        const sizt_vector dims_phase{fried.get_size(), config::sims_per_fried, config::sims_size_x, config::sims_size_y};
+        const sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
+        sizt_vector process_fried_map(fried.get_size() + 1);
     
 #ifdef _APERTURE_
 
@@ -214,13 +216,13 @@ int main(int argc, char *argv[]){
      * -----------------------------------------------
      */
 
-	    fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_aperture_function_from.c_str());
+        fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_aperture_function_from.c_str());
         fflush (console);
 
-	    read_status = aperture.rd_fits(config::read_aperture_function_from.c_str());
-	    if(read_status != EXIT_SUCCESS){
+        read_status = aperture.rd_fits(config::read_aperture_function_from.c_str());
+        if(read_status != EXIT_SUCCESS){
 
-	        fprintf(console, "Failed with err code: %d]\n", read_status);
+            fprintf(console, "Failed with err code: %d]\n", read_status);
             fflush (console);
             
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -234,15 +236,15 @@ int main(int argc, char *argv[]){
      * --------------------------------------------
      * dims_aperture    sizt_vector     Dimensions of the aperture, in pixels.
      */
-
-	    const sizt_vector dims_aperture = aperture.get_dims();
+        
+        const sizt_vector dims_aperture = aperture.get_dims();
 
     /* ----------------------------------------------------------------------------
      * Check that dimensions of the aperture match values specified in config file.
      * ----------------------------------------------------------------------------
      */
 
-	    if(dims_aperture[0] != config::sims_size_x && dims_aperture[1] != config::sims_size_y){
+        if(dims_aperture[0] != config::sims_size_x && dims_aperture[1] != config::sims_size_y){
 	        
             fprintf(console, "Failed, expected aperture with size [%ud %ud]]\n", config::sims_size_x, config::sims_size_y);
             fflush (console);
@@ -250,7 +252,7 @@ int main(int argc, char *argv[]){
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
 	    }
-	    else{
+        else{
 
             fprintf(console, "Done]\n");
             fflush (console);
@@ -299,7 +301,7 @@ int main(int argc, char *argv[]){
                 
                 if(aperture[0] != nullptr){
 
-		            MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
 
                 }else{
 
@@ -311,19 +313,20 @@ int main(int argc, char *argv[]){
                 }
 
 #endif
-	        /* -------------------------------------
-	         * Decrement number of processes in use.
+                
+            /* -------------------------------------
+             * Decrement number of processes in use.
              * -------------------------------------
-	         */
+             */
 		
-		        processes_total--;          
+                processes_total--;          
 
             }
             
         /* --------------------------------------------------------------------------------------------
          * if rank >= number of fried parameters, send fried parameter and aperture function to worker.
-         * -------------------------------------------------------------------------------------------- 
-	     */
+         * --------------------------------------------------------------------------------------------
+         */
             
             else{
 
@@ -344,7 +347,7 @@ int main(int argc, char *argv[]){
 
                 if(aperture[0] != nullptr){
                     
-		            MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
                 }else{
 
@@ -357,12 +360,12 @@ int main(int argc, char *argv[]){
 
 #endif
 
-	        /* -------------------------------------------------------
-	         * Store index_of_fried_in_queue in process_fried_map[id].
-	         * -------------------------------------------------------
-	         */
+            /* -------------------------------------------------------
+             * Store index_of_fried_in_queue in process_fried_map[id].
+             * -------------------------------------------------------
+             */
 
-		        process_fried_map[id] = index_of_fried_in_queue;
+                process_fried_map[id] = index_of_fried_in_queue;
 
             /* ----------------------------------
              * Increment index_of_fried_in_queue.
@@ -415,9 +418,9 @@ int main(int argc, char *argv[]){
          * Variable declaration:
          *---------------------------------
          * Name         Type    Description
-	     * --------------------------------
-	     * fried_index  sizt    Index of simulated fried parameter.
-	     */
+         * --------------------------------
+         * fried_index  sizt    Index of simulated fried parameter.
+         */
 
         /* -------------------------------------------------
          * Get index of fried parameter processed by worker.
@@ -449,17 +452,17 @@ int main(int argc, char *argv[]){
          * --------------------------
          */
 
-	        fried_completed++;
+            fried_completed++;
       
         /* -------------------------------------
          * Update and display percent_completed.
          * ------------------------------------- 
          */
 
-	        percent_completed = (100.0 * fried_completed) / fried.get_size();
+            percent_completed = (100.0 * fried_completed) / fried.get_size();
 	        
-            fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-	        fflush (console);
+            fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed);
+            fflush (console);
 
         /* --------------------------------------------------------------------
          * Assign new fried parameter, if available, to worker, else, shutdown. 
