@@ -555,6 +555,21 @@ int main(int argc, char *argv[]){
         Array<cmpx>      pupil_function(dims_psf_single);
         Array<cmpx>      pupil_function_fourier(dims_psf_single);
 
+    /* -------------------------------
+     * Import fft wisdom if available.
+     * -------------------------------
+     */
+
+        fftw_import_wisdom_from_filename(config::read_fft_psf_wisdom_from.c_str());
+
+    /*
+     * Variable declaration:
+     * --------------------------------
+     * Name     Type        Description
+     * --------------------------------
+     * forward  fftw_plan   Re-usable FFTW plan for the forward transformation.
+     */
+
         fftw_plan forward = fftw_plan_dft_2d(dims_psf_single[0], dims_psf_single[1], reinterpret_cast<fftw_complex*>(pupil_function[0]),\
                                              reinterpret_cast<fftw_complex*>(pupil_function_fourier[0]), FFTW_FORWARD, FFTW_MEASURE);
 
@@ -616,8 +631,16 @@ int main(int argc, char *argv[]){
                     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
                 
                 }
-
             }
+
+
+        /* ------------------------
+         * Write FFT wisdom to file
+         * ------------------------
+         */
+            
+            fftw_export_wisdom_to_filename(config::read_fft_psf_wisdom_from.c_str());
+
         }
     }
 
