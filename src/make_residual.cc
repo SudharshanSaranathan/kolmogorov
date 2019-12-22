@@ -59,15 +59,16 @@ int main(int argc, char *argv[]){
 
 /*
  *  Variable declaration:
- *  -----------------------------------------------
- *  Name		Type		Description
- *  -----------------------------------------------
- *  status:		MPI_status	See MPI documentation.
- *  process_rank:	int		Rank of MPI processes.
- *  process_total:	int		Store the total number of MPI processes
- *  mpi_recv_count:	int		Store the count of data received in MPI_Recv, see MPI documentation for explanation.
- *  read_status:	int		File read status.
- *  write_status:   int     File write status.
+ *  ---------------------------------------
+ *  Name            Type        Description
+ *  ---------------------------------------
+ *  status          MPI_status  See MPI documentation.
+ *  process_rank    int         Rank of MPI processes.
+ *  process_total   int         Store the total number of MPI processes
+ *  mpi_recv_count  int         Store the count of data received in MPI_Recv, see MPI documentation for explanation.
+ *  read_status     int         File read status.
+ *  write_status    int         File write status.
+ *  mpi_precision   int         MPI_FLOAT or MPI_DOUBLE.
  */
    
     MPI_Status status;
@@ -76,6 +77,7 @@ int main(int argc, char *argv[]){
     int mpi_recv_count = 0;
     int read_status = 0;
     int write_status = 0;
+    int mpi_precision = std::is_same<precision, float>::value == true ? MPI_FLOAT : MPI_DOUBLE;
 
 /* --------------
  * Initialize MPI
@@ -140,30 +142,30 @@ int main(int argc, char *argv[]){
      * --------------------------------------------
      * Name                     Type    Description
      * --------------------------------------------
-     * index_of_fried_in_queue  long    Index of the next fried parameter.
-     * fried_completed          long    Number of fried parameters processed.
-     * percent_assigned         double  Percentage of fried assigned.
-     * percent_completed        double  Percentage of fried completed.
+     * index_of_fried_in_queue  ulng    Index of the next fried parameter.
+     * fried_completed          ulng    Number of fried parameters processed.
+     * percent_assigned         float   Percentage of fried assigned.
+     * percent_completed        float   Percentage of fried completed.
      */
 
-        long    index_of_fried_in_queue = 0;
-        long    fried_completed         = 0;
-        double  percent_assigned        = 0.0;
-        double  percent_completed       = 0.0;
+        ulng  index_of_fried_in_queue = 0;
+        ulng  fried_completed         = 0;
+        float percent_assigned        = 0.0;
+        float percent_completed       = 0.0;
 
     /*
      * Array declaration.
-     * ------------------------------------
-     * Name     Type            Description
-     * ------------------------------------
-     * phase    Array<double>   Phase-screen simulations, see 'lib_array.h' for datatype.
-     * basis    Array<double>   Basis functions on aperture.
-     * weights  Array<double>   Basis weights.
+     * ----------------------------------------
+     * Name     Type                Description
+     * ----------------------------------------
+     * phase    Array<precision>    Phase-screen simulations, see 'lib_array.h' for datatype.
+     * basis    Array<precision>    Basis functions on aperture.
+     * weights  Array<precision>    Basis weights.
      */
 
-        Array<double> phase;
-        Array<double> basis;
-        Array<double> weights;
+        Array<precision> phase;
+        Array<precision> basis;
+        Array<precision> weights;
 
     /* ---------------------------------------------
      * !(2) Read phase-screen simulations from file.
@@ -235,9 +237,9 @@ int main(int argc, char *argv[]){
 
     /*
      * Vector declaration.
-     * ----------------------------------------------------
+     * ------------------------------------------------
      * Name                 Type            Description
-     * ----------------------------------------------------
+     * ------------------------------------------------
      * dims_phase           sizt_vector     Dimensions of phase-screen simulations.
      * dims_basis           sizt_vector     Dimensions of basis functions.
      * dims_weights         sizt_vector     Dimensions of basis weights.
@@ -258,7 +260,7 @@ int main(int argc, char *argv[]){
 
         if(dims_phase[2] != config::sims_size_x  || dims_phase[3] != config::sims_size_y){
      
-            fprintf(console, "(Error)\texpected phase-screens with size [%ld %ld], calling MPI_Abort()\n", config::sims_size_x, config::sims_size_y);
+            fprintf(console, "(Error)\texpected phase-screens with size [%ud %ud], calling MPI_Abort()\n", config::sims_size_x, config::sims_size_y);
             fflush (console);
 
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -267,7 +269,7 @@ int main(int argc, char *argv[]){
 
         if(dims_basis[1] != config::sims_size_x  || dims_basis[2] != config::sims_size_y){
      
-            fprintf(console, "(Error)\texpected basis functions with size [%ld %ld], calling MPI_Abort()\n", config::sims_size_x, config::sims_size_y);
+            fprintf(console, "(Error)\texpected basis functions with size [%ud %ud], calling MPI_Abort()\n", config::sims_size_x, config::sims_size_y);
             fflush (console);
             
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -285,13 +287,13 @@ int main(int argc, char *argv[]){
 
      /*
      * Array declaration.
-     * ----------------------------------------
-     * Name         Type            Description
-     * ----------------------------------------
-     * residual     Array<double>   Residual phase-screens, see 'lib_array.h' for datatype.
+     * --------------------------------------------
+     * Name         Type                Description
+     * --------------------------------------------
+     * residual     Array<precision>    Residual phase-screens, see 'lib_array.h' for datatype.
      */
 
-        Array<double> residual(phase);
+        Array<precision> residual(phase);
 
     /*
      * Variable declaration.
@@ -311,7 +313,7 @@ int main(int argc, char *argv[]){
          * ------------------------------------------------------
          */
 
-            if(id > dims_phase[0]){
+            if(id > int(dims_phase[0])){
 
                 MPI_Send(&dims_basis_naxis, 1, MPI_LONG, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
                 MPI_Send( dims_basis.data(), dims_basis_naxis, MPI_LONG, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
@@ -348,7 +350,7 @@ int main(int argc, char *argv[]){
 
             if(basis[0] != nullptr){
 
-                MPI_Send(basis[0], basis.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(basis[0], basis.get_size(), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
             }else{
 
@@ -376,7 +378,7 @@ int main(int argc, char *argv[]){
 
             if(weights[index_of_fried_in_queue] != nullptr){
                 
-                MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
             }else{
 
@@ -394,7 +396,7 @@ int main(int argc, char *argv[]){
 
             if(phase[index_of_fried_in_queue] != nullptr){
                 
-                MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
             }else{
 
@@ -439,7 +441,7 @@ int main(int argc, char *argv[]){
 	     */	
 	
 	        MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-	        MPI_Get_count(&status, MPI_DOUBLE, &mpi_recv_count);
+	        MPI_Get_count(&status, mpi_precision, &mpi_recv_count);
 
 	    /*
 	     * Variable declaration:
@@ -455,7 +457,6 @@ int main(int argc, char *argv[]){
          * -------------------------------------------------
 	     */
 
-            sizt fried_index_weights = process_fried_map[status.MPI_SOURCE];
 	        sizt fried_index_phase   = process_fried_map[status.MPI_SOURCE];
 
 	    /* ------------------------------------------------------
@@ -463,7 +464,7 @@ int main(int argc, char *argv[]){
          * ------------------------------------------------------
 	     */
 
-	        MPI_Recv(residual[fried_index_phase], sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+	        MPI_Recv(residual[fried_index_phase], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
         /* --------------------------
 	     * Increment fried_completed.
@@ -497,7 +498,7 @@ int main(int argc, char *argv[]){
 
                 if(weights[index_of_fried_in_queue] != nullptr){
                 
-                    MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], mpi_precision, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
                 }else{
 
@@ -515,7 +516,7 @@ int main(int argc, char *argv[]){
 
                 if(phase[index_of_fried_in_queue] != nullptr){
                 
-                    MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
                 }else{
 
@@ -560,8 +561,8 @@ int main(int argc, char *argv[]){
                 
                 if(weights[0] != nullptr && phase[0] != nullptr){
 
-                    MPI_Send(weights[0], dims_basis[0], MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
-		            MPI_Send(phase[0], sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                    MPI_Send(weights[0], dims_basis[0], mpi_precision, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+		            MPI_Send(phase[0], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
                 
                 }else{
 
@@ -645,33 +646,33 @@ int main(int argc, char *argv[]){
 
     /*
      * Array declaration.
-     * ----------------------------------------
-     * Name         Type            Description
-     * ----------------------------------------
-     * phase        Array<double>   Phase-screen simulations.
-     * basis        Array<double>   Basis functions.
-     * weights      Array<double>   Basis weights.
+     * --------------------------------------------
+     * Name         Type                Description
+     * --------------------------------------------
+     * phase        Array<precision>    Phase-screen simulations.
+     * basis        Array<precision>    Basis functions.
+     * weights      Array<precision>    Basis weights.
      */
 
         dims_weights[0] = dims_basis[0];
 
-        Array<double> phase(dims_phase_per_fried);
-        Array<double> basis(dims_basis);
-        Array<double> weights(dims_weights);
+        Array<precision> phase(dims_phase_per_fried);
+        Array<precision> basis(dims_basis);
+        Array<precision> weights(dims_weights);
 
     /* -------------------------------------
      * Get basis functions from master rank.
      * -------------------------------------
      */
 
-        MPI_Recv(basis[0], basis.get_size(), MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(basis[0], basis.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     /*
      * Vector declaration.
      * ----------------------------------------
      * Name         Type            Description
      * ----------------------------------------
-     * basis_norm   Array<double>   L2 normalization of the basis functions.
+     * basis_norm   sizt_vector     L2 normalization of the basis functions.
      */
 
         sizt_vector basis_norm(dims_basis[0]);
@@ -701,33 +702,32 @@ int main(int argc, char *argv[]){
          * ------------------------------
          */
 
-            MPI_Recv(weights[0], dims_weights[0], MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(weights[0], dims_weights[0], mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
         /* -----------------------------------------
          * Get phase-screen simulations from master.
          * -----------------------------------------
          */
 
-            MPI_Recv(phase[0], phase.get_size(), MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
+            MPI_Recv(phase[0], phase.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
             if(status.MPI_TAG == mpi_cmds::stayalive){
 
             /* ---------------------------------------------
              * Compute the residuals from the phase-screens.
              * ---------------------------------------------
              */
-                Array<double> phase_single(dims_phase_single);
+                Array<precision> phase_single(dims_phase_single);
                 for(sizt sim = 0; sim < dims_phase_per_fried[0]; sim++){
 
-                    memcpy(phase_single[0], phase[sim], phase_single.get_size()*sizeof(double));
+                    memcpy(phase_single[0], phase[sim], phase_single.get_size()*sizeof(precision));
                     make_residual_phase_screen(phase_single, basis, weights, basis_norm);
-                    memcpy(phase[sim], phase_single[0], phase_single.get_size()*sizeof(double));
+                    memcpy(phase[sim], phase_single[0], phase_single.get_size()*sizeof(precision));
 
                 }
 
                 if(phase[0] != nullptr){
 
-                    MPI_Send(phase[0], phase.get_size(), MPI_DOUBLE, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+                    MPI_Send(phase[0], phase.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
 
                 }else{
 
