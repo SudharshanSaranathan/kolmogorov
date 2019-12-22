@@ -11,7 +11,8 @@ public:
     static string read_fried_from;
     static string read_basis_from;
     static string read_weights_from;
-    static string read_fftwisdom_from;
+    static string read_fft_psf_wisdom_from;
+    static string read_fft_phase_wisdom_from;
     static string read_aperture_function_from;
 
     static string write_log_to;
