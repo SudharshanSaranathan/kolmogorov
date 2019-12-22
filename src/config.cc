@@ -26,57 +26,58 @@ bool   config::output_clobber = false;
 bool   config::get_airy_disk  = false;
 
 int config_parse(const char* filename){
-  unsigned int counter = 0;
-  std::ifstream infile(filename);
-  std::string line;
-  if(!infile)
-    return(EXIT_FAILURE);
+  
+    std::ifstream infile(filename);
+    std::string line;
+    if(!infile)
+        return(EXIT_FAILURE);
 
-  while(std::getline(infile, line)){
+    while(std::getline(infile, line)){
     
-    std::stringstream tokens(line);
-    std::string key, value;
-    std::getline(tokens, key, ':');
-    tokens >> std::ws;
-    std::getline(tokens, value, ':');
+        std::stringstream tokens(line);
+        std::string key, value;
+        std::getline(tokens, key, ':');
+        tokens >> std::ws;
+        std::getline(tokens, value, ':');
 
-    if(key == "fried")
-	    config::read_fried_from = value;
-    else if(key == "basis")
-	    config::read_basis_from = value;
-    else if(key == "aperture")
-	    config::read_aperture_function_from = value;
-    else if(key == "weights")
-	    config::read_weights_from = value;
-    else if(key == "fftwisdom")
-	    config::read_fftwisdom_from = value;
-    else if(key == "log")
-	    config::write_log_to = value;
-    else if(key == "phase")
-	    config::write_phase_to = value;
-    else if(key == "residual")
-	    config::write_residual_to = value;
-    else if(key == "psf")
-	    config::write_psf_to = value;
-    else if(key == "realizations")
-	    config::sims_per_fried = std::stoi(value);
-    else if(key == "size_x")
-	    config::sims_size_x = std::stoi(value);
-    else if(key == "size_y")
-	    config::sims_size_y = std::stoi(value);
-    else if(key == "phase_size")
-	    config::phase_size  = std::stof(value);
-    else if(key == "aperture_size")
-	    config::aperture_size = std::stof(value);
-    else if(key == "aperture_sampling")
-	    config::aperture_sampling_factor = std::stof(value);
-    else if(key == "save")
-	    config::output_save = value == "Y";
-    else if(key == "clobber")
-	    config::output_clobber = value == "Y"; 
-    else if(key == "airy_disk")
-	    config::get_airy_disk = value == "Y";
-  }
+        if(key == "fried")
+	        config::read_fried_from = value;
+        else if(key == "basis")
+	        config::read_basis_from = value;
+        else if(key == "aperture")
+	        config::read_aperture_function_from = value;
+        else if(key == "weights")
+	        config::read_weights_from = value;
+        else if(key == "fftwisdom")
+	        config::read_fftwisdom_from = value;
+        else if(key == "log")
+	        config::write_log_to = value;
+        else if(key == "phase")
+	        config::write_phase_to = value;
+        else if(key == "residual")
+	        config::write_residual_to = value;
+        else if(key == "psf")
+	        config::write_psf_to = value;
+        else if(key == "realizations")
+	        config::sims_per_fried = std::stoi(value);
+        else if(key == "size_x")
+	        config::sims_size_x = std::stoi(value);
+        else if(key == "size_y")
+	        config::sims_size_y = std::stoi(value);
+        else if(key == "phase_size")
+	        config::phase_size  = std::stof(value);
+        else if(key == "aperture_size")
+	        config::aperture_size = std::stof(value);
+        else if(key == "aperture_sampling")
+	        config::aperture_sampling_factor = std::stof(value);
+        else if(key == "save")
+	        config::output_save = value == "Y";
+        else if(key == "clobber")
+	        config::output_clobber = value == "Y"; 
+        else if(key == "airy_disk")
+	        config::get_airy_disk = value == "Y";
+    }
+    
+    return(EXIT_SUCCESS);
 
-  return(EXIT_SUCCESS);
 }
