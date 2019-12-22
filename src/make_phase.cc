@@ -469,12 +469,12 @@ int main(int argc, char *argv[]){
          * --------------------------------------------------------------------
          */
 
-	        if(index_of_fried_in_queue < fried.get_size()){
+            if(index_of_fried_in_queue < fried.get_size()){
 	    
-	        /* ----------------------------------------------------------------------------
-	         * If unprocessed fried parameters are available, send a new one to the worker.
+            /* ----------------------------------------------------------------------------
+             * If unprocessed fried parameters are available, send a new one to the worker.
              * ---------------------------------------------------------------------------- 
-	         */
+             */
 
                 if(fried[index_of_fried_in_queue] != nullptr){
 
