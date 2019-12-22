@@ -614,12 +614,12 @@ int main(int argc, char *argv[]){
         Array<precision> phase_per_fried(dims_phase_per_fried);
         Array<precision> aperture(dims_aperture);
 
-    /* -----------------------------------------------------------------------
-     * Import fft wisdom, if available, and initialize fourier transformation.
-     * -----------------------------------------------------------------------
+    /* -------------------------------
+     * Import fft wisdom if available.
+     * -------------------------------
      */
 
-        fftw_import_wisdom_from_filename(config::read_fftwisdom_from.c_str());
+        fftw_import_wisdom_from_filename(config::read_fft_phase_wisdom_from.c_str());
 
     /*
      * Variable declaration:
@@ -767,7 +767,7 @@ int main(int argc, char *argv[]){
          * ------------------------
          */
             
-            fftw_export_wisdom_to_filename(config::read_fftwisdom_from.c_str());
+            fftw_export_wisdom_to_filename(config::read_fft_phase_wisdom_from.c_str());
     }
 
     MPI_Finalize();
