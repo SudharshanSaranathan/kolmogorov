@@ -301,10 +301,14 @@ int main(int argc, char *argv[]){
      * Name                 Type    Description
      * ----------------------------------------
      * dims_basis_naxis     sizt    Number of axes of dims_basis.
-     * id                   sizt    Rank of MPI process.
      */
 
         sizt dims_basis_naxis  = dims_basis.size();
+
+    /* ----------------------
+     * Loop over MPI workers.
+     * ----------------------
+     */
 
         for(int id = 1; id < processes_total; id++){
 
