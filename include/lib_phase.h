@@ -5,13 +5,14 @@
 #include <cstring>
 #include <complex>
 
+#include "fftw3.h"
 #include "config.h"
 #include "lib_array.h"
 
 #define _USE_MATH_DEFINES
 
 template <class type> 
-void make_aperture_function(Array<type>& aperture, double aperture_radius){
+void make_aperture_function(Array<type>& aperture, type aperture_radius){
 
 /*
  * Vector declaration.
@@ -25,17 +26,17 @@ void make_aperture_function(Array<type>& aperture, double aperture_radius){
 
 /*
  * Variable declaration.
- * ------------------------------------------------
- * Name                 Type        Description
- * ------------------------------------------------
- * aperture_center_x    double      Center of aperture, abscissa.
- * aperture_center_y    double      Center of aperture, ordinate.
- * distance_center      double      Distance to the center of aperture.
+ * ----------------------------------------
+ * Name                 Type    Description
+ * ----------------------------------------
+ * aperture_center_x    type    Center of aperture, abscissa.
+ * aperture_center_y    type    Center of aperture, ordinate.
+ * distance_center      type    Distance to the center of aperture.
  */ 
 
-    double aperture_center_x = double(aperture_dims[0])/2.0;
-    double aperture_center_y = double(aperture_dims[1])/2.0;
-    double distance_center   = 0.0;
+    type aperture_center_x = type(aperture_dims[0])/2.0;
+    type aperture_center_y = type(aperture_dims[1])/2.0;
+    type distance_center   = 0.0;
 
 /* -----------------------
  * Make aperture function.
@@ -50,7 +51,7 @@ void make_aperture_function(Array<type>& aperture, double aperture_radius){
     }
 }
 
-void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, double fried, double sim_size){
+void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, precision sim_size){
 
 /*
  * Array declaration
@@ -74,19 +75,19 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, double fried, doubl
 
 /*
  * Variable declaration
- * --------------------------------------------
+ * --------------------------------
  * Name     Type        Description
- * --------------------------------------------
- * xc       double      Center of the fourier array.
- * yc       double      Center of the fourier array.
- * amp      double      Amplitude of the fourier array.
- * frq      double      Spatial frequency.
+ * --------------------------------
+ * xc       precision   Center of the fourier array.
+ * yc       precision   Center of the fourier array.
+ * amp      precision   Amplitude of the fourier array.
+ * frq      precision   Spatial frequency.
  */
 
-    double xc  = fourier_dims[0]/2;
-    double yc  = fourier_dims[1]/2;
-    double amp = 1.0;
-    double frq = 1.0;
+    precision xc  = fourier_dims[0]/2;
+    precision yc  = fourier_dims[1]/2;
+    precision amp = 1.0;
+    precision frq = 1.0;
 
 /* -----------------------------
  * Seed random number generator.
@@ -94,22 +95,22 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, double fried, doubl
  */
 
     std::default_random_engine generator(rand());
-    std::normal_distribution<double> distribution(0.0, 1.0);
+    std::normal_distribution<precision> distribution(0.0, 1.0);
 
 /* --------------------------------------
  * Loop to construct Kolmogorov spectrum.
  * --------------------------------------
  */
 
-    for(int xpix = 0; xpix < fourier_dims[0]; xpix++){
-        for(int ypix = 0; ypix < fourier_dims[1]; ypix++){
+    for(sizt xpix = 0; xpix < fourier_dims[0]; xpix++){
+        for(sizt ypix = 0; ypix < fourier_dims[1]; ypix++){
 
         /* --------------
          * Set frequency.
          * --------------
          */
 
-            frq = sqrt(pow(xpix - xc, 2) + pow(ypix - yc, 2));
+            frq = sqrt(pow(precision(xpix) - xc, 2) + pow(precision(ypix) - yc, 2));
            
         /* --------------
          * Set amplitude.
@@ -120,16 +121,16 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, double fried, doubl
             
         /* 
          * Variable declaration
-         * ----------------------------
-         * Name     Type    Description
-         * ----------------------------
-         * cosphi   double  Real part of the fourier phase.
-         * sinphi   double  Imag part of the fourier phase.
-         * phase    cmpx    Fourier transformed phase.
+         * --------------------------------
+         * Name     Type        Description
+         * --------------------------------
+         * cosphi   precision   Real part of the fourier phase.
+         * sinphi   precision   Imag part of the fourier phase.
+         * phase    cmpx        Fourier transformed phase.
          */
             
-            double cosphi = distribution(generator);
-            double sinphi = distribution(generator);
+            precision cosphi = distribution(generator);
+            precision sinphi = distribution(generator);
             cmpx phase(amp*cosphi, amp*sinphi);
 
         /* ------------------------------------------------------------------------
@@ -142,7 +143,7 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, double fried, doubl
     }
 }
 
-void make_residual_phase_screen(Array<double>& phase, Array<double>& basis, Array<double>& mode_cfs_weights, sizt_vector norm){
+void make_residual_phase_screen(Array<precision>& phase, Array<precision>& basis, Array<precision>& mode_cfs_weights, sizt_vector norm){
 
 /*
  * Vector declaration
@@ -161,14 +162,14 @@ void make_residual_phase_screen(Array<double>& phase, Array<double>& basis, Arra
 /*
  * Array declaration
  * --------------------------------------------
- * Name         Type            Description
+ * Name         Type                Description
  * --------------------------------------------
- * mode         Array<double>   Individual mode, see 'lib_array.h' for datatype.
- * mode_cfs     Array<double>   Mode-amplitudes, see 'lib_array.h' for datatype.
+ * mode         Array<precision>    Individual mode, see 'lib_array.h' for datatype.
+ * mode_cfs     Array<precision>    Mode-amplitudes, see 'lib_array.h' for datatype.
  */
 
-    Array<double> mode(dims_mode);
-    Array<double> mode_cfs(dims_mode_cfs);
+    Array<precision> mode(dims_mode);
+    Array<precision> mode_cfs(dims_mode_cfs);
 
 /* ------------------------------
  * Loop over the number of modes.
@@ -182,7 +183,7 @@ void make_residual_phase_screen(Array<double>& phase, Array<double>& basis, Arra
      * -----------------------------------------
      */
 
-        memcpy(mode[0], basis[ind], mode.get_size() * sizeof(double));
+        memcpy(mode[0], basis[ind], mode.get_size() * sizeof(precision));
 
     /* ----------------------------------------------
      * Get the mode-amplitude of the individual mode.
@@ -201,7 +202,7 @@ void make_residual_phase_screen(Array<double>& phase, Array<double>& basis, Arra
     }
 }
 
-void make_psf_from_phase_screen(Array<double>& phase, Array<double>& psf, Array<double>& aperture, fftw_plan& forward){
+void make_psf_from_phase_screen(Array<precision>& phase, Array<precision>& psf, Array<precision>& aperture, fftw_plan& forward){
 
 /*
  * Vector declaration
@@ -284,12 +285,12 @@ void make_psf_from_phase_screen(Array<double>& phase, Array<double>& psf, Array<
 /*
  * Array declaration.
  * ----------------------------------------
- * Name         Type            Description
+ * Name         Type                Description
  * ----------------------------------------
- * psf_copy     Array<double>   Shifted copy of the PSF, see 'lib_array.h' for datatype.
+ * psf_copy     Array<precision>    Shifted copy of the PSF, see 'lib_array.h' for datatype.
  */
 
-    Array<double> psf_copy(psf);
+    Array<precision> psf_copy(psf);
 
 /* ------------------------------------------------------------
  * PSF is computed as the power spectrum of the pupil function.
@@ -304,13 +305,13 @@ void make_psf_from_phase_screen(Array<double>& phase, Array<double>& psf, Array<
 
 /*
  * Variable declaration.
- * ------------------------------------
+ * --------------------------------
  * Name         Type        Description
- * ------------------------------------
- * psf_total    double      Total sum of the PSF.
+ * --------------------------------
+ * psf_total    precision   Total sum of the PSF.
  */
 
-    double psf_total = psf_copy.get_total();
+    precision psf_total = psf_copy.get_total();
 
 /* ------------------------------------------------------------
  * Shift PSF central maxima to the array center, and normalize.
