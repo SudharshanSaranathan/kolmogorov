@@ -399,16 +399,16 @@ int main(int argc, char *argv[]){
             fflush (console);
 
         /* -----------------------------------------------------------------
-	     * Send next set of phase-screen residuals, if available, to worker.
+         * Send next set of phase-screen residuals, if available, to worker.
          * -----------------------------------------------------------------
-	     */
+         */
 
-	        if(index_of_fried_in_queue < dims_residual[0]){
+            if(index_of_fried_in_queue < dims_residual[0]){
 
             /* ----------------------------
              * Send phase-screen residuals.
              * ----------------------------
-            */
+             */
 
                 if(residual[index_of_fried_in_queue] != nullptr){
 
@@ -423,12 +423,12 @@ int main(int argc, char *argv[]){
                 
                 }    
 	
-	        /* -------------------------
-	         * Update process_fried_map.
+            /* -------------------------
+             * Update process_fried_map.
              * -------------------------
-	         */
+             */
 	
-		        process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
+                process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
 
             /* ------------------------------------
              * Update and display percent_assigned.
@@ -441,19 +441,20 @@ int main(int argc, char *argv[]){
                 fflush (console);
 
             /* ----------------------------------
-	         * Increment index_of_fried_in_queue.
+             * Increment index_of_fried_in_queue.
              * ----------------------------------
-	         */
+             */
 
-		        index_of_fried_in_queue++;
-      	    }
-	        else{
-	    
-	        /* ----------------------------------------------------------
-	         * If no more residuals to be calculated, shutdown processes.
+                index_of_fried_in_queue++;
+      	    
+            }else{
+	   
+            /* ----------------------------------------------------------
+             * If no more residuals to be calculated, shutdown processes.
              * ----------------------------------------------------------
-	         */
-		        if(residual[0] != nullptr){
+             */
+		        
+                if(residual[0] != nullptr){
 
                     MPI_Send(residual[0], sizeof_vector(dims_residual_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
 	        
