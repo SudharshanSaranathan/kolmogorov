@@ -683,10 +683,10 @@ int main(int argc, char *argv[]){
 
             for(sizt ind = 0; ind < config::sims_per_fried; ind++){
             	    
-    	    /* -------------------------------
-	         * Simulate a single phase-screen.
+            /* -------------------------------
+             * Simulate a single phase-screen.
              * -------------------------------
-	        */
+             */
              
                 make_phase_screen_fourier_shifted(phase_fourier, fried, config::phase_size);
                 fftw_execute_dft(forward, reinterpret_cast<fftw_complex*>(phase_fourier[0]),\
@@ -694,23 +694,25 @@ int main(int argc, char *argv[]){
 
 #ifdef _APERTURE_
 	
-	        /* ---------------------------------------------------
-	         * If aperture available, clip simulation to aperture.
+            /* ---------------------------------------------------
+             * If aperture available, clip simulation to aperture.
              * ---------------------------------------------------
-	         */
+             */
 
-		        precision phase_piston = 0.0;
-		        for(sizt xs = 0; xs < config::sims_size_x; xs++){
-		            for(sizt ys = 0; ys < config::sims_size_y; ys++){
-			            phase_per_fried(ind, xs, ys) = aperture(xs, ys) * static_cast<precision>(phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real());
-			            phase_piston += aperture(xs, ys) * phase_per_fried(ind, xs, ys);
-		            }
-		        }
+                precision phase_piston = 0.0;
+                for(sizt xs = 0; xs < config::sims_size_x; xs++){
+                    for(sizt ys = 0; ys < config::sims_size_y; ys++){
+                    
+                        phase_per_fried(ind, xs, ys) = aperture(xs, ys) * static_cast<precision>(phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real());
+                        phase_piston += aperture(xs, ys) * phase_per_fried(ind, xs, ys);
+                    
+                    }
+                }
 	    
-	        /* ------------------------------------------------------
-	         * Subtract phase-screen mean over aperture a.k.a piston.
+            /* ------------------------------------------------------
+             * Subtract phase-screen mean over aperture a.k.a piston.
              * ------------------------------------------------------
-	         */
+             */
 
 		        phase_piston /= aperture_total;
 		        for(sizt xs = 0; xs < config::sims_size_x; xs++){
@@ -726,11 +728,11 @@ int main(int argc, char *argv[]){
              * -------------------------------------------------------------
 	         */
 
-		        for(sizt xs = 0; xs < config::sims_size_x; xs++){
-		            for(sizt ys = 0; ys < config::sims_size_y; ys++){
-		    	        phase_per_fried(ind, xs, ys) = static_cast<precision>(phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real());
-		            }
-		        }
+                for(sizt xs = 0; xs < config::sims_size_x; xs++){
+                    for(sizt ys = 0; ys < config::sims_size_y; ys++){
+                        phase_per_fried(ind, xs, ys) = static_cast<precision>(phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real());
+                    }
+                }
 
 #endif
 
