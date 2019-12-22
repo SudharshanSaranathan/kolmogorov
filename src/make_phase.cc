@@ -230,9 +230,9 @@ int main(int argc, char *argv[]){
     /*
      * Vector declaration:
      * --------------------------------------------
-     * Name		        Type			Description
+     * Name             Type            Description
      * --------------------------------------------
-     * dims_aperture	sizt_vector	    Dimensions of the aperture, in pixels.
+     * dims_aperture    sizt_vector     Dimensions of the aperture, in pixels.
      */
 
 	    const sizt_vector dims_aperture = aperture.get_dims();
@@ -276,7 +276,7 @@ int main(int argc, char *argv[]){
         for(int id = 1; id < processes_total; id++){
 
         /* ------------------------------------------------------
-	     * if rank < number of fried parameters. Shutdown worker.
+        * if rank < number of fried parameters. Shutdown worker.
          * ------------------------------------------------------ 
 	     */
 
@@ -321,7 +321,7 @@ int main(int argc, char *argv[]){
             }
             
         /* --------------------------------------------------------------------------------------------
-	     * if rank >= number of fried parameters, send fried parameter and aperture function to worker.
+         * if rank >= number of fried parameters, send fried parameter and aperture function to worker.
          * -------------------------------------------------------------------------------------------- 
 	     */
             
@@ -365,14 +365,14 @@ int main(int argc, char *argv[]){
 		        process_fried_map[id] = index_of_fried_in_queue;
 
             /* ----------------------------------
-	         * Increment index_of_fried_in_queue.
+             * Increment index_of_fried_in_queue.
              * ----------------------------------
 	         */
 
                 index_of_fried_in_queue++;
 
             /* ------------------------------------
-	         * Update and display percent_assigned.
+             * Update and display percent_assigned.
              * ------------------------------------
 	         */
 
@@ -387,7 +387,7 @@ int main(int argc, char *argv[]){
     /*
      * Array declaration:
      * ------------------------------------
-     * Name	    Type		    Description
+     * Name     Type                Description
      * ------------------------------------
      * phase	Array<precision>	Phase-screens array.
      */
@@ -403,33 +403,34 @@ int main(int argc, char *argv[]){
 
         while(fried_completed < fried.get_size()){
         	  
-	    /* ----------------------------------------------------------------------------
-	     * Wait for a worker that is ready. If found, get and store worker information.
+        /* ----------------------------------------------------------------------------
+         * Wait for a worker that is ready. If found, get and store worker information.
          * ----------------------------------------------------------------------------
-	     */	
+         */	
 	
-	        MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-	        MPI_Get_count(&status, mpi_precision, &mpi_recv_count);
+            MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Get_count(&status, mpi_precision, &mpi_recv_count);
 
-	    /*
-	     * Variable declaration:
-	     *---------------------------------
-	     * Name		    Type    Description
+        /*
+         * Variable declaration:
+         *---------------------------------
+         * Name         Type    Description
 	     * --------------------------------
-	     * fried_index	sizt	Index of simulated fried parameter.
+	     * fried_index  sizt    Index of simulated fried parameter.
 	     */
 
         /* -------------------------------------------------
-	     * Get index of fried parameter processed by worker.
+         * Get index of fried parameter processed by worker.
          * -------------------------------------------------
-	     */
+         */
+            
+            sizt fried_index = process_fried_map[status.MPI_SOURCE];
 
-	        sizt fried_index = process_fried_map[status.MPI_SOURCE];
-
-	    /* -----------------------------------------------------
-	     * Get data, and store in phase at the correct location.
+        /* -----------------------------------------------------
+         * Get data, and store in phase at the correct location.
          * -----------------------------------------------------
-	     */
+         */
+         
             if(phase[fried_index] != nullptr){
 
                 MPI_Recv(phase[fried_index], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
@@ -444,26 +445,26 @@ int main(int argc, char *argv[]){
             }
 
         /* --------------------------
-	     * Increment fried_completed.
+         * Increment fried_completed.
          * --------------------------
-	     */
+         */
 
 	        fried_completed++;
       
-	    /* -------------------------------------
-	     * Update and display percent_completed.
+        /* -------------------------------------
+         * Update and display percent_completed.
          * ------------------------------------- 
-	     */
+         */
 
 	        percent_completed = (100.0 * fried_completed) / fried.get_size();
 	        
             fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
 	        fflush (console);
 
-	    /* --------------------------------------------------------------------
-	     * Assign new fried parameter, if available, to worker, else, shutdown. 
-         * -------------------------------------------------------------------- 
-	     */
+        /* --------------------------------------------------------------------
+         * Assign new fried parameter, if available, to worker, else, shutdown. 
+         * --------------------------------------------------------------------
+         */
 
 	        if(index_of_fried_in_queue < fried.get_size()){
 	    
@@ -474,7 +475,7 @@ int main(int argc, char *argv[]){
 
                 if(fried[index_of_fried_in_queue] != nullptr){
 
-		            MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
 	
                 }else{
 
@@ -485,24 +486,24 @@ int main(int argc, char *argv[]){
 
                 }
 
-	        /* -------------------------
-	         * Update process_fried_map.
+            /* -------------------------
+             * Update process_fried_map.
              * -------------------------
-	         */
+             */
 	
-		        process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
+                process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
 
-	        /* ----------------------------------
-	         * Increment index_of_fried_in_queue.
+            /* ----------------------------------
+             * Increment index_of_fried_in_queue.
              * ----------------------------------
-	         */
+             */
 
-		        index_of_fried_in_queue++;
+                index_of_fried_in_queue++;
 
-	        /* ------------------------------------
-	         * Update and display percent_assigned.
+            /* ------------------------------------
+             * Update and display percent_assigned.
              * ------------------------------------
-	         */
+             */
 
                 percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
                 
@@ -512,13 +513,13 @@ int main(int argc, char *argv[]){
             }
 	        
         /* --------------------------------------------------------------
-	     * If no more fried parameters are available, shutdown processes.
+         * If no more fried parameters are available, shutdown processes.
          * --------------------------------------------------------------
-	     */
+         */
 
 	        else{
 
-		        MPI_Send(nullptr, 0, MPI_CHAR, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                MPI_Send(nullptr, 0, MPI_CHAR, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
 	        
             /* --------------------------
              * Decrement processes_total;
@@ -535,7 +536,7 @@ int main(int argc, char *argv[]){
      * ------------------------------
      */
 
-	    fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_phase_to.c_str());
+        fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_phase_to.c_str());
         fflush (console);
 
         write_status = phase.wr_fits(config::write_phase_to.c_str(), config::output_clobber);
@@ -547,7 +548,7 @@ int main(int argc, char *argv[]){
         }
 	    else{
 
-	        fprintf(console, "Done]\n");
+            fprintf(console, "Done]\n");
             fflush (console);
 
         }
