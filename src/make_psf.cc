@@ -105,8 +105,8 @@ int main(int argc, char *argv[]){
  */
 
     if(argc < 2){
-	    fprintf(console, "(Error)\tExpected configuration file, aborting!\n");
-	    fflush (console);
+        fprintf(console, "(Error)\tExpected configuration file, aborting!\n");
+        fflush (console);
         
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
@@ -115,10 +115,10 @@ int main(int argc, char *argv[]){
     fflush (console);
     
     if(config_parse(argv[1]) == EXIT_FAILURE){
-	    fprintf(console, "[Failed]\n");
+        fprintf(console, "[Failed]\n");
         fflush (console);
 
-	    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
     }else{
 	    
