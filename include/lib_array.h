@@ -11,9 +11,11 @@
  * ----------------
  */
 
-using sizt = std::size_t;
-using ulng = unsigned long;
-using cmpx = std::complex<double>;
+typedef float precision;
+
+using ulng      = unsigned long;
+using sizt      = std::size_t;
+using cmpx      = std::complex<double>;
 
 template <typename type>
 using limits = std::numeric_limits<type>;
