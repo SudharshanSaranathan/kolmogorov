@@ -211,29 +211,43 @@ int main(int argc, char *argv[]){
      * Name                     Type            Description
      * ----------------------------------------------------
      * dims_psf                 sizt_vector     Dimensions of PSFs.
-     * dims_image               sizt_vector     Dimensions of PSFs.
      * dims_psf_per_fried       sizt_vector     Dimensions of PSFs, per_fried.
-     * dims_convolved_images    sizt_vector     Dimensions of the convolved images array.
-     * dims_images_per_fried    sizt_vector     Dimensions of the convolved images array, per fried.
+     * dims_image               sizt_vector     Dimensions of PSFs.
+     * dims_image_convolved     sizt_vector     Dimensions of the convolved images.
+     * dims_image_per_fried     sizt_vector     Dimensions of the convolved images, per fried.
      * process_fried_map        sizt_vector     Map of which process is handling which fried index.
      */
 
         const sizt_vector dims_psf   = psf.get_dims();
-        const sizt_vector dims_image = image.get_dims();
         const sizt_vector dims_psf_per_fried(dims_psf.begin() + 1, dims_psf.end());
-        const sizt_vector dims_convolved_images{dims_psf[0], dims_psf[1], dims_image[0], dims_image[1]};
-        const sizt_vector dims_images_per_fried{dims_psf[1], dims_image[0], dims_image[1]};
+        const sizt_vector dims_image = image.get_dims();
+        const sizt_vector dims_image_convolved(dims_psf);
+        
+        dims_image_convolved.rbegin()[0] = dims_image.rbegin()[0];
+        dims_image_convolved.rbegin()[1] = dims_image.rbegin()[1];
+
+        const sizt_vector dims_image_per_fried(dims_image_convolved.begin() + 1, dims_image_convolved.end());
         sizt_vector process_fried_map(dims_psf[0] + 1);
 
     /*
      * Array declaration.
-     * ----------------------------------------------------
-     * Name                 Type                Description
-     * ----------------------------------------------------
-     * convolved_images     Array<precision>    Convolved images, see 'lib_array.h' for datatype.
+     * ------------------------------------------------
+     * Name             Type                Description
+     * ------------------------------------------------
+     * image_convolved  Array<precision>    Convolved images, see 'lib_array.h' for datatype.
      */
 
-        Array<precision> convolved_images(dims_convolved_images);
+        Array<precision> image_convolved(dims_image_convolved);
+
+    /*
+     * Variable declaration.
+     * ------------------------------------------------
+     * Name                         Type    Description
+     * ------------------------------------------------
+     * dims_psf_per_fried_naxis     sizt    Convolved images, see 'lib_array.h' for datatype.
+     */
+
+        sizt dims_psf_per_fried_naxis = dims_psf_per_fried.size();
 
     /* ------------------------
      * Loop over MPI processes.
@@ -247,21 +261,10 @@ int main(int argc, char *argv[]){
          * --------------------------------------------------
          */
 
-            if(id > int(dims_residual[0])){
+            if(id > int(dims_psf[0])){
 
-                if(aperture[0] != nullptr){
-                
-                    MPI_Send(dims_psf_per_fried.data(), dims_psf_per_fried.size(), mpi_precision, id, mpi_cmds::kill, MPI_COMM_WORLD);
-                    MPI_Send(dims_image.data(), dims_image.size(), mpi_precision, id, mpi_cmds::kill, MPI_COMM_WORLD);
-
-                }else{
-
-                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                    fflush (console);
-                
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-                }
+                MPI_Send(&dims_psf_per_fried_naxis,  1, MPI::UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
+                MPI_Send( dims_psf_per_fried.data(), dims_psf_per_fried.size(), MPI::UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
 
             /* -------------------------------------
              * Decrement number of processes in use.
@@ -278,19 +281,10 @@ int main(int argc, char *argv[]){
          */
 
             else{
-                if(aperture[0] != nullptr){
-
-                    MPI_Send(dims_psf_per_fried.data(), dims_psf_per_fried.size(), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
-                    MPI_Send(dims_image.data(), dims_image.get_size(), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
-
-                }else{
-
-                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                    fflush (console);
-                
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-                
-                }
+            
+                MPI_Send(&dims_psf_per_fried_naxis,  1, MPI::UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send( dims_psf_per_fried.data(), dims_psf_per_fried.size(), MPI::UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
+            
             }
 
         }
@@ -303,7 +297,8 @@ int main(int argc, char *argv[]){
         for(int id = 1; id < processes_total; id++){
 
             if(image[0] != nullptr){
-
+                
+                MPI_Send(dims_image.data(), dims_image.size(), MPI::UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
                 MPI_Send(image[0], image.get_size(), mpi_precision,  id, mpi_cmds::task, MPI_COMM_WORLD);
 
             }else{

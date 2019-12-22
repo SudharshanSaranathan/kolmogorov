@@ -72,7 +72,7 @@ int main(int argc, char *argv[]){
  */
    
     MPI_Status status;
-    MPI_Datatype mpi_precision = std::is_same<precision, float>::value == true ? MPI_FLOAT : MPI_DOUBLE;
+    MPI::Datatype mpi_precision = std::is_same<precision, float>::value == true ? MPI::FLOAT : MPI::DOUBLE;
     int process_rank = 0;
     int processes_total = 0;
     int mpi_recv_count = 0;
@@ -278,7 +278,7 @@ int main(int argc, char *argv[]){
         for(int id = 1; id < processes_total; id++){
 
         /* --------------------------------------------------
-         * if rank < number of fried parameters, kill worker.
+         * if rank > number of fried parameters, kill worker.
          * -------------------------------------------------- 
          */
 
@@ -324,7 +324,7 @@ int main(int argc, char *argv[]){
             }
             
         /* --------------------------------------------------------------------------------------------
-         * if rank >= number of fried parameters, send fried parameter and aperture function to worker.
+         * if rank <= number of fried parameters, send fried parameter and aperture function to worker.
          * --------------------------------------------------------------------------------------------
          */
             
