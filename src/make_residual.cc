@@ -79,9 +79,9 @@ int main(int argc, char *argv[]){
     int read_status = 0;
     int write_status = 0;
 
-/* --------------
- * Initialize MPI
- * --------------
+/* ---------------
+ * Initialize MPI.
+ * ---------------
  */
    
     MPI_Init(&argc, &argv);
@@ -278,7 +278,7 @@ int main(int argc, char *argv[]){
 
         if(dims_weights[0] != dims_phase[0] || dims_weights[1] != dims_basis[0]){
             
-            fprintf(console, "(Error)\texpected weights with dimensions [%ld %ld], calling MPI_Abort()\n", dims_phase[0], dims_basis[1]);
+            fprintf(console, "(Error)\texpected weights with dimensions [%lu %lu], calling MPI_Abort()\n", dims_phase[0], dims_basis[0]);
             fflush (console);
             
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);

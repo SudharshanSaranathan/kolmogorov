@@ -223,10 +223,25 @@ int main(int argc, char *argv[]){
 
         const sizt_vector dims_residual = residual.get_dims();
         const sizt_vector dims_residual_per_fried(dims_residual.begin() + 1, dims_residual.end());
-        const sizt_vector dims_psf{dims_residual[0], dims_residual[1], 2 * dims_residual[2] - 1, 2 * dims_residual[3] - 1};
-        const sizt_vector dims_psf_per_fried(dims_psf.begin() + 1, dims_psf.end());
         sizt_vector process_fried_map(dims_residual[0] + 1);
 
+#ifdef _GET_ALL_POINT_SPREAD_FUNCTIONS_
+
+    /*
+     * Vector declaration.
+     * ----------------------------------------------------
+     * Name                     Type            Description
+     * ----------------------------------------------------
+     * dims_residual            sizt_vector     Dimensions of phase-screen residuals.
+     * dims_residual_per_fried  sizt_vector     Dimensions of phase-screen residuals, per fried.
+     * dims_psf                 sizt_vector     Dimensions of PSFs.
+     * dims_psf_per_fried       sizt_vector     Dimensions of PSFs, per_fried.
+     * process_fried_map        sizt_vector     Map of which process is handling which fried index.
+     */
+
+        const sizt_vector dims_psf{dims_residual[0], dims_residual[1], 2 * dims_residual[2] - 1, 2 * dims_residual[3] - 1};
+        const sizt_vector dims_psf_per_fried(dims_psf.begin() + 1, dims_psf.end());
+    
     /*
      * Array declaration.
      * ----------------------------------------
@@ -236,6 +251,32 @@ int main(int argc, char *argv[]){
      */
 
         Array<precision> psf(dims_psf);
+
+#else
+
+    /*
+     * Variable declaration.
+     * ----------------------------------------
+     * Name                 Type            Description
+     * ----------------------------------------
+     * dims_psf_single      sizt_vector     Dimensions of a single PSF.
+     * dims_psf_average     sizt_vector     Dimensions of PSF averaged over residual phase-screen realizations.
+     */
+
+        const sizt_vector dims_psf_single {2 * dims_residual[2] - 1, 2 * dims_residual[3] - 1};
+        const sizt_vector dims_psf_average{dims_residual[0], 2 * dims_residual[2] - 1, 2 * dims_residual[3] - 1};
+
+    /*
+     * Array declaration.
+     * ----------------------------------------
+     * Name         Type                Description
+     * ----------------------------------------
+     * psf_average  Array<precision>    PSFs corresponding to the residuals, see 'lib_array.h' for datatype.
+     */
+
+        Array<precision> psf_average(dims_psf_average);
+
+#endif
 
     /* ------------------------
      * Loop over MPI processes.
@@ -279,6 +320,7 @@ int main(int argc, char *argv[]){
          */
 
             else{
+                
                 if(aperture[0] != nullptr){
 
                     MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
@@ -373,12 +415,25 @@ int main(int argc, char *argv[]){
 
             sizt fried_index_psf = process_fried_map[status.MPI_SOURCE];
 
-        /* ------------------------------------
-         * Get PSFs, store at correct location.
-         * ------------------------------------
+#ifdef _GET_ALL_POINT_SPREAD_FUNCTIONS_
+
+        /* --------------------------------------------
+         * Get all PSFs, store at psf[fried_index_psf].
+         * --------------------------------------------
          */
 
             MPI_Recv(psf[fried_index_psf], sizeof_vector(dims_psf_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+#else
+
+        /* -------------------------------------------------------
+         * Get average PSF, store at psf_average[fried_index_psf].
+         * -------------------------------------------------------
+         */
+
+            MPI_Recv(psf_average[fried_index_psf], sizeof_vector(dims_psf_average), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+#endif
 
         /* --------------------------
          * Increment fried_completed.
@@ -478,7 +533,16 @@ int main(int argc, char *argv[]){
         fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_psf_to.c_str());
         fflush (console);
 
+#ifdef _GET_ALL_POINT_SPREAD_FUNCTIONS_
+
         write_status = psf.wr_fits(config::write_psf_to.c_str(), config::output_clobber);
+        
+#else
+
+        write_status = psf_average.wr_fits(config::write_psf_to.c_str(), config::output_clobber);
+
+#endif
+
         if(write_status != EXIT_SUCCESS){
 	    
             fprintf(console, "Failed with err code: %d]\n", write_status);
@@ -514,8 +578,21 @@ int main(int argc, char *argv[]){
 
         const sizt_vector dims_aperture{config::sims_size_x, config::sims_size_y};
         const sizt_vector dims_psf_single{2 * config::sims_size_x - 1, 2 * config::sims_size_y - 1}; 
-        const sizt_vector dims_psf_per_fried{config::sims_per_fried, 2 * config::sims_size_x - 1, 2 * config::sims_size_y - 1};
         const sizt_vector dims_residual_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
+
+#ifdef _GET_ALL_POINT_SPREAD_FUNCTIONS_
+
+    /*
+     * Vector declaration.
+     * ----------------------------------------------------
+     * Name                 Type                Description
+     * ----------------------------------------------------
+     * dims_psf_per_fried   Array<precision>    PSFs of residual phase-screens, per fried.
+     */
+       
+        const sizt_vector dims_psf_per_fried{config::sims_per_fried, 2 * config::sims_size_x - 1, 2 * config::sims_size_y - 1};
+
+#endif
 
     /*
      * Array declaration.
@@ -541,18 +618,44 @@ int main(int argc, char *argv[]){
      * --------------------------------------------------------
      * residual_per_fried       Array<precision>    Phase-screen residuals, per fried.
      * residual_single          Array<precision>    Single residual phase-screen.
-     * psf_per_fried            Array<precision>    PSFs of the residuals, per fried.
-     * psf_single               Array<precision>    Single PSF.
      * pupil_function           Array<cmpx>         Single pupil function.
      * pupil_function_fourier   Array<cmpx>         Fourier transformed pupil function. 
      */
 
         Array<precision> residual_per_fried(dims_residual_per_fried);
         Array<precision> residual_single(dims_aperture);
-        Array<precision> psf_per_fried(dims_psf_per_fried);
-        Array<precision> psf_single(dims_psf_single);
         Array<cmpx>      pupil_function(dims_psf_single);
         Array<cmpx>      pupil_function_fourier(dims_psf_single);
+
+#ifdef _GET_ALL_POINT_SPREAD_FUNCTIONS_
+
+    /*
+     * Array declaration.
+     * ------------------------------------------------
+     * Name             Type                Description
+     * ------------------------------------------------
+     * psf_per_fried    Array<precision>    PSFs of residual phase-screens, per fried.
+     * psf_single       Array<precision>    PSF of a single residual phase-screen.
+     */
+       
+        Array<precision> psf_per_fried(dims_psf_per_fried);
+        Array<precision> psf_single(dims_psf_single);
+
+#else
+
+    /*
+     * Array declaration.
+     * ------------------------------------------------
+     * Name             Type                Description
+     * ------------------------------------------------
+     * psf_average      Array<precision>    PSFs of residual phase-screens averaged over realizations, per fried.
+     * psf_single       Array<precision>    PSF of a single residual phase-screen.
+     */
+
+        Array<precision> psf_average{dims_psf_single};
+        Array<precision> psf_single {dims_psf_single};
+
+#endif        
 
     /* -------------------------------
      * Import fft wisdom if available.
@@ -612,6 +715,8 @@ int main(int argc, char *argv[]){
                    
                     }                
 
+#ifdef _GET_ALL_POINT_SPREAD_FUNCTIONS_
+
                 /* ---------------------------------------------
                  * Copy psf_single back into psf_per_fried[ind].
                  * ---------------------------------------------
@@ -632,6 +737,31 @@ int main(int argc, char *argv[]){
                 }
             }
 
+#else
+
+                /* ------------------------------------------
+                 * Compute the average PSF over realizations.
+                 * ------------------------------------------
+                 */
+
+                    psf_average += psf_single;
+
+                }
+
+                psf_average /= dims_residual_per_fried[0];
+
+                if(psf_average[0] != nullptr){
+                
+                    MPI_Send(psf_average[0], psf_average.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+                
+                }else{
+
+                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                
+                }
+            }
+
+#endif
 
         /* -------------------------
          * Write FFT wisdom to file.
