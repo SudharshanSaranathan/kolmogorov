@@ -305,9 +305,9 @@ int main(int argc, char *argv[]){
 
         sizt dims_basis_naxis  = dims_basis.size();
 
-    /* ----------------------
-     * Loop over MPI workers.
-     * ----------------------
+    /* ------------------------
+     * Loop over MPI processes.
+     * ------------------------
      */
 
         for(int id = 1; id < processes_total; id++){

@@ -580,7 +580,7 @@ int main(int argc, char *argv[]){
         while(status.MPI_TAG != mpi_cmds::kill){
 
         /* ---------------------------------------
-         * Get phase-screen residuals from master.
+         * Get residual phase-screens from master.
          * ---------------------------------------
          */
 
@@ -588,16 +588,16 @@ int main(int argc, char *argv[]){
 
             if(status.MPI_TAG == mpi_cmds::task){
 
-            /* ------------------------------------
-             * Compute the PSFs from the residuals.
-             * ------------------------------------
+            /* -------------------------------------------
+             * Compute the PSFs of residual phase-screens.
+             * -------------------------------------------
              */
                 
                 for(sizt ind = 0; ind < config::sims_per_fried; ind++){
                     
-                /* --------------------------
-                 * If airy disk is requested.
-                 * --------------------------
+                /* --------------------------------------------------------------
+                 * If airy disk is requested, don't copy into residual_single[0].
+                 * --------------------------------------------------------------
                  */
                   
                     if(config::get_airy_disk){
