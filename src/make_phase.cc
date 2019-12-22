@@ -406,9 +406,9 @@ int main(int argc, char *argv[]){
 
         while(fried_completed < fried.get_size()){
         	  
-        /* ----------------------------------------------------------------------------
-         * Wait for a worker that is ready. If found, get and store worker information.
-         * ----------------------------------------------------------------------------
+        /* --------------------------------------------------------------------
+         * Wait for a worker to ping master. If pinged, get worker information.
+         * --------------------------------------------------------------------
          */	
 	
             MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
