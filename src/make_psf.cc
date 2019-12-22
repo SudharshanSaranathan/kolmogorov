@@ -186,7 +186,6 @@ int main(int argc, char *argv[]){
 
         }
 
-
     /* --------------------------------------
      * !(3) Read aperture function from file.
      * --------------------------------------
@@ -233,7 +232,7 @@ int main(int argc, char *argv[]){
      * ----------------------------------------
      * Name     Type                Description
      * ----------------------------------------
-     * psf      Array<precision>    PSFs corresponding to the residuals see 'lib_array.h' for datatype.
+     * psf      Array<precision>    PSFs corresponding to the residuals, see 'lib_array.h' for datatype.
      */
 
         Array<precision> psf(dims_psf);
@@ -580,9 +579,9 @@ int main(int argc, char *argv[]){
 
         while(status.MPI_TAG != mpi_cmds::kill){
 
-        /* -----------------------------------------
+        /* ---------------------------------------
          * Get phase-screen residuals from master.
-         * -----------------------------------------
+         * ---------------------------------------
          */
 
             MPI_Recv(residual_per_fried[0], residual_per_fried.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
