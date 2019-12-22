@@ -312,15 +312,15 @@ int main(int argc, char *argv[]){
 
         for(int id = 1; id < processes_total; id++){
 
-        /* ------------------------------------------------------
-         * If rank > number of fried parameters, shutdown worker.
-         * ------------------------------------------------------
+        /* --------------------------------------------------
+         * If rank > number of fried parameters, kill worker.
+         * --------------------------------------------------
          */
 
             if(id > int(dims_phase[0])){
 
-                MPI_Send(&dims_basis_naxis, 1, MPI_LONG, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
-                MPI_Send( dims_basis.data(), dims_basis_naxis, MPI_LONG, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                MPI_Send(&dims_basis_naxis, 1, MPI_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
+                MPI_Send( dims_basis.data(), dims_basis_naxis, MPI_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
 
             /* -------------------------------------
              * Decrement number of processes in use.
@@ -338,8 +338,8 @@ int main(int argc, char *argv[]){
 
             else{
 
-                MPI_Send(&dims_basis_naxis, 1, MPI_LONG, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
-                MPI_Send( dims_basis.data(), dims_basis_naxis, MPI_LONG, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(&dims_basis_naxis, 1, MPI_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send( dims_basis.data(), dims_basis_naxis, MPI_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
 
             }
 
@@ -354,7 +354,7 @@ int main(int argc, char *argv[]){
 
             if(basis[0] != nullptr){
 
-                MPI_Send(basis[0], basis.get_size(), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(basis[0], basis.get_size(), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
 
             }else{
 
@@ -382,7 +382,7 @@ int main(int argc, char *argv[]){
 
             if(weights[index_of_fried_in_queue] != nullptr){
                 
-                MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
 
             }else{
 
@@ -400,7 +400,7 @@ int main(int argc, char *argv[]){
 
             if(phase[index_of_fried_in_queue] != nullptr){
                 
-                MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
 
             }else{
 
@@ -502,7 +502,7 @@ int main(int argc, char *argv[]){
 
                 if(weights[index_of_fried_in_queue] != nullptr){
                 
-                    MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], mpi_precision, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
 
                 }else{
 
@@ -520,7 +520,7 @@ int main(int argc, char *argv[]){
 
                 if(phase[index_of_fried_in_queue] != nullptr){
                 
-                    MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
 
                 }else{
 
@@ -557,15 +557,15 @@ int main(int argc, char *argv[]){
       	    
             }else{
 	    
-            /* ----------------------------------------------------------
-             * If no more residuals to be calculated, shutdown processes.
-             * ----------------------------------------------------------
+            /* ------------------------------------------------------
+             * If no more residuals need to be computed, kill worker.
+             * ------------------------------------------------------
              */
                 
                 if(weights[0] != nullptr && phase[0] != nullptr){
 
-                    MPI_Send(weights[0], dims_basis[0], mpi_precision, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
-                    MPI_Send(phase[0], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                    MPI_Send(weights[0], dims_basis[0], mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
+                    MPI_Send(phase[0], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
                 
                 }else{
 
@@ -693,12 +693,12 @@ int main(int argc, char *argv[]){
             }
         }
 
-    /* --------------------
-     * Loop until shutdown.
-     * --------------------
+    /* --------------------------------------------
+     * Compute residual phase-screens until killed.
+     * --------------------------------------------
      */
 
-        while(status.MPI_TAG != mpi_cmds::shutdown){
+        while(status.MPI_TAG != mpi_cmds::kill){
 
         /* ------------------------------
          * Get basis weights from master.
@@ -713,7 +713,7 @@ int main(int argc, char *argv[]){
          */
 
             MPI_Recv(phase[0], phase.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-            if(status.MPI_TAG == mpi_cmds::stayalive){
+            if(status.MPI_TAG == mpi_cmds::task){
 
             /* ---------------------------------------------
              * Compute the residuals from the phase-screens.

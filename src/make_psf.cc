@@ -238,23 +238,23 @@ int main(int argc, char *argv[]){
 
         Array<precision> psf(dims_psf);
 
-    /* --------------------------------------------------------------------
-     * Loop to shutdown excess MPI workers than available fried parameters.
-     * --------------------------------------------------------------------
+    /* ------------------------
+     * Loop over MPI processes.
+     * ------------------------
      */
 
         for(int id = 1; id < processes_total; id++){
 
-        /* ------------------------------------------------------
-         * If rank > number of fried parameters, shutdown worker.
-         * ------------------------------------------------------
+        /* --------------------------------------------------
+         * If rank > number of fried parameters, kill worker.
+         * --------------------------------------------------
          */
 
             if(id > int(dims_residual[0])){
 
                 if(aperture[0] != nullptr){
                 
-                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::kill, MPI_COMM_WORLD);
 
                 }else{
 
@@ -282,7 +282,7 @@ int main(int argc, char *argv[]){
             else{
                 if(aperture[0] != nullptr){
 
-                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
 
                 }else{
 
@@ -312,7 +312,7 @@ int main(int argc, char *argv[]){
 
             if(residual[index_of_fried_in_queue] != nullptr){
                 
-                MPI_Send(residual[index_of_fried_in_queue], sizeof_vector(dims_residual_per_fried), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(residual[index_of_fried_in_queue], sizeof_vector(dims_residual_per_fried), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
 
             }else{
 
@@ -412,7 +412,7 @@ int main(int argc, char *argv[]){
 
                 if(residual[index_of_fried_in_queue] != nullptr){
 
-                    MPI_Send(residual[index_of_fried_in_queue], sizeof_vector(dims_residual_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(residual[index_of_fried_in_queue], sizeof_vector(dims_residual_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
 
                 }else{
 
@@ -449,14 +449,14 @@ int main(int argc, char *argv[]){
       	    
             }else{
 	   
-            /* ----------------------------------------------------------
-             * If no more residuals to be calculated, shutdown processes.
-             * ----------------------------------------------------------
+            /* -------------------------------------------------
+             * If no more PSFs need to be computed, kill worker.
+             * -------------------------------------------------
              */
 		        
                 if(residual[0] != nullptr){
 
-                    MPI_Send(residual[0], sizeof_vector(dims_residual_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                    MPI_Send(residual[0], sizeof_vector(dims_residual_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
 	        
                 }else{
 
@@ -573,12 +573,12 @@ int main(int argc, char *argv[]){
         fftw_plan forward = fftw_plan_dft_2d(dims_psf_single[0], dims_psf_single[1], reinterpret_cast<fftw_complex*>(pupil_function[0]),\
                                              reinterpret_cast<fftw_complex*>(pupil_function_fourier[0]), FFTW_FORWARD, FFTW_MEASURE);
 
-    /* --------------------
-     * Loop until shutdown.
-     * --------------------
+    /* ----------------------------------------------------
+     * Compute PSFs of residual phase-screens until killed.
+     * ----------------------------------------------------
      */
 
-        while(status.MPI_TAG != mpi_cmds::shutdown){
+        while(status.MPI_TAG != mpi_cmds::kill){
 
         /* -----------------------------------------
          * Get phase-screen residuals from master.
@@ -587,7 +587,7 @@ int main(int argc, char *argv[]){
 
             MPI_Recv(residual_per_fried[0], residual_per_fried.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-            if(status.MPI_TAG == mpi_cmds::stayalive){
+            if(status.MPI_TAG == mpi_cmds::task){
 
             /* ------------------------------------
              * Compute the PSFs from the residuals.

@@ -277,16 +277,16 @@ int main(int argc, char *argv[]){
 
         for(int id = 1; id < processes_total; id++){
 
-        /* ------------------------------------------------------
-         * if rank < number of fried parameters. Shutdown worker.
-         * ------------------------------------------------------ 
+        /* --------------------------------------------------
+         * if rank < number of fried parameters, kill worker.
+         * -------------------------------------------------- 
          */
 
             if(id > int(fried.get_size())){
 
                 if(fried[0] != nullptr){
 
-                    MPI_Send(fried[0], 1, mpi_precision, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                    MPI_Send(fried[0], 1, mpi_precision, id, mpi_cmds::kill, MPI_COMM_WORLD);
 
                 }else{
 
@@ -301,7 +301,7 @@ int main(int argc, char *argv[]){
                 
                 if(aperture[0] != nullptr){
 
-                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::kill, MPI_COMM_WORLD);
 
                 }else{
 
@@ -332,7 +332,7 @@ int main(int argc, char *argv[]){
 
                 if(fried[index_of_fried_in_queue] != nullptr){
 
-                    MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
 
                 }else{
 
@@ -347,7 +347,7 @@ int main(int argc, char *argv[]){
 
                 if(aperture[0] != nullptr){
                     
-                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
 
                 }else{
 
@@ -464,9 +464,9 @@ int main(int argc, char *argv[]){
             fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed);
             fflush (console);
 
-        /* --------------------------------------------------------------------
-         * Assign new fried parameter, if available, to worker, else, shutdown. 
-         * --------------------------------------------------------------------
+        /* ---------------------------------------------------------------------
+         * Assign new fried parameter to worker if available, else, kill worker.
+         * ---------------------------------------------------------------------
          */
 
             if(index_of_fried_in_queue < fried.get_size()){
@@ -478,7 +478,7 @@ int main(int argc, char *argv[]){
 
                 if(fried[index_of_fried_in_queue] != nullptr){
 
-                    MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
 	
                 }else{
 
@@ -515,14 +515,14 @@ int main(int argc, char *argv[]){
       	    
             }
 	        
-        /* --------------------------------------------------------------
-         * If no more fried parameters are available, shutdown processes.
-         * --------------------------------------------------------------
+        /* -------------------------------------------------------
+         * If no more fried parameters are available, kill worker.
+         * -------------------------------------------------------
          */
 
             else{
 
-                MPI_Send(nullptr, 0, MPI_CHAR, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                MPI_Send(nullptr, 0, MPI_CHAR, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
 	        
             /* --------------------------
              * Decrement processes_total;
@@ -674,12 +674,12 @@ int main(int argc, char *argv[]){
 
 #endif
 
-    /* -----------------------------------------------------
-     * Enter loop to simulate phase-screens, until shutdown.
-     * -----------------------------------------------------
+    /* ---------------------------------------------------
+     * Enter loop to simulate phase-screens, until killed.
+     * ---------------------------------------------------
      */
 
-        while(status.MPI_TAG != mpi_cmds::shutdown){
+        while(status.MPI_TAG != mpi_cmds::kill){
 
             for(sizt ind = 0; ind < config::sims_per_fried; ind++){
             	    
