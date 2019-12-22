@@ -14,16 +14,16 @@
 
 sizt sizeof_vector(      sizt_vector &vector){
     sizt N = 1;
-    for(int i = 0; i < vector.size(); i++){
-        N *= vector[i];
+    for(sizt ind = 0; ind < vector.size(); ind++){
+        N *= vector[ind];
     }
     return(N);
 }
 
 sizt sizeof_vector(const sizt_vector &vector){
     sizt N = 1;
-    for(int i = 0; i < vector.size(); i++){
-        N *= vector[i];
+    for(sizt ind = 0; ind < vector.size(); ind++){
+        N *= vector[ind];
     }
     return(N);
 }
@@ -482,28 +482,27 @@ int          Array<type>::wr_bin(const char *filename, bool clobber){
 template <class type>
 int          Array<type>::rd_fits(const char *filename){
 
-    int fits_bitpix   = 0;
-    int fits_datatype = 0;
-
+    int this_bitpix   = 0;
+    int this_datatype = 0;
     if(std::is_same<type, float>::value){
 
-        fits_bitpix   = -32;
-        fits_datatype = TFLOAT;
+        this_bitpix   = -32;
+        this_datatype = TFLOAT;
 
     }else if(std::is_same<type, double>::value){
 
-        fits_bitpix   = -64;
-        fits_datatype = TDOUBLE;
+        this_bitpix   = -64;
+        this_datatype = TDOUBLE;
 
     }else if(std::is_same<type, std::complex<float>>::value){
 
-        fits_bitpix   = -32;
-        fits_datatype = TCOMPLEX;
+        this_bitpix   = -32;
+        this_datatype = TCOMPLEX;
 
     }else if(std::is_same<type, std::complex<double>>::value){
 
-        fits_bitpix   = -64;
-        fits_datatype = TDBLCOMPLEX;
+        this_bitpix   = -64;
+        this_datatype = TDBLCOMPLEX;
 
     }else{
 
@@ -515,6 +514,7 @@ int          Array<type>::rd_fits(const char *filename){
     sizt count = 1;
     int n_axis = 0;
     int status = 0;
+    int bitpix = 0;
 
     sizt_vector fpix;
     sizt_vector dims;
@@ -522,9 +522,10 @@ int          Array<type>::rd_fits(const char *filename){
     fits_open_file(&file, filename, READONLY, &status);
     if(status != 0)
         return(status);
-
+ 
     fits_get_img_dim (file, &n_axis, &status); dims.resize(n_axis);
     fits_get_img_size(file,  n_axis, (long int*)dims.data(), &status);
+    fits_get_img_type(file, &bitpix, &status);
     if(status != 0)
         return(status);
 
@@ -535,7 +536,8 @@ int          Array<type>::rd_fits(const char *filename){
 
     count = sizeof_vector(dims);
     fpix.resize(n_axis); std::fill(fpix.begin(), fpix.end(), 1);
-    fits_read_pix(file, fits_datatype, (long int*)fpix.data(), count, nullptr, data.root_ptr, nullptr, &status);
+
+    fits_read_pix(file, this_datatype, (long int*)fpix.data(), count, nullptr, data[0], nullptr, &status);
     if(status != 0)
         return(status);
 
@@ -548,28 +550,28 @@ int          Array<type>::rd_fits(const char *filename){
 template <class type>
 int 	     Array<type>::wr_fits(const char *name, bool clobber){
 
-    int fits_bitpix   = 0;
-    int fits_datatype = 0;
+    int this_bitpix   = 0;
+    int this_datatype = 0;
 
     if(std::is_same<type, float>::value){
 
-        fits_bitpix   = -32;
-        fits_datatype = TFLOAT;
+        this_bitpix   = -32;
+        this_datatype = TFLOAT;
 
     }else if(std::is_same<type, double>::value){
 
-        fits_bitpix   = -64;
-        fits_datatype = TDOUBLE;
+        this_bitpix   = -64;
+        this_datatype = TDOUBLE;
 
     }else if(std::is_same<type, std::complex<float>>::value){
 
-        fits_bitpix   = -32;
-        fits_datatype = TCOMPLEX;
+        this_bitpix   = -32;
+        this_datatype = TCOMPLEX;
 
     }else if(std::is_same<type, std::complex<double>>::value){
 
-        fits_bitpix   = -64;
-        fits_datatype = TDBLCOMPLEX;
+        this_bitpix   = -64;
+        this_datatype = TDBLCOMPLEX;
 
     }else{
 
@@ -610,7 +612,7 @@ int 	     Array<type>::wr_fits(const char *name, bool clobber){
  * ------------------
  */
 
-    fits_create_img(fileptr, fits_bitpix, dimensions.size(), (long int*)dimensions.data(), &status);
+    fits_create_img(fileptr, this_bitpix, dimensions.size(), (long int*)dimensions.data(), &status);
     if(status != 0)
         return(status);
     
@@ -619,7 +621,7 @@ int 	     Array<type>::wr_fits(const char *name, bool clobber){
  * -------------------
  */
 
-    fits_write_img(fileptr, fits_datatype, 1, this->size, this->root_ptr, &status);
+    fits_write_img(fileptr, this_datatype, 1, this->size, this->root_ptr, &status);
     if(status != 0)
         return(status);
     
