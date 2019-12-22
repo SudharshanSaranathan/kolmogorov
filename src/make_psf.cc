@@ -60,15 +60,16 @@ int main(int argc, char *argv[]){
 
 /*
  *  Variable declaration:
- *  -----------------------------------------------
- *  Name		Type		Description
- *  -----------------------------------------------
- *  status:		MPI_status	See MPI documentation.
- *  process_rank:	int		Rank of MPI processes.
- *  process_total:	int		Store the total number of MPI processes
- *  mpi_recv_count:	int		Store the count of data received in MPI_Recv, see MPI documentation for explanation.
- *  read_status:	int		File read status.
- *  write_status:	int		File write status.
+ *  ---------------------------------------
+ *  Name		    Type        Description
+ *  ---------------------------------------
+ *  status          MPI_status  See MPI documentation.
+ *  process_rank    int         Rank of MPI processes.
+ *  process_total   int         Store the total number of MPI processes
+ *  mpi_recv_count  int         Store the count of data received in MPI_Recv, see MPI documentation for explanation.
+ *  read_status     int         File read status.
+ *  write_status    int         File write status.
+ *  mpi_precision   int         MPI_FLOAT or MPI_DOUBLE.
  */
    
     MPI_Status status;
@@ -77,6 +78,7 @@ int main(int argc, char *argv[]){
     int mpi_recv_count = 0;
     int read_status = 0;
     int write_status = 0;
+    int mpi_precision = std::is_same<precision, float>::value == true ? MPI_FLOAT : MPI_DOUBLE;
 
 /* --------------
  * Initialize MPI
@@ -138,28 +140,28 @@ int main(int argc, char *argv[]){
      * --------------------------------------------
      * Name                     Type    Description
      * --------------------------------------------
-     * index_of_fried_in_queue  long    Index of the next fried parameter.
-     * fried_completed          long    Number of fried parameters processed.
-     * percent_assigned         double  Percentage of fried assigned.
-     * percent_completed        double  Percentage of fried completed.
+     * index_of_fried_in_queue  ulng    Index of the next fried parameter.
+     * fried_completed          ulng    Number of fried parameters processed.
+     * percent_assigned         float   Percentage of fried assigned.
+     * percent_completed        float   Percentage of fried completed.
      */
 
-        long    index_of_fried_in_queue = 0;
-        long    fried_completed         = 0;
-        double  percent_assigned        = 0.0;
-        double  percent_completed       = 0.0;
+        ulng  index_of_fried_in_queue = 0;
+        ulng  fried_completed         = 0;
+        float percent_assigned        = 0.0;
+        float percent_completed       = 0.0;
 
     /*
      * Array declaration.
-     * ----------------------------------------
-     * Name         Type            Description
-     * ----------------------------------------
-     * residual     Array<double>   Phase-screen residuals, see 'lib_array.h' for datatype.
-     * aperture     Array<double>   Aperture function, see 'lib_array.h' for datatype.
+     * --------------------------------------------
+     * Name         Type                Description
+     * --------------------------------------------
+     * residual     Array<precision>    Phase-screen residuals, see 'lib_array.h' for datatype.
+     * aperture     Array<precision>    Aperture function, see 'lib_array.h' for datatype.
      */
 
-        Array<double> residual;
-        Array<double> aperture;
+        Array<precision> residual;
+        Array<precision> aperture;
 
     /* -------------------------------------------
      * !(2) Read residual phase-screens from file.
@@ -228,13 +230,13 @@ int main(int argc, char *argv[]){
 
     /*
      * Array declaration.
-     * ------------------------------------
-     * Name     Type            Description
-     * ------------------------------------
-     * psf      Array<double>  PSFs corresponding to the residuals see 'lib_array.h' for datatype.
+     * ----------------------------------------
+     * Name     Type                Description
+     * ----------------------------------------
+     * psf      Array<precision>    PSFs corresponding to the residuals see 'lib_array.h' for datatype.
      */
 
-        Array<double> psf(dims_psf);
+        Array<precision> psf(dims_psf);
 
     /* --------------------------------------------------------------------
      * Loop to shutdown excess MPI workers than available fried parameters.
@@ -248,11 +250,11 @@ int main(int argc, char *argv[]){
          * ------------------------------------------------------
          */
 
-            if(id > dims_residual[0]){
+            if(id > int(dims_residual[0])){
 
                 if(aperture[0] != nullptr){
                 
-                    MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
 
                 }else{
 
@@ -280,7 +282,7 @@ int main(int argc, char *argv[]){
             else{
                 if(aperture[0] != nullptr){
 
-                    MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
                 }else{
 
@@ -310,7 +312,7 @@ int main(int argc, char *argv[]){
 
             if(residual[index_of_fried_in_queue] != nullptr){
                 
-                MPI_Send(residual[index_of_fried_in_queue], sizeof_vector(dims_residual_per_fried), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                MPI_Send(residual[index_of_fried_in_queue], sizeof_vector(dims_residual_per_fried), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
             }else{
 
@@ -349,42 +351,42 @@ int main(int argc, char *argv[]){
 
         while(fried_completed < dims_residual[0]){
 
-        /* ---------------------------------------------------------------------------
-	     * Wait for a worker that has finished task. If found, get worker information.
-         * ---------------------------------------------------------------------------
-	     */	
+        /* --------------------------------------------------------------------
+         * Wait for a worker to ping master. If pinged, get worker information.
+         * --------------------------------------------------------------------
+         */	
 	
-	        MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-	        MPI_Get_count(&status, MPI_DOUBLE, &mpi_recv_count);
-
-	    /*
-	     * Variable declaration:
-	     *-------------------------------------
-	     * Name		        Type    Description
-	     * ------------------------------------
+            MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Get_count(&status, mpi_precision, &mpi_recv_count);
+            
+        /*
+         * Variable declaration:
+         * -------------------------------------
+         *  Name            Type    Description
+         * ------------------------------------
          * fried_index_psf  sizt    Index of next fried in pointer space, for psf array.
-	     */
+         */
 
         /* -------------------------------------------------
-	     * Get index of fried parameter processed by worker.
+         * Get index of fried parameter processed by worker.
          * -------------------------------------------------
-	     */
+         */
 
-	        sizt fried_index_psf = process_fried_map[status.MPI_SOURCE];
+            sizt fried_index_psf = process_fried_map[status.MPI_SOURCE];
 
-	    /* ------------------------------------
-	     * Get PSFs, store at correct location.
+        /* ------------------------------------
+         * Get PSFs, store at correct location.
          * ------------------------------------
-	     */
+         */
 
-	        MPI_Recv(psf[fried_index_psf], sizeof_vector(dims_psf_per_fried), MPI_DOUBLE, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(psf[fried_index_psf], sizeof_vector(dims_psf_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
         /* --------------------------
-	     * Increment fried_completed.
+         * Increment fried_completed.
          * --------------------------
-	     */
+         */
 
-	        fried_completed++;
+            fried_completed++;
 
         /* -------------------------------------
          * Update and display percent_completed.
@@ -410,7 +412,7 @@ int main(int argc, char *argv[]){
 
                 if(residual[index_of_fried_in_queue] != nullptr){
 
-                    MPI_Send(residual[index_of_fried_in_queue], sizeof_vector(dims_residual_per_fried), MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(residual[index_of_fried_in_queue], sizeof_vector(dims_residual_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
                 }else{
 
@@ -453,7 +455,7 @@ int main(int argc, char *argv[]){
 	         */
 		        if(residual[0] != nullptr){
 
-                    MPI_Send(residual[0], sizeof_vector(dims_residual_per_fried), MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                    MPI_Send(residual[0], sizeof_vector(dims_residual_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
 	        
                 }else{
 
@@ -517,40 +519,40 @@ int main(int argc, char *argv[]){
 
     /*
      * Array declaration.
-     * ----------------------------------------
-     * Name         Type    Description
-     * ----------------------------------------
-     * aperture     sizt    Aperture function.
+     * --------------------------------------------
+     * Name         Type                Description
+     * --------------------------------------------
+     * aperture     Array<precision>    Aperture function.
      */
 
-        Array<double> aperture{dims_aperture};
+        Array<precision> aperture{dims_aperture};
 
     /* ----------------------------------
      * Get aperture function from master.
      * ----------------------------------
      */
 
-        MPI_Recv(aperture[0], aperture.get_size(), MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(aperture[0], aperture.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         
     /*
      * Array declaration.
-     * ----------------------------------------
-     * Name                     Type            Description
-     * ----------------------------------------
-     * residual_per_fried       Array<double>   Phase-screen residuals, per fried.
-     * residual_single          Array<double>   Single residual phase-screen.
-     * psf_per_fried            Array<double>   PSFs of the residuals, per fried.
-     * psf_single               Array<double>   Single PSF.
-     * pupil_function           Array<cmpx>     Single pupil function.
-     * pupil_function_fourier   Array<cmpx>     Fourier transformed pupil function. 
+     * --------------------------------------------------------
+     * Name                     Type                Description
+     * --------------------------------------------------------
+     * residual_per_fried       Array<precision>    Phase-screen residuals, per fried.
+     * residual_single          Array<precision>    Single residual phase-screen.
+     * psf_per_fried            Array<precision>    PSFs of the residuals, per fried.
+     * psf_single               Array<precision>    Single PSF.
+     * pupil_function           Array<cmpx>         Single pupil function.
+     * pupil_function_fourier   Array<cmpx>         Fourier transformed pupil function. 
      */
 
-        Array<double> residual_per_fried(dims_residual_per_fried);
-        Array<double> residual_single(dims_aperture);
-        Array<double> psf_per_fried(dims_psf_per_fried);
-        Array<double> psf_single(dims_psf_single);
-        Array<cmpx> pupil_function(dims_psf_single);
-        Array<cmpx> pupil_function_fourier(dims_psf_single);
+        Array<precision> residual_per_fried(dims_residual_per_fried);
+        Array<precision> residual_single(dims_aperture);
+        Array<precision> psf_per_fried(dims_psf_per_fried);
+        Array<precision> psf_single(dims_psf_single);
+        Array<cmpx>      pupil_function(dims_psf_single);
+        Array<cmpx>      pupil_function_fourier(dims_psf_single);
 
         fftw_plan forward = fftw_plan_dft_2d(dims_psf_single[0], dims_psf_single[1], reinterpret_cast<fftw_complex*>(pupil_function[0]),\
                                              reinterpret_cast<fftw_complex*>(pupil_function_fourier[0]), FFTW_FORWARD, FFTW_MEASURE);
@@ -567,7 +569,7 @@ int main(int argc, char *argv[]){
          * -----------------------------------------
          */
 
-            MPI_Recv(residual_per_fried[0], residual_per_fried.get_size(), MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(residual_per_fried[0], residual_per_fried.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
             if(status.MPI_TAG == mpi_cmds::stayalive){
 
@@ -589,7 +591,7 @@ int main(int argc, char *argv[]){
                     }
                     else{
 
-                        memcpy(residual_single[0], residual_per_fried[ind], residual_single.get_size() * sizeof(double));
+                        memcpy(residual_single[0], residual_per_fried[ind], residual_single.get_size() * sizeof(precision));
                         make_psf_from_phase_screen(residual_single, psf_single, aperture, forward); 
                    
                     }                
@@ -599,13 +601,13 @@ int main(int argc, char *argv[]){
                  * -------------------------------------------------
                  */
 
-                    memcpy(psf_per_fried[ind], psf_single[0], psf_single.get_size() * sizeof(double));
+                    memcpy(psf_per_fried[ind], psf_single[0], psf_single.get_size() * sizeof(precision));
 
                 }
                 
                 if(psf_per_fried[0] != nullptr){
                 
-                    MPI_Send(psf_per_fried[0], psf_per_fried.get_size(), MPI_DOUBLE, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+                    MPI_Send(psf_per_fried[0], psf_per_fried.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
                 
                 }else{
 
