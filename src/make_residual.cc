@@ -459,19 +459,19 @@ int main(int argc, char *argv[]){
 	        
             sizt fried_index_phase   = process_fried_map[status.MPI_SOURCE];
 
-	    /* ------------------------------------------------------
-	     * Get residual phase-screens, store at correct location.
+        /* ------------------------------------------------------
+         * Get residual phase-screens, store at correct location.
          * ------------------------------------------------------
-	     */
+         */
 
-	        MPI_Recv(residual[fried_index_phase], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(residual[fried_index_phase], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
         /* --------------------------
-	     * Increment fried_completed.
+         * Increment fried_completed.
          * --------------------------
-	     */
+         */
 
-	        fried_completed++;
+            fried_completed++;
 
         /* -------------------------------------
          * Update and display percent_completed.
@@ -484,11 +484,11 @@ int main(int argc, char *argv[]){
             fflush (console);
 
         /* -------------------------------------------------------------------
-	     * Send next set of phase-screen simulations, if available, to worker.
+         * Send next set of phase-screen simulations, if available, to worker.
          * -------------------------------------------------------------------
-	     */
+         */
 
-	        if(index_of_fried_in_queue < dims_phase[0]){
+            if(index_of_fried_in_queue < dims_phase[0]){
 
 
            /* -------------------
@@ -527,12 +527,12 @@ int main(int argc, char *argv[]){
                 
                 }    
 	
-	        /* -------------------------
-	         * Update process_fried_map.
+            /* -------------------------
+             * Update process_fried_map.
              * -------------------------
-	         */
+             */
 	
-		        process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
+                process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
 
             /* ------------------------------------
              * Update and display percent_assigned.
@@ -545,14 +545,13 @@ int main(int argc, char *argv[]){
                 fflush (console);
 
             /* ----------------------------------
-	         * Increment index_of_fried_in_queue.
+             * Increment index_of_fried_in_queue.
              * ----------------------------------
-	         */
+             */
 
-		        index_of_fried_in_queue++;
+                index_of_fried_in_queue++;
       	    
-            }
-	        else{
+            }else{
 	    
 	        /* ----------------------------------------------------------
 	         * If no more residuals to be calculated, shutdown processes.
