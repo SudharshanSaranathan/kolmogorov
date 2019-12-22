@@ -738,27 +738,27 @@ int main(int argc, char *argv[]){
 
             }
 	    
-	    /* ----------------------------------
-	     * Send phase-screens to master rank.
+        /* ----------------------------------
+         * Send phase-screens to master rank.
          * ----------------------------------
-	     */
+         */
 
             if(phase_per_fried[0] != nullptr){
 
-	            MPI_Send(phase_per_fried[0], phase_per_fried.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
-
+                MPI_Send(phase_per_fried[0], phase_per_fried.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+            
             }else{
 
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
                
             }
 
-	    /* -------------------------------------
-	     * Get next fried parameter from master.
+        /* -------------------------------------
+         * Get next fried parameter from master.
          * -------------------------------------
-	     */
+         */
 
-	        MPI_Recv(&fried, 1,  mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(&fried, 1,  mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         
         }
 
