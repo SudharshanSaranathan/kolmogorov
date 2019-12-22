@@ -553,15 +553,15 @@ int main(int argc, char *argv[]){
       	    
             }else{
 	    
-	        /* ----------------------------------------------------------
-	         * If no more residuals to be calculated, shutdown processes.
+            /* ----------------------------------------------------------
+             * If no more residuals to be calculated, shutdown processes.
              * ----------------------------------------------------------
-	         */
+             */
                 
                 if(weights[0] != nullptr && phase[0] != nullptr){
 
                     MPI_Send(weights[0], dims_basis[0], mpi_precision, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
-		            MPI_Send(phase[0], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                    MPI_Send(phase[0], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
                 
                 }else{
 
