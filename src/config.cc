@@ -2,11 +2,12 @@
 #include <fstream>
 #include <sstream>
 
-string config::read_fried_from     = "fried.fits";
-string config::read_basis_from     = "basis.fits";
-string config::read_weights_from   = "weights.fits";
-string config::read_fftwisdom_from = "fftw.wisdom";
-string config::read_aperture_function_from = "pupil.fits";
+string config::read_fried_from              = "fried.fits";
+string config::read_basis_from              = "basis.fits";
+string config::read_weights_from            = "weights.fits";
+string config::read_fft_psf_wisdom_from     = "fftw_wisdom_psf";
+string config::read_fft_phase_wisdom_from   = "fftw_wisdom_phase";
+string config::read_aperture_function_from  = "pupil.fits";
 
 string config::write_log_to      = "log.file";
 string config::write_phase_to    = "phase.fits";
@@ -48,8 +49,10 @@ int config_parse(const char* filename){
 	        config::read_aperture_function_from = value;
         else if(key == "weights")
 	        config::read_weights_from = value;
-        else if(key == "fftwisdom")
-	        config::read_fftwisdom_from = value;
+        else if(key == "fftw_psf")
+	        config::read_fft_psf_wisdom_from = value;
+        else if(key == "fftw_phase")
+	        config::read_fft_phase_wisdom_from = value;
         else if(key == "log")
 	        config::write_log_to = value;
         else if(key == "phase")
