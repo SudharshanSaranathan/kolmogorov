@@ -278,9 +278,9 @@ int main(int argc, char *argv[]){
         for(int id = 1; id < processes_total; id++){
 
         /* ------------------------------------------------------
-        * if rank < number of fried parameters. Shutdown worker.
+         * if rank < number of fried parameters. Shutdown worker.
          * ------------------------------------------------------ 
-	     */
+         */
 
             if(id > int(fried.get_size())){
 
@@ -377,7 +377,7 @@ int main(int argc, char *argv[]){
             /* ------------------------------------
              * Update and display percent_assigned.
              * ------------------------------------
-	         */
+             */
 
                 percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
        
@@ -520,7 +520,7 @@ int main(int argc, char *argv[]){
          * --------------------------------------------------------------
          */
 
-	        else{
+            else{
 
                 MPI_Send(nullptr, 0, MPI_CHAR, status.MPI_SOURCE, mpi_cmds::shutdown, MPI_COMM_WORLD);
 	        
@@ -532,7 +532,7 @@ int main(int argc, char *argv[]){
                 processes_total--;
 
             }
-	    }
+        }
 
     /* ------------------------------ 
      * !(6) Save simulations to disk.
@@ -543,13 +543,12 @@ int main(int argc, char *argv[]){
         fflush (console);
 
         write_status = phase.wr_fits(config::write_phase_to.c_str(), config::output_clobber);
-	    if(write_status != EXIT_SUCCESS){
+        if(write_status != EXIT_SUCCESS){
+            
+            fprintf(console, "Failed with err code: %d]\n", write_status);
+            fflush (console);
 
-	        fprintf(console, "Failed with err code: %d]\n", write_status);
-	        fflush (console);
-
-        }
-	    else{
+        }else{
 
             fprintf(console, "Done]\n");
             fflush (console);
@@ -589,9 +588,9 @@ int main(int argc, char *argv[]){
      * scaled. Therefore, dims_phase in this workflow is *not* equal to the dims_phase in the master workflow. 
      */
 
-	    const sizt_vector dims_phase{sizt(config::phase_size * config::sims_size_x / config::aperture_size), sizt(config::phase_size * config::sims_size_y / config::aperture_size)}; 
-	    const sizt_vector dims_aperture{config::sims_size_x, config::sims_size_y};
-	    const sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
+        const sizt_vector dims_phase{sizt(config::phase_size * config::sims_size_x / config::aperture_size), sizt(config::phase_size * config::sims_size_y / config::aperture_size)};
+        const sizt_vector dims_aperture{config::sims_size_x, config::sims_size_y};
+        const sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
 
     /*
      * Array declaration:
@@ -610,10 +609,10 @@ int main(int argc, char *argv[]){
      * to the size of the aperture and stored in phase_per_fried.
      */
 
-	    Array<cmpx>      phase(dims_phase);
-	    Array<cmpx>      phase_fourier(dims_phase);
-	    Array<precision> phase_per_fried(dims_phase_per_fried);
-	    Array<precision> aperture(dims_aperture);
+        Array<cmpx>      phase(dims_phase);
+        Array<cmpx>      phase_fourier(dims_phase);
+        Array<precision> phase_per_fried(dims_phase_per_fried);
+        Array<precision> aperture(dims_aperture);
 
     /* -----------------------------------------------------------------------
      * Import fft wisdom, if available, and initialize fourier transformation.
@@ -651,7 +650,7 @@ int main(int argc, char *argv[]){
         precision fried = 0.0;
         precision aperture_total  = 0.0;
 
-	    sizt aperture_center_x = sizt(config::sims_size_x / 2.0);
+        sizt aperture_center_x = sizt(config::sims_size_x / 2.0);
         sizt aperture_center_y = sizt(config::sims_size_y / 2.0);
         sizt phase_center_x    = sizt(dims_phase[0] / 2.0);
         sizt phase_center_y    = sizt(dims_phase[1] / 2.0);
@@ -670,8 +669,8 @@ int main(int argc, char *argv[]){
      * ------------------------------------------------
      */
 
-	    MPI_Recv(aperture[0], aperture.get_size(),  mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-	    aperture_total = aperture.get_total();
+        MPI_Recv(aperture[0], aperture.get_size(),  mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        aperture_total = aperture.get_total();
 
 #endif
 
@@ -680,7 +679,7 @@ int main(int argc, char *argv[]){
      * -----------------------------------------------------
      */
 
-	    while(status.MPI_TAG != mpi_cmds::shutdown){
+        while(status.MPI_TAG != mpi_cmds::shutdown){
 
             for(sizt ind = 0; ind < config::sims_per_fried; ind++){
             	    
@@ -689,7 +688,7 @@ int main(int argc, char *argv[]){
              * -------------------------------
 	        */
              
-	            make_phase_screen_fourier_shifted(phase_fourier, fried, config::phase_size);
+                make_phase_screen_fourier_shifted(phase_fourier, fried, config::phase_size);
                 fftw_execute_dft(forward, reinterpret_cast<fftw_complex*>(phase_fourier[0]),\
                                           reinterpret_cast<fftw_complex*>(phase[0]));
 
