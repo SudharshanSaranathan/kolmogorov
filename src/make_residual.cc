@@ -436,28 +436,28 @@ int main(int argc, char *argv[]){
         while(fried_completed < dims_phase[0]){
 
         /* ----------------------------------------------------------------------------
-	     * Wait for a worker that is ready. If found, get and store worker information.
+         * Wait for a worker that is ready. If found, get and store worker information.
          * ----------------------------------------------------------------------------
-	     */	
+         */	
 	
-	        MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-	        MPI_Get_count(&status, mpi_precision, &mpi_recv_count);
+            MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Get_count(&status, mpi_precision, &mpi_recv_count);
 
-	    /*
-	     * Variable declaration:
-	     *-----------------------------------------
-	     * Name		            Type    Description
-	     * ----------------------------------------
-	     * fried_index_weights	sizt	Index of next fried in pointer space, for array weights.
+        /*
+         * Variable declaration:
+         *-----------------------------------------
+         * Name                 Type    Description
+         * ----------------------------------------
+         * fried_index_weights  sizt    Index of next fried in pointer space, for array weights.
          * fried_index_phase    sizt    Index of next fried in pointer space, for array phase.
-	     */
+         */
 
         /* -------------------------------------------------
-	     * Get index of fried parameter processed by worker.
+         * Get index of fried parameter processed by worker.
          * -------------------------------------------------
-	     */
-
-	        sizt fried_index_phase   = process_fried_map[status.MPI_SOURCE];
+         */	
+	        
+            sizt fried_index_phase   = process_fried_map[status.MPI_SOURCE];
 
 	    /* ------------------------------------------------------
 	     * Get residual phase-screens, store at correct location.
