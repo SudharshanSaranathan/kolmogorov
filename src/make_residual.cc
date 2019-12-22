@@ -319,8 +319,8 @@ int main(int argc, char *argv[]){
 
             if(id > int(dims_phase[0])){
 
-                MPI_Send(&dims_basis_naxis, 1, MPI_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
-                MPI_Send( dims_basis.data(), dims_basis_naxis, MPI_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
+                MPI_Send(&dims_basis_naxis, 1, MPI::UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
+                MPI_Send( dims_basis.data(), dims_basis_naxis, MPI::UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
 
             /* -------------------------------------
              * Decrement number of processes in use.
@@ -338,8 +338,8 @@ int main(int argc, char *argv[]){
 
             else{
 
-                MPI_Send(&dims_basis_naxis, 1, MPI_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
-                MPI_Send( dims_basis.data(), dims_basis_naxis, MPI_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send(&dims_basis_naxis, 1, MPI::UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send( dims_basis.data(), dims_basis_naxis, MPI::UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
 
             }
 
@@ -627,7 +627,13 @@ int main(int argc, char *argv[]){
      */
 
         sizt dims_basis_naxis;
-        MPI_Recv(&dims_basis_naxis, 1, MPI_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+    /* ------------------------------------------------------------
+     * Get the number of dimensions of basis functions from master.
+     * ------------------------------------------------------------
+     */
+
+        MPI_Recv(&dims_basis_naxis, 1, MPI::UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     /*
      * Vector declaration.
@@ -645,7 +651,7 @@ int main(int argc, char *argv[]){
         sizt_vector dims_basis(dims_basis_naxis);
         sizt_vector dims_weights(1);
         
-        MPI_Recv(dims_basis.data(), dims_basis_naxis, MPI_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(dims_basis.data(), dims_basis_naxis, MPI::UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     /*
      * Array declaration.
@@ -663,13 +669,6 @@ int main(int argc, char *argv[]){
         Array<precision> basis(dims_basis);
         Array<precision> weights(dims_weights);
 
-    /* -------------------------------------
-     * Get basis functions from master rank.
-     * -------------------------------------
-     */
-
-        MPI_Recv(basis[0], basis.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
     /*
      * Vector declaration.
      * ----------------------------------------
@@ -680,15 +679,25 @@ int main(int argc, char *argv[]){
 
         sizt_vector basis_norm(dims_basis[0]);
 
-    /* ------------------------------------------------
-     * Compute L2 normalization of the basis functions.
-     * ------------------------------------------------
+    /* ------------------------------------------------------------------------
+     * Get basis functions from master rank, if this process hasn't been killed.
+     * -------------------------------------------------------------------------
      */
 
-        for(sizt ind = 0; ind < dims_basis[0]; ind++){
-            for(sizt xs = 0; xs < dims_basis[1]; xs++){
-                for(sizt ys = 0; ys < dims_basis[2]; ys++){
-                    basis_norm[ind] += basis(ind, xs, ys) * basis(ind, xs, ys);
+        if(status.MPI_TAG != mpi_cmds::kill){
+
+            MPI_Recv(basis[0], basis.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+        /* ------------------------------------------------
+        * Compute L2 normalization of the basis functions.
+        * ------------------------------------------------
+        */
+
+            for(sizt ind = 0; ind < dims_basis[0]; ind++){
+                for(sizt xs = 0; xs < dims_basis[1]; xs++){
+                    for(sizt ys = 0; ys < dims_basis[2]; ys++){
+                        basis_norm[ind] += basis(ind, xs, ys) * basis(ind, xs, ys);
+                    }
                 }
             }
         }
