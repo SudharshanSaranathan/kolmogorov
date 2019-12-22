@@ -247,12 +247,12 @@ void make_psf_from_phase_screen(Array<precision>& phase, Array<precision>& psf, 
  * Pupil function has the same dimensions as the PSF.
  */
 
-    Array<cmpx>   pupil_function (dims_psf);
+    Array<cmpx>   pupil_function(dims_psf);
     Array<cmpx>   complex_psf(dims_psf);
 
-/* ------------------------------
- * Loop to create pupil function.
- * ------------------------------
+/* -------------------------
+ * Construct pupil function.
+ * -------------------------
  */
 
     for(sizt xpix = 0; xpix < dims_phase[0]; xpix++){
@@ -263,14 +263,14 @@ void make_psf_from_phase_screen(Array<precision>& phase, Array<precision>& psf, 
          * --------------
          */
            
-            pupil_function(xpix + phase_center_x, ypix + phase_center_y).real(aperture(xpix, ypix) * cos(phase(xpix, ypix)));
+            pupil_function(xpix + phase_center_x, ypix + phase_center_y).real(static_cast<double>(aperture(xpix, ypix) * cos(phase(xpix, ypix))));
               
         /* -------------------
          * Set imaginary part.
          * -------------------
          */
            
-            pupil_function(xpix + phase_center_x, ypix + phase_center_y).imag(aperture(xpix, ypix) * sin(phase(xpix, ypix))); 
+            pupil_function(xpix + phase_center_x, ypix + phase_center_y).imag(static_cast<double>(aperture(xpix, ypix) * sin(phase(xpix, ypix)))); 
         
         }
     }
@@ -284,9 +284,9 @@ void make_psf_from_phase_screen(Array<precision>& phase, Array<precision>& psf, 
     
 /*
  * Array declaration.
- * ----------------------------------------
+ * --------------------------------------------
  * Name         Type                Description
- * ----------------------------------------
+ * --------------------------------------------
  * psf_copy     Array<precision>    Shifted copy of the PSF, see 'lib_array.h' for datatype.
  */
 
@@ -299,7 +299,7 @@ void make_psf_from_phase_screen(Array<precision>& phase, Array<precision>& psf, 
 
     for(sizt xpix = 0; xpix < dims_psf[0]; xpix++){
         for(sizt ypix = 0; ypix < dims_psf[1]; ypix++){
-            psf_copy(xpix, ypix) = std::norm(complex_psf(xpix, ypix));
+            psf_copy(xpix, ypix) = static_cast<precision>(std::norm(complex_psf(xpix, ypix)));
         }
     }
 
