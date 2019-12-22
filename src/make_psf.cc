@@ -260,11 +260,11 @@ int main(int argc, char *argv[]){
      * Name                 Type            Description
      * ----------------------------------------
      * dims_psf_single      sizt_vector     Dimensions of a single PSF.
-     * dims_average_psf     sizt_vector     Dimensions of PSF averaged over residual phase-screen realizations.
+     * dims_psf_average     sizt_vector     Dimensions of PSF averaged over residual phase-screen realizations.
      */
 
         const sizt_vector dims_psf_single {2 * dims_residual[2] - 1, 2 * dims_residual[3] - 1};
-        const sizt_vector dims_psf_average{dims_residual[1], 2 * dims_residual[2] - 1, 2 * dims_residual[3] - 1};
+        const sizt_vector dims_psf_average{dims_residual[0], 2 * dims_residual[2] - 1, 2 * dims_residual[3] - 1};
 
     /*
      * Array declaration.
