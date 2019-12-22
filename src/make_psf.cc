@@ -60,25 +60,25 @@ int main(int argc, char *argv[]){
 
 /*
  *  Variable declaration:
- *  ---------------------------------------
- *  Name		    Type        Description
- *  ---------------------------------------
- *  status          MPI_status  See MPI documentation.
- *  process_rank    int         Rank of MPI processes.
- *  process_total   int         Store the total number of MPI processes
- *  mpi_recv_count  int         Store the count of data received in MPI_Recv, see MPI documentation for explanation.
- *  read_status     int         File read status.
- *  write_status    int         File write status.
- *  mpi_precision   int         MPI_FLOAT or MPI_DOUBLE.
+ *  -------------------------------------------
+ *  Name		    Type            Description
+ *  -------------------------------------------
+ *  status          MPI_status      See MPI documentation.
+ *  mpi_precision   MPI_Datatype    MPI_FLOAT or MPI_DOUBLE.
+ *  process_rank    int             Rank of MPI processes.
+ *  process_total   int             Store the total number of MPI processes
+ *  mpi_recv_count  int             Store the count of data received in MPI_Recv, see MPI documentation for explanation.
+ *  read_status     int             File read status.
+ *  write_status    int             File write status.
  */
    
     MPI_Status status;
+    MPI_Datatype mpi_precision = std::is_same<precision, float>::value == true ? MPI_FLOAT : MPI_DOUBLE;
     int process_rank = 0;
     int processes_total = 0;
     int mpi_recv_count = 0;
     int read_status = 0;
     int write_status = 0;
-    int mpi_precision = std::is_same<precision, float>::value == true ? MPI_FLOAT : MPI_DOUBLE;
 
 /* --------------
  * Initialize MPI
