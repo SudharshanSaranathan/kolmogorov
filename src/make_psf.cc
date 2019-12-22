@@ -578,6 +578,7 @@ int main(int argc, char *argv[]){
              * Compute the PSFs from the residuals.
              * ------------------------------------
              */
+                
                 for(sizt ind = 0; ind < config::sims_per_fried; ind++){
                     
                 /* --------------------------
@@ -598,7 +599,7 @@ int main(int argc, char *argv[]){
                     }                
 
                 /* -------------------------------------------------
-                 * Copy the psf_single back into psf_per_fried[ind].
+                 * Copy psf_single back into psf_per_fried[ind].
                  * -------------------------------------------------
                  */
 
