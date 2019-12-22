@@ -714,19 +714,19 @@ int main(int argc, char *argv[]){
              * ------------------------------------------------------
              */
 
-		        phase_piston /= aperture_total;
-		        for(sizt xs = 0; xs < config::sims_size_x; xs++){
-		            for(sizt ys = 0; ys < config::sims_size_y; ys++){
-		        	    phase_per_fried(ind, xs, ys) -= aperture(xs, ys) * phase_piston;
-		            }
-		        }
+                phase_piston /= aperture_total;
+                for(sizt xs = 0; xs < config::sims_size_x; xs++){
+                    for(sizt ys = 0; ys < config::sims_size_y; ys++){
+                        phase_per_fried(ind, xs, ys) -= aperture(xs, ys) * phase_piston;
+                    }
+                }
 
 #else
 	
-	        /* -------------------------------------------------------------
-	         * If aperture not available, clip simulation to requested size.
+            /* -------------------------------------------------------------
+             * If aperture not available, clip simulation to requested size.
              * -------------------------------------------------------------
-	         */
+             */
 
                 for(sizt xs = 0; xs < config::sims_size_x; xs++){
                     for(sizt ys = 0; ys < config::sims_size_y; ys++){
