@@ -68,6 +68,7 @@ int main(int argc, char *argv[]){
  * mpi_recv_count   int         Store the count of data received in MPI_Recv, see MPI documentation for explanation.
  * read_status      int         File read status.
  * write_status     int         File write status.
+ * mpi_precision    int         MPI_FLOAT or MPI_DOUBLE.
  */
    
     MPI_Status status;
@@ -76,6 +77,7 @@ int main(int argc, char *argv[]){
     int mpi_recv_count = 0;
     int read_status = 0;
     int write_status = 0;
+    int mpi_precision = std::is_same<precision, float>::value == true ? MPI_FLOAT : MPI_DOUBLE;
 
 /* -------------------------
  * Initialize MPI framework.
@@ -134,28 +136,28 @@ int main(int argc, char *argv[]){
     /*
      * Variable declaration:
      * ------------------------------------------------
-     * Name                     Type        Description
+     * Name                     Type    Description
      * ------------------------------------------------
-     * index_of_fried_in_queue  long        Index of the next fried parameter.
-     * fried_completed          long        Number of fried parameters processed.
-     * percent_assigned         double      Percentage of fried parameters assigned to workers.
-     * percent_completed        double      Percentage of fried parameters completed by workers.
+     * index_of_fried_in_queue  ulng    Index of the next fried parameter.
+     * fried_completed          ulng    Number of fried parameters processed.
+     * percent_assigned         float   Percentage of fried parameters assigned to workers.
+     * percent_completed        float   Percentage of fried parameters completed by workers.
      */
 
-        long   index_of_fried_in_queue  = 0;
-        long   fried_completed          = 0;
-        double percent_assigned         = 0.0;
-        double percent_completed        = 0.0;
+        ulng  index_of_fried_in_queue  = 0;
+        ulng  fried_completed          = 0;
+        float percent_assigned         = 0.0;
+        float percent_completed        = 0.0;
 
     /*
      * Array declaration:
-     * ------------------------------------
-     * Name		Type		    Description
-     * ------------------------------------
-     * fried	Array<double>	Fried parameters array, see "lib_array.h" for datatype.
+     * ----------------------------------------
+     * Name		Type		        Description
+     * ----------------------------------------
+     * fried	Array<precision>	Fried parameters array, see "lib_array.h" for datatype.
      */
     
-        Array<double> fried;
+        Array<precision> fried;
 
     /* -------------------------------------
      * !(2) Read fried parameters from file.
@@ -199,13 +201,13 @@ int main(int argc, char *argv[]){
 
     /*
      * Array declaration:
-     * ------------------------------------
-     * Name         Type            Description
-     * ------------------------------------
-     * aperture     Array<double>   Aperture function array, see "lib_array.h" for datatype.
+     * -------------------------------------------
+     * Name         Type                Description
+     * --------------------------------------------
+     * aperture     Array<precision>    Aperture function array, see "lib_array.h" for datatype.
      */
 	
-        Array<double> aperture;
+        Array<precision> aperture;
 
     /* -----------------------------------------------
      * If aperture function available, read from file.
@@ -242,7 +244,7 @@ int main(int argc, char *argv[]){
 
 	    if(dims_aperture[0] != config::sims_size_x && dims_aperture[1] != config::sims_size_y){
 	        
-            fprintf(console, "Failed, expected aperture with size [%ld %ld]]\n", config::sims_size_x, config::sims_size_y);
+            fprintf(console, "Failed, expected aperture with size [%ud %ud]]\n", config::sims_size_x, config::sims_size_y);
             fflush (console);
 
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -278,11 +280,11 @@ int main(int argc, char *argv[]){
          * ------------------------------------------------------ 
 	     */
 
-            if(id > fried.get_size()){
+            if(id > int(fried.get_size())){
 
                 if(fried[0] != nullptr){
 
-                    MPI_Send(fried[0], 1, MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+                    MPI_Send(fried[0], 1, mpi_precision, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
 
                 }else{
 
@@ -297,7 +299,7 @@ int main(int argc, char *argv[]){
                 
                 if(aperture[0] != nullptr){
 
-		            MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
+		            MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::shutdown, MPI_COMM_WORLD);
 
                 }else{
 
@@ -327,7 +329,7 @@ int main(int argc, char *argv[]){
 
                 if(fried[index_of_fried_in_queue] != nullptr){
 
-                    MPI_Send(fried[index_of_fried_in_queue], 1, MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+                    MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
                 }else{
 
@@ -342,7 +344,7 @@ int main(int argc, char *argv[]){
 
                 if(aperture[0] != nullptr){
                     
-		            MPI_Send(aperture[0], aperture.get_size(), MPI_DOUBLE, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
+		            MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::stayalive, MPI_COMM_WORLD);
 
                 }else{
 
@@ -387,10 +389,10 @@ int main(int argc, char *argv[]){
      * ------------------------------------
      * Name	    Type		    Description
      * ------------------------------------
-     * phase	Array<double>	Phase-screens array.
+     * phase	Array<precision>	Phase-screens array.
      */
 
-        Array<double> phase(dims_phase);
+        Array<precision> phase(dims_phase);
 
     /* ------------------------------------------------
      * !(3) Distribute the fried parameters to workers.
@@ -407,7 +409,7 @@ int main(int argc, char *argv[]){
 	     */	
 	
 	        MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-	        MPI_Get_count(&status, MPI_DOUBLE, &mpi_recv_count);
+	        MPI_Get_count(&status, mpi_precision, &mpi_recv_count);
 
 	    /*
 	     * Variable declaration:
@@ -430,7 +432,7 @@ int main(int argc, char *argv[]){
 	     */
             if(phase[fried_index] != nullptr){
 
-                MPI_Recv(phase[fried_index], sizeof_vector(dims_phase_per_fried), MPI_DOUBLE, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+                MPI_Recv(phase[fried_index], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
             }else{
                 
@@ -472,7 +474,7 @@ int main(int argc, char *argv[]){
 
                 if(fried[index_of_fried_in_queue] != nullptr){
 
-		            MPI_Send(fried[index_of_fried_in_queue], 1, MPI_DOUBLE, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
+		            MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, status.MPI_SOURCE, mpi_cmds::stayalive, MPI_COMM_WORLD);
 	
                 }else{
 
@@ -589,13 +591,13 @@ int main(int argc, char *argv[]){
 
     /*
      * Array declaration:
-     * --------------------------------------------
-     * Name             Type            Description
-     * --------------------------------------------
-     * phase            Array<cmpx>     Single phase-screen array.
-     * phase_fourier	Array<cmpx>     Single phase-screen fourier array.
-     * phase_per_fried  Array<double>   Phase-screens array, per fried.
-     * aperture         Array<double>   Aperture function array.
+     * ------------------------------------------------
+     * Name             Type                Description
+     * ------------------------------------------------
+     * phase            Array<cmpx>         Single phase-screen array.
+     * phase_fourier	Array<cmpx>         Single phase-screen fourier array.
+     * phase_per_fried  Array<precision>    Phase-screens array, per fried.
+     * aperture         Array<precision>    Aperture function array.
      *
      * --------------------
      * Additional comments:
@@ -604,10 +606,17 @@ int main(int argc, char *argv[]){
      * to the size of the aperture and stored in phase_per_fried.
      */
 
-	    Array<cmpx>   phase(dims_phase);
-	    Array<cmpx>   phase_fourier(dims_phase);
-	    Array<double> phase_per_fried(dims_phase_per_fried);
-	    Array<double> aperture(dims_aperture);
+	    Array<cmpx>      phase(dims_phase);
+	    Array<cmpx>      phase_fourier(dims_phase);
+	    Array<precision> phase_per_fried(dims_phase_per_fried);
+	    Array<precision> aperture(dims_aperture);
+
+    /* -----------------------------------------------------------------------
+     * Import fft wisdom, if available, and initialize fourier transformation.
+     * -----------------------------------------------------------------------
+     */
+
+        fftw_import_wisdom_from_filename(config::read_fftwisdom_from.c_str());
 
     /*
      * Variable declaration:
@@ -617,12 +626,6 @@ int main(int argc, char *argv[]){
      * forward  fftw_plan   Re-usable FFTW plan for the forward transformation.
      */
 
-    /* -----------------------------------------------------------------------
-     * Import fft wisdom, if available, and initialize fourier transformation.
-     * -----------------------------------------------------------------------
-     */
-
-        fftw_import_wisdom_from_filename(config::read_fftwisdom_from.c_str());
         fftw_plan forward = fftw_plan_dft_2d(dims_phase[0], dims_phase[1],\
                                              reinterpret_cast<fftw_complex*>(phase_fourier[0]),\
                                              reinterpret_cast<fftw_complex*>(phase[0]),\
@@ -630,21 +633,19 @@ int main(int argc, char *argv[]){
    
     /*
      * Variable declaration:.
-     * ----------------------------------------
-     * Name                 Type    Description
-     * ----------------------------------------
-     * fried                double  Fried parameter value received from master rank.
-     * aperture_radius      double  Radius of the aperture, in pixels.
-     * aperture_total       double  Area of the aperture;
-     * aperture_center_x    sizt    Center of the clipping region in x, in pixels.
-     * aperture_center_y    sizt    Center of the clipping region in y, in pixels. 
-     * phase_center_x       sizt    Center of the simulated phase-screen in x, in pixels.
-     * phase_center_y       sizt    Center of the simulated phase-screen in y, in pixels.
+     * --------------------------------------------
+     * Name                 Type        Description
+     * --------------------------------------------
+     * fried                precision   Fried parameter value received from master rank.
+     * aperture_total       precision   Area of the aperture;
+     * aperture_center_x    sizt        Center of the clipping region in x, in pixels.
+     * aperture_center_y    sizt        Center of the clipping region in y, in pixels. 
+     * phase_center_x       sizt        Center of the simulated phase-screen in x, in pixels.
+     * phase_center_y       sizt        Center of the simulated phase-screen in y, in pixels.
      */
 
-        double fried = 0.0;
-	    double aperture_radius = config::sims_size_x / (2.0 * config::aperture_sampling_factor);
-        double aperture_total  = 0.0;
+        precision fried = 0.0;
+        precision aperture_total  = 0.0;
 
 	    sizt aperture_center_x = sizt(config::sims_size_x / 2.0);
         sizt aperture_center_y = sizt(config::sims_size_y / 2.0);
@@ -656,7 +657,7 @@ int main(int argc, char *argv[]){
      * --------------------------------
      */
 
-        MPI_Recv(&fried, 1,  MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(&fried, 1,  mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
 #ifdef _APERTURE_
 
@@ -665,7 +666,7 @@ int main(int argc, char *argv[]){
      * ------------------------------------------------
      */
 
-	    MPI_Recv(aperture[0], aperture.get_size(),  MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+	    MPI_Recv(aperture[0], aperture.get_size(),  mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 	    aperture_total = aperture.get_total();
 
 #endif
@@ -695,10 +696,10 @@ int main(int argc, char *argv[]){
              * ---------------------------------------------------
 	         */
 
-		        double phase_piston = 0.0;
+		        precision phase_piston = 0.0;
 		        for(sizt xs = 0; xs < config::sims_size_x; xs++){
 		            for(sizt ys = 0; ys < config::sims_size_y; ys++){
-			            phase_per_fried(ind, xs, ys) = aperture(xs, ys) * phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real();
+			            phase_per_fried(ind, xs, ys) = aperture(xs, ys) * static_cast<precision>(phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real());
 			            phase_piston += aperture(xs, ys) * phase_per_fried(ind, xs, ys);
 		            }
 		        }
@@ -724,7 +725,7 @@ int main(int argc, char *argv[]){
 
 		        for(sizt xs = 0; xs < config::sims_size_x; xs++){
 		            for(sizt ys = 0; ys < config::sims_size_y; ys++){
-		    	    phase_per_fried(ind, xs, ys) = phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real();
+		    	        phase_per_fried(ind, xs, ys) = static_cast<precision>(phase(xs + (phase_center_x - aperture_center_x), ys + (phase_center_y - aperture_center_y)).real());
 		            }
 		        }
 
@@ -739,7 +740,7 @@ int main(int argc, char *argv[]){
 
             if(phase_per_fried[0] != nullptr){
 
-	            MPI_Send(phase_per_fried[0], phase_per_fried.get_size(), MPI_DOUBLE, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+	            MPI_Send(phase_per_fried[0], phase_per_fried.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
 
             }else{
 
@@ -752,7 +753,7 @@ int main(int argc, char *argv[]){
          * -------------------------------------
 	     */
 
-	        MPI_Recv(&fried, 1,  MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+	        MPI_Recv(&fried, 1,  mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         
         }
 
