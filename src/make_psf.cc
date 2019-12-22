@@ -398,7 +398,7 @@ int main(int argc, char *argv[]){
             fflush (console);
 
         /* -----------------------------------------------------------------
-         * Send next set of phase-screen residuals, if available, to worker.
+         * Send next set of residual phase-screens, if available, to worker.
          * -----------------------------------------------------------------
          */
 
