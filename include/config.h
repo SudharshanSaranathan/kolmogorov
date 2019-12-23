@@ -8,6 +8,7 @@ using uint   = unsigned int;
 
 typedef struct config {
 public:
+    static string read_image_from;
     static string read_fried_from;
     static string read_basis_from;
     static string read_weights_from;
@@ -17,6 +18,7 @@ public:
 
     static string write_log_to;
     static string write_phase_to;
+    static string write_images_to;
     static string write_residual_to;
     static string write_psf_to;
 
