@@ -9,7 +9,10 @@
 #include "config.h"
 #include "lib_array.h"
 
+#define _GET_ALL_POINT_SPREAD_FUNCTIONS_
 #define _USE_MATH_DEFINES
+#define _APERTURE_
+
 
 template <class type> 
 void make_aperture_function(Array<type>& aperture, type aperture_radius){
@@ -53,16 +56,6 @@ void make_aperture_function(Array<type>& aperture, type aperture_radius){
 
 void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, precision sim_size){
 
-/*
- * Array declaration
- * --------------------------------------------
- * Name             Type            Description
- * --------------------------------------------
- * fourier_copy     Array<cmpx>     Fourier of the phase-screen, see 'lib_array.h' for datatype. 
- */
-
-    Array<cmpx> fourier_copy(fourier);
-    
 /*
  * Vector declaration
  * --------------------------------------------
@@ -139,6 +132,7 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, pr
          */
 
             fourier(sizt(xpix + fourier_dims[0] - xc) % fourier_dims[0], sizt(ypix + fourier_dims[1] - yc) % fourier_dims[1]) = phase;
+        
         }
     }
 }
