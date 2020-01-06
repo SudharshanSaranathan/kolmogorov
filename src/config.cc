@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 
+string config::read_image_from              = "image.fits";
 string config::read_fried_from              = "fried.fits";
 string config::read_basis_from              = "basis.fits";
 string config::read_weights_from            = "weights.fits";
@@ -11,6 +12,7 @@ string config::read_aperture_function_from  = "pupil.fits";
 
 string config::write_log_to      = "log.file";
 string config::write_phase_to    = "phase.fits";
+string config::write_images_to   = "image_convolved.fits";
 string config::write_residual_to = "residual.fits";
 string config::write_psf_to      = "psf.fits";
 
@@ -41,7 +43,9 @@ int config_parse(const char* filename){
         tokens >> std::ws;
         std::getline(tokens, value, ':');
 
-        if(key == "fried")
+        if(key == "image")
+	        config::read_image_from = value;
+        else if(key == "fried")
 	        config::read_fried_from = value;
         else if(key == "basis")
 	        config::read_basis_from = value;
@@ -57,6 +61,8 @@ int config_parse(const char* filename){
 	        config::write_log_to = value;
         else if(key == "phase")
 	        config::write_phase_to = value;
+        else if(key == "convolved_images")
+	        config::write_images_to = value;
         else if(key == "residual")
 	        config::write_residual_to = value;
         else if(key == "psf")
