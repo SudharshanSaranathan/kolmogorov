@@ -104,7 +104,7 @@ Array<type>:: Array(const Array<type> &src){
     }
 
     if(this->stat == true && src.stat == true){
-        std::memcpy(this->root_ptr, src.root_ptr, this->size*sizeof(type));
+        std::memcpy(this->root_ptr, src.root_ptr, this->size * sizeof(type));
     }
 }
 
@@ -160,7 +160,7 @@ type* Array<type>::operator[](const sizt ind){
 template <class type>
 type& Array<type>::operator()(const sizt xs){
     if(this->dims.size() != 1)
-        throw std::runtime_error("expected " + std::to_string(this->dims.size()) + " argument(s)");
+        throw std::runtime_error("In Array<type>::operator(), expected " + std::to_string(this->dims.size()) + " argument(s)");
     if(xs >= this->dims[0])
         throw std::range_error("array out of bounds");
 
@@ -170,7 +170,7 @@ type& Array<type>::operator()(const sizt xs){
 template <class type>
 type& Array<type>::operator()(const sizt xs, const sizt ys){
     if(this->dims.size() != 2)
-        throw std::runtime_error("expected " + std::to_string(this->dims.size()) + " argument(s)");
+        throw std::runtime_error("In Array<type>::operator(), expected " + std::to_string(this->dims.size()) + " argument(s)");
 
     if(xs >= this->dims[0] || ys >= this->dims[1])
         throw std::range_error("array out of bounds");
@@ -181,7 +181,7 @@ type& Array<type>::operator()(const sizt xs, const sizt ys){
 template <class type>
 type& Array<type>::operator()(const sizt xs, const sizt ys, const sizt zs){
     if(this->dims.size() != 3)
-        throw std::runtime_error("expected " + std::to_string(this->dims.size()) + " argument(s)");
+        throw std::runtime_error("In Array<type>::operator(), expected " + std::to_string(this->dims.size()) + " argument(s)");
 
     if(xs >= this->dims[0] || ys >= this->dims[1] || zs >= this->dims[2])
         throw std::range_error("array out of bounds");
@@ -192,7 +192,7 @@ type& Array<type>::operator()(const sizt xs, const sizt ys, const sizt zs){
 template <class type>
 type& Array<type>::operator()(const sizt xs, const sizt ys, const sizt zs, const sizt ws){
     if(this->dims.size() != 4)
-        throw std::runtime_error("expected " + std::to_string(this->dims.size()) + " argument(s)");
+        throw std::runtime_error("In Array<type>::operator(), expected " + std::to_string(this->dims.size()) + " argument(s)");
 
     if(xs >= this->dims[0] || ys >= this->dims[1] || zs >= this->dims[2] || ws >this->dims[3])
         throw std::range_error("array out of bounds");
@@ -259,10 +259,10 @@ template <class type>
 Array<type>  Array<type>::operator* (const Array<type> &src){
 
     if(!this->stat || !src.stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In Array<type>::operator*(), expected allocated arguments");
 
     if(this->dims != src.dims)
-        throw std::logic_error("expected matching dimensions");
+        throw std::logic_error("In Array<type>::operator*(), expected matching dimensions");
 
     Array<type> product(src.dims);
     for(sizt ind = 0; ind < src.size; ind++){
@@ -446,6 +446,58 @@ void         Array<type>::operator/=(type value){
         else
             this->root_ptr[ind] /= value;
     }
+}
+
+template <class type>
+Array<type>  Array<type>::roll(sizt_vector shift, bool clockwise){
+
+    if(this->dims.size() != shift.size()){
+        throw std::runtime_error("Unspecified shift");
+    }
+
+    Array<type> array_rolled(this->dims);
+
+    if(!clockwise){
+        for(sizt ind = 0; ind < this->dims.size(); ind++){
+            shift[ind] += (this->dims[ind] % 2);
+        }
+    }
+
+    switch(shift.size()){
+        case 1: for(sizt xpix = 0; xpix < this->dims[0]; xpix++){
+                    array_rolled.data_ptr_1D[xpix] = this->data_ptr_1D[(xpix + shift[0]) % this->dims[0]];
+                }
+                break;
+
+        case 2: for(sizt xpix = 0; xpix < this->dims[0]; xpix++){
+                    for(sizt ypix = 0; ypix < this->dims[1]; ypix++){
+                        array_rolled.data_ptr_2D[xpix][ypix] = this->data_ptr_2D[(xpix + shift[0]) % this->dims[0]][(ypix + shift[1]) % this->dims[1]];
+                    }
+                }
+                break;
+        
+        case 3: for(sizt xpix = 0; xpix < this->dims[0]; xpix++){
+                    for(sizt ypix = 0; ypix < this->dims[1]; ypix++){
+                        for(sizt zpix = 0; zpix < this->dims[2]; zpix++){
+                            array_rolled.data_ptr_3D[xpix][ypix][zpix] = this->data_ptr_3D[(xpix + shift[0]) % this->dims[0]][(ypix + shift[1]) % this->dims[1]][(zpix + shift[2]) % this->dims[2]];
+                        }
+                    }
+                }
+                break;
+        
+        case 4: for(sizt xpix = 0; xpix < this->dims[0]; xpix++){
+                    for(sizt ypix = 0; ypix < this->dims[1]; ypix++){
+                        for(sizt zpix = 0; zpix < this->dims[2]; zpix++){
+                            for(sizt wpix = 0; wpix < this->dims[3]; wpix++){
+                                array_rolled.data_ptr_4D[xpix][ypix][zpix][wpix] = this->data_ptr_4D[(xpix + shift[0]) % this->dims[0]][(ypix + shift[1]) % this->dims[1]][(zpix + shift[2]) % this->dims[2]][(wpix + shift[3]) % this->dims[3]];
+                            }
+                        }
+                    }
+                }
+                break;
+    }
+
+    return(array_rolled);
 }
 
 template <class type>
