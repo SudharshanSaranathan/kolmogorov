@@ -110,6 +110,7 @@ public:
     type& operator()(const sizt, const sizt, const sizt);
     type& operator()(const sizt, const sizt, const sizt, const sizt);
 
+    Array<type>  roll(sizt_vector, bool clockwise=true);
     Array<type>& operator =(      Array<type> );
     Array<type>  operator +(const Array<type>&);
     Array<type>  operator -(const Array<type>&);
@@ -138,6 +139,17 @@ public:
 
     int rd_fits(const char*);
     int wr_fits(const char*, bool clobber=false);
+
+    template <typename TYPE>
+    void cast_to_type(Array<TYPE>& dest){
+
+        if(dest.get_dims() != this->dims)
+            throw std::runtime_error("Expected equal dimensions");
+
+        for(sizt ind = 0; ind < this->size; ind++){
+            *(dest[0] + ind) = static_cast<TYPE>(this->root_ptr[ind]);
+        }
+    }
 };
 
 #endif
