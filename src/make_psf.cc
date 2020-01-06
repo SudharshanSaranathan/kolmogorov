@@ -11,8 +11,6 @@
 #include <unistd.h>
 #include <iostream>
 
-#define _APERTURE_
-
 /* ------------
  * Description:
  * ------------
@@ -615,7 +613,7 @@ int main(int argc, char *argv[]){
      * --------------------------------------------------------
      * Name                     Type                Description
      * --------------------------------------------------------
-     * residual_per_fried       Array<precision>    Phase-screen residuals, per fried.
+     * residual_per_fried       Array<precision>    Residual phase-screens, per fried.
      * residual_single          Array<precision>    Single residual phase-screen.
      * pupil_function           Array<cmpx>         Single pupil function.
      * pupil_function_fourier   Array<cmpx>         Fourier transformed pupil function. 
