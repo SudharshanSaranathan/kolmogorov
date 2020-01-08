@@ -60,7 +60,7 @@ int main(int argc, char *argv[]){
  *  Name		    Type            Description
  *  -------------------------------------------
  *  status          MPI_status      See MPI documentation.
- *  mpi_precision   MPI::Datatype   MPI::FLOAT or MPI::DOUBLE.
+ *  mpi_precision   MPI_Datatype   MPI_FLOAT or MPI_DOUBLE.
  *  process_rank    int             Rank of MPI processes.
  *  process_total   int             Store the total number of MPI processes
  *  mpi_recv_count  int             Store the count of data received in MPI_Recv, see MPI documentation for explanation.
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]){
  */
    
     MPI_Status status;
-    MPI_Datatype mpi_precision = std::is_same<precision, float>::value == true ? MPI::FLOAT : MPI::DOUBLE;
+    MPI_Datatype mpi_precision = std::is_same<precision, float>::value == true ? MPI_FLOAT : MPI_DOUBLE;
     int process_rank = 0;
     int processes_total = 0;
     int mpi_recv_count = 0;
@@ -275,9 +275,9 @@ int main(int argc, char *argv[]){
 
             if(id > int(dims_psfs[0])){
 
-                MPI_Send(&dims_psfs_per_fried_naxis,  1, MPI::UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
-                MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI::UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
-                MPI_Send( dims_img.data(), dims_img.size(), MPI::UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
+                MPI_Send(&dims_psfs_per_fried_naxis,  1, MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
+                MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
+                MPI_Send( dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
 
             /* -------------------------------------
              * Decrement number of processes in use.
@@ -295,9 +295,9 @@ int main(int argc, char *argv[]){
 
             else{
             
-                MPI_Send(&dims_psfs_per_fried_naxis,  1, MPI::UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
-                MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI::UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
-                MPI_Send( dims_img.data(), dims_img.size(), MPI::UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send(&dims_psfs_per_fried_naxis,  1, MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send( dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
             
             }
 
@@ -557,7 +557,7 @@ int main(int argc, char *argv[]){
      * -------------------------------------------------------
      */
 
-        MPI_Recv(&dims_psfs_naxis, 1, MPI::UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(&dims_psfs_naxis, 1, MPI_UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
     /* ---------------------------
      * Resize dims_psfs_per_fried.
@@ -570,14 +570,14 @@ int main(int argc, char *argv[]){
      * ---------------------------------------------------
      */
 
-        MPI_Recv(dims_psfs.data(), dims_psfs.size(), MPI::UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(dims_psfs.data(), dims_psfs.size(), MPI_UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
     
     /* ----------------------------------------
      * Get dimensions of the image from master.
      * ----------------------------------------
      */
 
-        MPI_Recv(dims_img.data(), dims_img.size(), MPI::UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        MPI_Recv(dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         
     /*
      * Vector declaration.
