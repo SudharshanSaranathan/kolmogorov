@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstdlib>
 #include <complex>
+#include <stdexcept>
 
 /* ----------------
  * Define typedefs.
