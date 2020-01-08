@@ -1,6 +1,7 @@
 #ifndef _SIMULATOR_
 #define _SIMULATOR_
 
+#include <chrono>
 #include <random>
 #include <cstring>
 #include <complex>
@@ -9,10 +10,10 @@
 #include "config.h"
 #include "lib_array.h"
 
-#define _GET_ALL_POINT_SPREAD_FUNCTIONS_
 #define _USE_MATH_DEFINES
 #define _APERTURE_
 
+typedef std::chrono::high_resolution_clock clock_;
 
 template <class type> 
 void make_aperture_function(Array<type>& aperture, type aperture_radius){
@@ -57,6 +58,16 @@ void make_aperture_function(Array<type>& aperture, type aperture_radius){
 void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, precision sim_size){
 
 /*
+ * Variable declaration
+ * ----------------------------------------
+ * Name             Type        Description
+ * ----------------------------------------
+ * time_stamp       clock_      System clock.  
+ */
+
+    clock_::time_point time_start = clock_::now();
+
+/*
  * Vector declaration
  * --------------------------------------------
  * Name             Type            Description
@@ -82,12 +93,24 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, pr
     precision amp = 1.0;
     precision frq = 1.0;
 
-/* -----------------------------
- * Seed random number generator.
- * -----------------------------
+/*
+ * Variable declaration
+ * ------------------------------------------------
+ * Name             Type                Description
+ * ------------------------------------------------
+ * duration         clock_::duration    Time duration until execution of this line. 
+ * mt19937_seed     sizt                Seed for mersenne twister random number generator. 
+ */
+    
+    clock_::duration duration = clock_::now() - time_start;
+    sizt mt19937_seed = duration.count();
+
+/* ----------------------------------------------------
+ * Initialize mersenne twister random number generator.
+ * ----------------------------------------------------
  */
 
-    std::default_random_engine generator(rand());
+    std::mt19937 generator(mt19937_seed);
     std::normal_distribution<precision> distribution(0.0, 1.0);
 
 /* --------------------------------------
