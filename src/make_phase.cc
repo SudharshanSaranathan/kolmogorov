@@ -72,7 +72,7 @@ int main(int argc, char *argv[]){
  */
    
     MPI_Status status;
-    MPI::Datatype mpi_precision = std::is_same<precision, float>::value == true ? MPI::FLOAT : MPI::DOUBLE;
+    MPI_Datatype mpi_precision = std::is_same<precision, float>::value == true ? MPI_FLOAT : MPI_DOUBLE;
     int process_rank = 0;
     int processes_total = 0;
     int mpi_recv_count = 0;
@@ -584,8 +584,8 @@ int main(int argc, char *argv[]){
      * Additional comments:
      * --------------------
      * The size of the phase-screen simulation *should* be much larger than the size of the aperture to avoid \\
-     * underestimation of the low-order fluctuations. Therefore, the size of the simulation, in pixels, is appropriately \\
-     * scaled. Therefore, dims_phase in this workflow is *not* equal to the dims_phase in the master workflow. 
+     * underestimation of the low-orders. The size of the simulation, in pixels, is therefore appropriately \\
+     * scaled, so that dims_phase in this workflow is *not* equal to the dims_phase in the master workflow. 
      */
 
         const sizt_vector dims_phase{sizt(config::phase_size * config::sims_size_x / config::aperture_size), sizt(config::phase_size * config::sims_size_y / config::aperture_size)};
