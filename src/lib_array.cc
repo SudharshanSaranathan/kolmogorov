@@ -8,7 +8,6 @@
 #include <cstring>
 #include <fstream>
 #include <unistd.h>
-#include <stdexcept>
 #include <exception>
 #include <algorithm>
 
@@ -142,20 +141,24 @@ sizt_vector  Array<type>:: get_dims(){
 }
 
 template <class type>
-type* Array<type>::operator[](const sizt ind){
+type* Array<type>::operator[](const sizt xs){
+
+    if(this->stat == false)
+        return(nullptr);
+
+    if(xs >= this->dims[0])
+       return(nullptr);
     
     switch(this->dims.size()){
 
-        case 1:     return(ind < this->dims[0] ? this->data_ptr_1D+ind : nullptr);
-        case 2:     return(ind < this->dims[0] ? this->data_ptr_2D[ind] : nullptr);
-        case 3:     return(ind < this->dims[0] ? this->data_ptr_3D[ind][0] : nullptr);
-        case 4:     return(ind < this->dims[0] ? this->data_ptr_4D[ind][0][0] : nullptr);
-        default:    return(nullptr);
+        case 1:  return(this->data_ptr_1D + xs);
+        case 2:  return(this->data_ptr_2D[xs]);
+        case 3:  return(this->data_ptr_3D[xs][0]);
+        case 4:  return(this->data_ptr_4D[xs][0][0]);
+        default: return(nullptr);
 
     }
-
 }
-
 
 template <class type>
 type& Array<type>::operator()(const sizt xs){
@@ -285,7 +288,7 @@ Array<type>  Array<type>::operator/ (const Array<type> &src){
     type null = static_cast<type>(0);
 
     for(sizt ind = 0; ind < src.size; ind++){
-        div.root_ptr[ind] = src.root_ptr[ind] == null ? NAN : this->root_ptr[ind] / src.root_ptr[ind];
+        div.root_ptr[ind] = src.root_ptr[ind] == null ? std::numeric_limits<type>::infinity() : this->root_ptr[ind] / src.root_ptr[ind];
     }
     return(div);
 }
@@ -338,9 +341,9 @@ void         Array<type>::operator/=(const Array<type> &src){
     if(this->dims != src.dims)
         throw std::logic_error("expected matching dimensions");
 
-    for(sizt ind = 0; ind < src.size; ind++){
-        this->root_ptr[ind] /= src.root_ptr[ind];
-    }
+    for(sizt ind = 0; ind < src.size; ind++)
+        this->root_ptr[ind] /= src.root_ptr[ind] == static_cast<type>(0) ? std::numeric_limits<type>::infinity() : src.root_ptr[ind];
+    
 }
 
 template <class type>
@@ -391,12 +394,16 @@ Array<type>  Array<type>::operator /(type value){
     Array<type> div(this->dims);
     type null = static_cast<type>(0);
 
-    for(sizt ind = 0; ind < this->size; ind++){
-        if(value == null)
-            div.root_ptr[ind] = NAN;
-        else
+    if(value == null){
+        for(sizt ind = 0; ind < this->size; ind++)
+            div.root_ptr[ind] = std::numeric_limits<type>::infinity();
+
+    }else{
+        for(sizt ind = 0; ind < this->size; ind++)
             div.root_ptr[ind] = this->root_ptr[ind] / value;
+
     }
+    
     return(div);
 }
 
@@ -440,20 +447,124 @@ void         Array<type>::operator/=(type value){
         throw std::logic_error("expected allocated arguments");
 
     type null = static_cast<type>(0);
-    for(sizt ind = 0; ind < this->size; ind++){
-        if(value == null)
-            this->root_ptr[ind] = NAN;
-        else
+    if(value == null){
+        for(sizt ind = 0; ind < this->size; ind++)
+            this->root_ptr[ind] = std::numeric_limits<type>::infinity();
+    
+    }else{
+        for(sizt ind  = 0; ind < this->size; ind++)
             this->root_ptr[ind] /= value;
+
     }
+}
+
+template <class type>
+Array<type>  Array<type>::slice(sizt index){
+
+    if(this->stat == false)
+        throw std::runtime_error("In function Array<type>::slice(), cannot slice empty array");
+
+    if(index >= dims[0])
+        throw std::range_error("In function Array<type>::slice(), array out of bounds");
+
+    if(this->dims.size() == 1)
+        throw std::range_error("In function Array<type>::slice(), cannot slice 1D array");
+
+    sizt_vector dims_slice (this->dims.begin() + 1, this->dims.end());
+    Array<type> array_slice(dims_slice);
+    
+    switch(this->dims.size()){
+        
+        case 2: memcpy(array_slice.root_ptr, this->data_ptr_2D[index], sizeof(type) * array_slice.get_size());
+                break;
+        
+        case 3: memcpy(array_slice.root_ptr, this->data_ptr_3D[index], sizeof(type) * array_slice.get_size());
+                break;
+        
+        case 4: memcpy(array_slice.root_ptr, this->data_ptr_4D[index], sizeof(type) * array_slice.get_size());
+                break;
+    }
+
+    return(array_slice);
+}
+
+template <class type>
+Array<type>  Array<type>::abs(){
+
+    if(this->stat == false)
+        throw std::runtime_error("In function Array<type>::abs(), cannot find absolute value of empty array");
+
+    Array<type> absolute(this->dims);
+    for(sizt ind = 0; ind < this->size; ind++)
+        absolute.root_ptr[ind] = std::abs(this->root_ptr[ind]);
+
+    return(absolute);
+
+}
+
+template <class type>
+Array<type>  Array<type>::pad(sizt_vector dims_padded, sizt_vector dims_start, type pad_value){
+
+    if(this->stat == false)
+        throw std::runtime_error("In function Array<type>::pad(), cannot find absolute value of empty array");
+
+    if(this->dims.size() != dims_start.size() || this->dims.size() != dims_padded.size())
+        throw std::runtime_error("In function Array<type>::pad(), expected " + std::to_string(this->dims.size()) + "D vector(s)");
+
+    for(sizt ind = 0; ind < this->dims.size(); ind++){
+        if(this->dims[ind] + dims_start[ind] > dims_padded[ind])
+            throw std::runtime_error("In function Array<type>::pad(), dimensions of the padded array are too small");
+    
+    }
+
+    Array<type> array_padded(dims_padded);
+    switch(this->dims.size()){
+
+        case 1: for(sizt xpix = dims_start[0]; xpix < this->dims[0] + dims_start[0]; xpix++){
+                    array_padded.data_ptr_1D[xpix] = this->data_ptr_1D[xpix - dims_start[0]];
+                }
+                break;
+
+        case 2: for(sizt xpix = dims_start[0]; xpix < this->dims[0] + dims_start[0]; xpix++){
+                    for(sizt ypix = dims_start[1]; ypix < this->dims[1] + dims_start[1]; ypix++){
+                        array_padded(xpix, ypix) = this->data_ptr_2D[xpix - dims_start[0]][ypix - dims_start[1]];
+                    }
+                }
+                break;
+
+        case 3: for(sizt xpix = dims_start[0]; xpix < this->dims[0] + dims_start[0]; xpix++){
+                    for(sizt ypix = dims_start[1]; ypix < this->dims[1] + dims_start[1]; ypix++){
+                        for(sizt zpix = dims_start[2]; zpix < this->dims[2] + dims_start[2]; zpix++){
+                            array_padded(xpix, ypix, zpix) = this->data_ptr_3D[xpix - dims_start[0]][ypix - dims_start[1]][zpix - dims_start[2]];                        
+                        }
+                    }
+                }
+                break;
+
+        case 4: for(sizt xpix = dims_start[0]; xpix < this->dims[0] + dims_start[0]; xpix++){
+                    for(sizt ypix = dims_start[1]; ypix < this->dims[1] + dims_start[1]; ypix++){
+                        for(sizt zpix = dims_start[2]; zpix < this->dims[2] + dims_start[2]; zpix++){
+                            for(sizt wpix = dims_start[3]; wpix < this->dims[3] + dims_start[3]; wpix++){
+                                array_padded(xpix, ypix, zpix, wpix) = this->data_ptr_4D[xpix - dims_start[0]][ypix - dims_start[1]][zpix - dims_start[2]][wpix - dims_start[3]];
+                            }
+                        }
+                    }
+                }
+                break;
+    }
+    
+    return(array_padded);
+
 }
 
 template <class type>
 Array<type>  Array<type>::roll(sizt_vector shift, bool clockwise){
 
-    if(this->dims.size() != shift.size()){
-        throw std::runtime_error("Unspecified shift");
-    }
+    if(this->stat == false)
+        throw std::runtime_error("In function Array<type>::roll(), cannot find absolute value of empty array");
+
+    if(this->dims.size() != shift.size())
+        throw std::runtime_error("In function Array<type>::roll(), empty argument");
 
     Array<type> array_rolled(this->dims);
 
@@ -464,6 +575,7 @@ Array<type>  Array<type>::roll(sizt_vector shift, bool clockwise){
     }
 
     switch(shift.size()){
+
         case 1: for(sizt xpix = 0; xpix < this->dims[0]; xpix++){
                     array_rolled.data_ptr_1D[xpix] = this->data_ptr_1D[(xpix + shift[0]) % this->dims[0]];
                 }
@@ -471,7 +583,8 @@ Array<type>  Array<type>::roll(sizt_vector shift, bool clockwise){
 
         case 2: for(sizt xpix = 0; xpix < this->dims[0]; xpix++){
                     for(sizt ypix = 0; ypix < this->dims[1]; ypix++){
-                        array_rolled.data_ptr_2D[xpix][ypix] = this->data_ptr_2D[(xpix + shift[0]) % this->dims[0]][(ypix + shift[1]) % this->dims[1]];
+                        array_rolled.data_ptr_2D[xpix][ypix] = this->data_ptr_2D[(xpix + shift[0]) % this->dims[0]]\
+                                                                                [(ypix + shift[1]) % this->dims[1]];
                     }
                 }
                 break;
@@ -479,7 +592,9 @@ Array<type>  Array<type>::roll(sizt_vector shift, bool clockwise){
         case 3: for(sizt xpix = 0; xpix < this->dims[0]; xpix++){
                     for(sizt ypix = 0; ypix < this->dims[1]; ypix++){
                         for(sizt zpix = 0; zpix < this->dims[2]; zpix++){
-                            array_rolled.data_ptr_3D[xpix][ypix][zpix] = this->data_ptr_3D[(xpix + shift[0]) % this->dims[0]][(ypix + shift[1]) % this->dims[1]][(zpix + shift[2]) % this->dims[2]];
+                            array_rolled.data_ptr_3D[xpix][ypix][zpix] = this->data_ptr_3D[(xpix + shift[0]) % this->dims[0]]\
+                                                                                          [(ypix + shift[1]) % this->dims[1]]\
+                                                                                          [(zpix + shift[2]) % this->dims[2]];
                         }
                     }
                 }
@@ -489,7 +604,10 @@ Array<type>  Array<type>::roll(sizt_vector shift, bool clockwise){
                     for(sizt ypix = 0; ypix < this->dims[1]; ypix++){
                         for(sizt zpix = 0; zpix < this->dims[2]; zpix++){
                             for(sizt wpix = 0; wpix < this->dims[3]; wpix++){
-                                array_rolled.data_ptr_4D[xpix][ypix][zpix][wpix] = this->data_ptr_4D[(xpix + shift[0]) % this->dims[0]][(ypix + shift[1]) % this->dims[1]][(zpix + shift[2]) % this->dims[2]][(wpix + shift[3]) % this->dims[3]];
+                                array_rolled.data_ptr_4D[xpix][ypix][zpix][wpix] = this->data_ptr_4D[(xpix + shift[0]) % this->dims[0]]\
+                                                                                                    [(ypix + shift[1]) % this->dims[1]]\
+                                                                                                    [(zpix + shift[2]) % this->dims[2]]\
+                                                                                                    [(wpix + shift[3]) % this->dims[3]];
                             }
                         }
                     }
@@ -498,6 +616,79 @@ Array<type>  Array<type>::roll(sizt_vector shift, bool clockwise){
     }
 
     return(array_rolled);
+}
+
+template <typename type>
+Array<type>  Array<type>::crop(sizt_vector dims_start, sizt_vector dims_type, bool vector_type){
+
+    sizt_vector dims_end(this->dims.size());
+    sizt_vector dims_sub(this->dims.size());
+
+    if(this->dims.size() != dims_start.size() || this->dims.size() != dims_type.size())
+        throw std::runtime_error("In function Array<type>::crop(), expected " + std::to_string(this->dims.size()) + "D vector(s)");
+
+    if(vector_type){
+        
+        for(sizt ind = 0; ind < this->dims.size(); ind++){
+            
+            dims_sub[ind] = dims_type[ind];
+            dims_end[ind] = dims_type[ind] + dims_start[ind];
+
+            if(dims_end[ind] >= this->dims[ind])
+                throw std::range_error("Array out of bounds\n");
+
+        }
+
+    }else{
+
+        for(sizt ind = 0; ind < this->dims.size(); ind++){
+
+            dims_end[ind] = dims_type[ind];
+            if(dims_start[ind] >= dims_end[ind])
+                throw std::runtime_error("Expected dims_start[" + std::to_string(ind) + "] <= dims_end[" + std::to_string(ind) + "]");
+            else
+                dims_sub[ind] = dims_end[ind] - dims_start[ind];
+
+        }
+    }
+
+    Array<type> array_cropped(dims_sub);
+    switch(this->dims.size()){
+
+        case 1: for(sizt xpix = 0; xpix < dims_sub[0]; xpix++){
+                    array_cropped(xpix) = this->data_ptr_1D[xpix + dims_start[0]];
+                }
+                break;
+
+        case 2: for(sizt xpix = 0; xpix < dims_sub[0]; xpix++){
+                    for(sizt ypix = 0; ypix < dims_sub[1]; ypix++){
+                        array_cropped(xpix, ypix) = this->data_ptr_2D[xpix + dims_start[0]][ypix + dims_start[1]];
+                    }
+                }
+                break;
+
+        case 3: for(sizt xpix = 0; xpix < dims_sub[0]; xpix++){
+                    for(sizt ypix = 0; ypix < dims_sub[1]; ypix++){
+                        for(sizt zpix = 0; zpix < dims_sub[2]; zpix++){
+                            array_cropped(xpix, ypix, zpix) = this->data_ptr_3D[xpix + dims_start[0]][ypix + dims_start[1]][zpix + dims_start[2]];                        
+                        }
+                    }
+                }
+                break;
+
+        case 4: for(sizt xpix = 0; xpix < dims_sub[0]; xpix++){
+                    for(sizt ypix = 0; ypix < dims_sub[1]; ypix++){
+                        for(sizt zpix = 0; zpix < dims_sub[2]; zpix++){
+                            for(sizt wpix = 0; wpix < dims_sub[3]; wpix++){
+                                array_cropped(xpix, ypix, zpix, wpix) = this->data_ptr_4D[xpix + dims_start[0]][ypix + dims_start[1]][zpix + dims_start[2]][wpix + dims_start[3]];
+                            }
+                        }
+                    }
+                }
+                break;
+    }
+
+    return(array_cropped);
 }
 
 template <class type>
@@ -681,6 +872,7 @@ int 	     Array<type>::wr_fits(const char *name, bool clobber){
     return(status);
 }
 
+template class Array<int>;
 template class Array<cmpx>;
 template class Array<float>;
 template class Array<double>;
