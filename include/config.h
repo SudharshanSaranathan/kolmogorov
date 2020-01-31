@@ -6,8 +6,9 @@
 using string = std::string;
 using uint   = unsigned int;
 
-typedef struct config {
+typedef struct io_t{
 public:
+    
     static string read_image_from;
     static string read_fried_from;
     static string read_basis_from;
@@ -21,20 +22,36 @@ public:
     static string write_images_to;
     static string write_residual_to;
     static string write_psf_to;
+    
+    static bool   save;
+    static bool   clobber;
 
-    static uint   sims_per_fried;
-    static uint   sims_size_x;
-    static uint   sims_size_y;
+} io_t;
 
-    static double phase_size;
-    static double aperture_size;
-    static double aperture_sampling_factor;
+typedef struct sims_t{
+public:
+    
+    static sizt  realizations_per_fried;
+    static sizt  size_x_in_pixels;
+    static sizt  size_y_in_pixels;
+    static float sizt_in_meters;
+} sims_t;
 
-    static bool   output_save;
-    static bool   output_clobber;
-    static bool   get_airy_disk;
+typedef struct aperture_t{
+public:
 
-} config;
+    static float size;
+    static float sampling_factor;
+    static bool  airy_disk;
+
+} aperture_t;
+
+typedef struct image_t{
+public:
+    
+    static float original_sampling;
+    static float degraded_sampling;
+} image_t;
 
 int config_parse(const char*);
 
