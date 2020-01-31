@@ -518,12 +518,7 @@ int main(int argc, char *argv[]){
          * ----------------------------------------
          * Name                 Type    Description
          * ----------------------------------------
-         * fried_index_image    sizt    Fried index to store the convolved images in.
-         */
-
-        /* -------------------------------------------------
-         * Get index of fried parameter processed by worker.
-         * -------------------------------------------------
+         * fried_index_image    sizt    Index of fried parameter processed by a particular MPI process.
          */
 
             sizt fried_index_image = process_fried_map[status.MPI_SOURCE];

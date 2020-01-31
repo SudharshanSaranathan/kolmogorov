@@ -506,15 +506,14 @@ template <class type>
 Array<type>  Array<type>::pad(sizt_vector dims_padded, sizt_vector dims_start, type pad_value){
 
     if(this->stat == false)
-        throw std::runtime_error("In function Array<type>::pad(), cannot find absolute value of empty array");
+        throw std::runtime_error("In function Array<type>::pad(), cannot pad empty array");
 
     if(this->dims.size() != dims_start.size() || this->dims.size() != dims_padded.size())
-        throw std::runtime_error("In function Array<type>::pad(), expected " + std::to_string(this->dims.size()) + "D vector(s)");
+        throw std::runtime_error("In function Array<type>::pad(), expected " + std::to_string(this->dims.size()) + "D vector(s) as argument(s)");
 
     for(sizt ind = 0; ind < this->dims.size(); ind++){
         if(this->dims[ind] + dims_start[ind] > dims_padded[ind])
             throw std::runtime_error("In function Array<type>::pad(), dimensions of the padded array are too small");
-    
     }
 
     Array<type> array_padded(dims_padded);
