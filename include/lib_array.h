@@ -4,33 +4,13 @@
 #define _USE_APERTURE_
 #define _USE_SINGLE_PRECISION_
 
+#include "config.h"
 #include "fitsio.h"
 
-#include <limits>
 #include <vector>
 #include <cstdlib>
-#include <complex>
 #include <typeinfo>
 #include <stdexcept>
-
-/* ----------------
- * Define typedefs.
- * ----------------
- */
-
-typedef float precision;
-
-using ulng = unsigned long;
-using sizt = std::size_t;
-using cmpx = std::complex<double>;
-
-template <typename type>
-using limits = std::numeric_limits<type>;
-
-template <typename type>
-using type_vector = std::vector<type>;
-using sizt_vector = std::vector<sizt>;
-using long_vector = std::vector<long>;
 
 /*
  * Function declaration
