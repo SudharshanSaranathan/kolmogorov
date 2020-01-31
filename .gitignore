@@ -1,0 +1,12 @@
+bin/make_phase
+bin/make_residual
+bin/make_psf
+bin/make_img
+bin/test_lib_mem
+bin/test_lib_array
+lib/make_phase.o
+lib/make_residual.o
+lib/make_psf.o
+lib/make_img.o
+lib/test_lib_mem.o
+lib/test_lib_array.o
