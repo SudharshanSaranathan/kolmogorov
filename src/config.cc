@@ -1,4 +1,5 @@
 #include "config.h"
+
 #include <fstream>
 #include <sstream>
 
@@ -19,14 +20,14 @@ string io_t::write_psf_to      = "psf.fits";
 bool   io_t::save    = true;
 bool   io_t::clobber = false;
 
-sizt      sims_t::realizations_per_fried = 400;
-sizt      sims_t::size_x_in_pixels       = 92;
-sizt      sims_t::size_y_in_pixels       = 92;
-precision sims_t::size_in_meters         = 10.0;
+sizt  sims_t::realizations_per_fried = 400;
+sizt  sims_t::size_x_in_pixels       = 92;
+sizt  sims_t::size_y_in_pixels       = 92;
+float sims_t::size_in_meters         = 10.0;
 
-precision aperture_t::size            = 1.0;
-precision aperture_t::sampling_factor = 1.5;
-bool      aperture_t::airy_disk       = false;
+float aperture_t::size            = 1.0;
+float aperture_t::sampling_factor = 1.5;
+bool  aperture_t::airy_disk       = false;
 
 float image_t::original_sampling = 1.0;
 float image_t::degraded_sampling = 1.0;

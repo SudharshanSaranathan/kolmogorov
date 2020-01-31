@@ -2,9 +2,30 @@
 #define _CONFIG_
 
 #include <string>
+#include <limits>
+#include <vector>
+#include <complex>
 
-using string = std::string;
+/* ----------------
+ * Define typedefs.
+ * ----------------
+ */
+
+using precision = float;
+
 using uint   = unsigned int;
+using ulng   = unsigned long;
+using sizt   = std::size_t;
+using cmpx   = std::complex<double>;
+using string = std::string;
+
+template <typename type>
+using limits = std::numeric_limits<type>;
+
+template <typename type>
+using type_vector = std::vector<type>;
+using sizt_vector = std::vector<sizt>;
+using long_vector = std::vector<long>;
 
 typedef struct io_t{
 public:
@@ -34,7 +55,8 @@ public:
     static sizt  realizations_per_fried;
     static sizt  size_x_in_pixels;
     static sizt  size_y_in_pixels;
-    static float sizt_in_meters;
+    static float size_in_meters;
+
 } sims_t;
 
 typedef struct aperture_t{
@@ -51,6 +73,7 @@ public:
     
     static float original_sampling;
     static float degraded_sampling;
+
 } image_t;
 
 int config_parse(const char*);
