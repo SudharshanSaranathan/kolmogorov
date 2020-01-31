@@ -2,31 +2,34 @@
 #include <fstream>
 #include <sstream>
 
-string config::read_image_from              = "image.fits";
-string config::read_fried_from              = "fried.fits";
-string config::read_basis_from              = "basis.fits";
-string config::read_weights_from            = "weights.fits";
-string config::read_fft_psf_wisdom_from     = "fftw_wisdom_psf";
-string config::read_fft_phase_wisdom_from   = "fftw_wisdom_phase";
-string config::read_aperture_function_from  = "pupil.fits";
+string io_t::read_image_from             = "image.fits";
+string io_t::read_fried_from             = "fried.fits";
+string io_t::read_basis_from             = "basis.fits";
+string io_t::read_weights_from           = "weights.fits";
+string io_t::read_fft_psf_wisdom_from    = "fftw_wisdom_psf";
+string io_t::read_fft_phase_wisdom_from  = "fftw_wisdom_phase";
+string io_t::read_aperture_function_from = "pupil.fits";
 
-string config::write_log_to      = "log.file";
-string config::write_phase_to    = "phase.fits";
-string config::write_images_to   = "image_convolved.fits";
-string config::write_residual_to = "residual.fits";
-string config::write_psf_to      = "psf.fits";
+string io_t::write_log_to      = "log.file";
+string io_t::write_phase_to    = "phase.fits";
+string io_t::write_images_to   = "image_convolved.fits";
+string io_t::write_residual_to = "residual.fits";
+string io_t::write_psf_to      = "psf.fits";
 
-uint   config::sims_per_fried = 400;
-uint   config::sims_size_x    = 94;
-uint   config::sims_size_y    = 94;
+bool   io_t::save    = true;
+bool   io_t::clobber = false;
 
-double config::phase_size               = 10.0;
-double config::aperture_size            = 1.0;
-double config::aperture_sampling_factor = 1.0;
+sizt      sims_t::realizations_per_fried = 400;
+sizt      sims_t::size_x_in_pixels       = 92;
+sizt      sims_t::size_y_in_pixels       = 92;
+precision sims_t::size_in_meters         = 10.0;
 
-bool   config::output_save    = true;
-bool   config::output_clobber = false;
-bool   config::get_airy_disk  = false;
+precision aperture_t::size            = 1.0;
+precision aperture_t::sampling_factor = 1.5;
+bool      aperture_t::airy_disk       = false;
+
+float image_t::original_sampling = 1.0;
+float image_t::degraded_sampling = 1.0;
 
 int config_parse(const char* filename){
   
@@ -44,47 +47,74 @@ int config_parse(const char* filename){
         std::getline(tokens, value, ':');
 
         if(key == "image")
-	        config::read_image_from = value;
+	        io_t::read_image_from = value;
+
         else if(key == "fried")
-	        config::read_fried_from = value;
+	        io_t::read_fried_from = value;
+
         else if(key == "basis")
-	        config::read_basis_from = value;
+	        io_t::read_basis_from = value;
+
         else if(key == "aperture")
-	        config::read_aperture_function_from = value;
+	        io_t::read_aperture_function_from = value;
+
         else if(key == "weights")
-	        config::read_weights_from = value;
+	        io_t::read_weights_from = value;
+        
         else if(key == "fftw_psf")
-	        config::read_fft_psf_wisdom_from = value;
+	        io_t::read_fft_psf_wisdom_from = value;
+        
         else if(key == "fftw_phase")
-	        config::read_fft_phase_wisdom_from = value;
+	        io_t::read_fft_phase_wisdom_from = value;
+        
         else if(key == "log")
-	        config::write_log_to = value;
+	        io_t::write_log_to = value;
+        
         else if(key == "phase")
-	        config::write_phase_to = value;
+	        io_t::write_phase_to = value;
+        
         else if(key == "convolved_images")
-	        config::write_images_to = value;
+	        io_t::write_images_to = value;
+        
         else if(key == "residual")
-	        config::write_residual_to = value;
+	        io_t::write_residual_to = value;
+        
         else if(key == "psf")
-	        config::write_psf_to = value;
+	        io_t::write_psf_to = value;
+        
         else if(key == "realizations")
-	        config::sims_per_fried = std::stoi(value);
-        else if(key == "size_x")
-	        config::sims_size_x = std::stoi(value);
-        else if(key == "size_y")
-	        config::sims_size_y = std::stoi(value);
-        else if(key == "phase_size")
-	        config::phase_size  = std::stof(value);
-        else if(key == "aperture_size")
-	        config::aperture_size = std::stof(value);
+	        sims_t::realizations_per_fried = std::stoi(value);
+        
+        else if(key == "phase_size_x_in_pixels")
+	        sims_t::size_x_in_pixels = std::stoi(value);
+        
+        else if(key == "phase_size_y_in_pixels")
+	        sims_t::size_y_in_pixels = std::stoi(value);
+        
+        else if(key == "phase_size_in_meters")
+	        sims_t::size_in_meters  = std::stof(value);
+        
+        else if(key == "aperture_size_in_meters")
+	        aperture_t::size = std::stof(value);
+        
         else if(key == "aperture_sampling")
-	        config::aperture_sampling_factor = std::stof(value);
-        else if(key == "save")
-	        config::output_save = value == "Y";
-        else if(key == "clobber")
-	        config::output_clobber = value == "Y"; 
+	        aperture_t::sampling_factor = std::stof(value);
+        
         else if(key == "airy_disk")
-	        config::get_airy_disk = value == "Y";
+	        aperture_t::airy_disk = value == "true";
+        
+        else if(key == "original_sampling")
+	        image_t::original_sampling = std::stof(value);
+    
+        else if(key == "degraded_sampling")
+	        image_t::degraded_sampling = std::stof(value);
+        
+        else if(key == "save")
+	        io_t::save = value == "true";
+        
+        else if(key == "clobber")
+	        io_t::clobber = value == "true"; 
+    
     }
     
     return(EXIT_SUCCESS);

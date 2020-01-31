@@ -1,6 +1,7 @@
 #include "mpi.h"
 #include "fftw3.h"
 #include "fitsio.h"
+#include "config.h"
 #include "lib_mpi.h"
 #include "lib_array.h"
 #include "lib_phase.h"
@@ -112,19 +113,19 @@ int main(int argc, char *argv[]){
     
     }
 
-    fprintf(console, "(Info)\tReading configuration:\t[%s, ", argv[1]);
+    fprintf(console, "(Info)\tReading configuration:\t");
     fflush (console);
 
     if(config_parse(argv[1]) == EXIT_FAILURE){
 
-        fprintf(console, "Failed]\n");
+        fprintf(console, "[Failed] (%s)\n", argv[1]);
         fflush (console);
 
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     
     }else{
 	
-        fprintf(console, "Done]\n");
+        fprintf(console, "[Done] (%s)\n", argv[1]);
         fflush (console);
 
     }
@@ -172,20 +173,20 @@ int main(int argc, char *argv[]){
      * ---------------------------------------------
      */
 
-        fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::write_phase_to.c_str());
+        fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        read_status = phase.rd_fits(config::write_phase_to.c_str());
+        read_status = phase.rd_fits(io_t::write_phase_to.c_str());
         if(read_status != EXIT_SUCCESS){
             
-            fprintf(console, "Failed with err code: %d]\n", read_status);
+            fprintf(console, "[Failed][Err code = %d](%s)\n", read_status, io_t::write_phase_to.c_str());
             fflush (console);
             
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
         }else{
             
-            fprintf(console, "Done]\n");
+            fprintf(console, "[Done] (%s)\n", io_t::write_phase_to.c_str());
             fflush (console);
 
         }
@@ -195,20 +196,20 @@ int main(int argc, char *argv[]){
      * ------------------------------------
      */
 
-        fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_basis_from.c_str());
+        fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        read_status = basis.rd_fits(config::read_basis_from.c_str());
+        read_status = basis.rd_fits(io_t::read_basis_from.c_str());
         if(read_status != EXIT_SUCCESS){
         
-            fprintf(console, "Failed with err code: %d]\n", read_status);
+            fprintf(console, "[Failed][Err code = %d](%s)\n", read_status, io_t::read_basis_from.c_str());
             fflush (console);
         
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
         }else{
             
-            fprintf(console, "Done]\n");
+            fprintf(console, "[Done] (%s)\n", io_t::read_basis_from.c_str());
             fflush (console);
 
         }
@@ -218,20 +219,20 @@ int main(int argc, char *argv[]){
      * ----------------------------------
      */
 
-        fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_weights_from.c_str());
+        fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
         
-        read_status = weights.rd_fits(config::read_weights_from.c_str());
+        read_status = weights.rd_fits(io_t::read_weights_from.c_str());
         if(read_status != EXIT_SUCCESS){
         
-            fprintf(console, "Failed with err code: %d]\n", read_status);
+            fprintf(console, "[Failed][Err code = %d](%s)\n", read_status, io_t::read_weights_from.c_str());
             fflush (console);
                 
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         
         }else{
             
-            fprintf(console, "Done]\n");
+            fprintf(console, "[Done] (%s)\n", io_t::read_weights_from.c_str());
             fflush (console);
         }
 
@@ -253,32 +254,32 @@ int main(int argc, char *argv[]){
         const sizt_vector dims_phase_per_fried(dims_phase.begin() + 1, dims_phase.end());
         sizt_vector process_fried_map(dims_phase[0] + 1);
 
-    /* --------------------------------------------
-     * Validate the dimensions of the input arrays.
-     * --------------------------------------------
+    /* ----------------------------------------
+     * Validate the dimensions of input arrays.
+     * ----------------------------------------
      */
 
-        if(dims_phase[2] != config::sims_size_x  || dims_phase[3] != config::sims_size_y){
+        if(dims_phase[2] != sims_t::size_x_in_pixels  || dims_phase[3] != sims_t::size_y_in_pixels){
      
-            fprintf(console, "(Error)\texpected phase-screens with size [%ud %ud], calling MPI_Abort()\n", config::sims_size_x, config::sims_size_y);
+            fprintf(console, "(Error)\tExpected phase-screens with size [%lu %lu], calling MPI_Abort()\n", sims_t::size_x_in_pixels, sims_t::size_y_in_pixels);
             fflush (console);
 
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
         }
 
-        if(dims_basis[1] != config::sims_size_x  || dims_basis[2] != config::sims_size_y){
+        if(dims_basis[1] != sims_t::size_x_in_pixels  || dims_basis[2] != sims_t::size_y_in_pixels){
      
-            fprintf(console, "(Error)\texpected basis functions with size [%ud %ud], calling MPI_Abort()\n", config::sims_size_x, config::sims_size_y);
+            fprintf(console, "(Error)\tExpected basis functions with size [%lu %lu], calling MPI_Abort()\n", sims_t::size_x_in_pixels, sims_t::size_y_in_pixels);
             fflush (console);
             
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
         }
 
-        if(dims_weights[0] != dims_phase[0] || dims_weights[1] != dims_basis[0]){
+        if(dims_weights[0] != dims_phase[0]){
             
-            fprintf(console, "(Error)\texpected weights with dimensions [%lu %lu], calling MPI_Abort()\n", dims_phase[0], dims_basis[0]);
+            fprintf(console, "(Error)\tExpected weights with dimensions [%lu %lu], calling MPI_Abort()\n", dims_phase[0], dims_basis[0]);
             fflush (console);
             
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -321,6 +322,7 @@ int main(int argc, char *argv[]){
 
                 MPI_Send(&dims_basis_naxis, 1, MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
                 MPI_Send( dims_basis.data(), dims_basis_naxis, MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
+                MPI_Send( dims_weights.data() + 1, 1, MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
 
             /* -------------------------------------
              * Decrement number of processes in use.
@@ -340,6 +342,7 @@ int main(int argc, char *argv[]){
 
                 MPI_Send(&dims_basis_naxis, 1, MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
                 MPI_Send( dims_basis.data(), dims_basis_naxis, MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send( dims_weights.data() + 1, 1, MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
 
             }
 
@@ -382,7 +385,7 @@ int main(int argc, char *argv[]){
 
             if(weights[index_of_fried_in_queue] != nullptr){
                 
-                MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send(weights[index_of_fried_in_queue], dims_weights[1], mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
 
             }else{
 
@@ -502,7 +505,7 @@ int main(int argc, char *argv[]){
 
                 if(weights[index_of_fried_in_queue] != nullptr){
                 
-                    MPI_Send(weights[index_of_fried_in_queue], dims_basis[0], mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
+                    MPI_Send(weights[index_of_fried_in_queue], dims_weights[1], mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
 
                 }else{
 
@@ -564,7 +567,7 @@ int main(int argc, char *argv[]){
                 
                 if(weights[0] != nullptr && phase[0] != nullptr){
 
-                    MPI_Send(weights[0], dims_basis[0], mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
+                    MPI_Send(weights[0], dims_weights[1], mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
                     MPI_Send(phase[0], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
                 
                 }else{
@@ -587,28 +590,30 @@ int main(int argc, char *argv[]){
 
         }
 
-    /* -----------------------------------------
-     * !(8) Save residual phase-screens to disk.
-     * -----------------------------------------
-     */
+        if(io_t::save){
 
-        fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_residual_to.c_str());
-        fflush (console);
-        
-        write_status = residual.wr_fits(config::write_residual_to.c_str(), config::output_clobber);
-	    if(write_status != EXIT_SUCCESS){
-	        
-            fprintf(console, "Failed with err code: %d]\n", write_status);
-	        fflush (console);
+        /* -----------------------------------------
+         * !(8) Save residual phase-screens to disk.
+         * -----------------------------------------
+         */
 
-        }
-	    else{
-	     
-            fprintf(console, "Done]\n");
+            fprintf(console, "\n(Info)\tWriting to file:\t");
             fflush (console);
+        
+            write_status = residual.wr_fits(io_t::write_residual_to.c_str(), io_t::clobber);
+    	    if(write_status != EXIT_SUCCESS){
+	        
+                fprintf(console, "[Failed][Err code = %d](%s)\n", write_status, io_t::write_residual_to.c_str());
+	            fflush (console);
+    
+            }
+	        else{
+	     
+                fprintf(console, "[Done] (%s)\n", io_t::write_residual_to.c_str());
+                fflush (console);
 
-        }
-
+            }
+       }
     }
     
 /* -------------------------
@@ -646,8 +651,8 @@ int main(int argc, char *argv[]){
      * dims_basis               sizt_vector     Dimensions of basis functions.    
      */
 
-        sizt_vector dims_phase_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
-        sizt_vector dims_phase_single{config::sims_size_x, config::sims_size_y};
+        sizt_vector dims_phase_per_fried{sims_t::realizations_per_fried, sims_t::size_x_in_pixels, sims_t::size_y_in_pixels};
+        sizt_vector dims_phase_single{sims_t::size_x_in_pixels, sims_t::size_y_in_pixels};
         sizt_vector dims_basis(dims_basis_naxis);
         sizt_vector dims_weights(1);
         
@@ -663,7 +668,7 @@ int main(int argc, char *argv[]){
      * weights      Array<precision>    Basis weights.
      */
 
-        dims_weights[0] = dims_basis[0];
+        MPI_Recv(dims_weights.data(), 1, MPI_UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
         Array<precision> phase(dims_phase_per_fried);
         Array<precision> basis(dims_basis);

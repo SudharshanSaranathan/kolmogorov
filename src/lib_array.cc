@@ -411,7 +411,7 @@ template <class type>
 void         Array<type>::operator+=(type value){
 
     if(!this->stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator+=(), cannot perform operation on empty array");
 
     for(sizt ind = 0; ind < this->size; ind++){
         this->root_ptr[ind] += value;
@@ -422,7 +422,7 @@ template <class type>
 void         Array<type>::operator-=(type value){
 
     if(!this->stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator-=(), cannot perform operation on empty array");
 
     for(sizt ind = 0; ind < this->size; ind++){
         this->root_ptr[ind] -= value;
@@ -433,7 +433,7 @@ template <class type>
 void         Array<type>::operator*=(type value){
 
     if(!this->stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator*=(), cannot perform operation on empty array");
 
     for(sizt ind = 0; ind < this->size; ind++){
         this->root_ptr[ind] *= value;

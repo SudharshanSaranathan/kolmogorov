@@ -1,6 +1,8 @@
+#define _GET_ALL_POINT_SPREAD_FUNCTIONS_
+
 #include "mpi.h"
 #include "fftw3.h"
-#include "fitsio.h"
+#include "config.h"
 #include "lib_mpi.h"
 #include "lib_array.h"
 #include "lib_phase.h"
@@ -14,8 +16,8 @@
 /* ------------
  * Description:
  * ------------
- * This program computes the Point Spread Function (PSF) corresponding to phase-screen residuals.
- * The PSF is computed as the forward fourier transform of the pupil function that is defined as:
+ * This program computes the Point Spread Function(s) (PSF) of the residual phase-screens.
+ * The PSF is the forward fourier transform of the pupil function, defined as:
  *
  *      Pupil_function(x, y) = aperture_function(x, y) * exp(i * phase(x, y))
  *
@@ -42,10 +44,10 @@
  * 1. Read and parse the config file.
  * 2. Read phase-screen residuals from file.
  * 3. Read aperture function from file.
- * 4. Distribute residual phase-screens to workers.
- * 5. Store PSFs returned by workers.
+ * 4. Distribute residual phase-screens to MPI processes.
+ * 5. Store PSF(s) returned by MPI processes.
  * 6. Repeat steps 4-5 for all residual phase-screens.
- * 7. Save PSFs to disk.
+ * 7. Save PSF(s) to disk.
  *
  * -----------------------
  * Additional information:
@@ -93,9 +95,9 @@ int main(int argc, char *argv[]){
  */
 
     FILE *console   = process_rank == 0 ? stdout : fopen("/dev/null","wb");
-    fprintf(console, "------------------------------------------------------\n");
-    fprintf(console, "- Phase-screen PSFs computation program -\n");
-    fprintf(console, "------------------------------------------------------\n");
+    fprintf(console, "----------------------------------------------\n");
+    fprintf(console, "- Point Spread Functions computation program -\n");
+    fprintf(console, "----------------------------------------------\n");
 
 /* ------------------------------------
  * !(1) Read and parse the config file.
@@ -113,14 +115,14 @@ int main(int argc, char *argv[]){
     fflush (console);
     
     if(config_parse(argv[1]) == EXIT_FAILURE){
-        fprintf(console, "[Failed]\n");
+        fprintf(console, "[Failed] (%s)\n", argv[1]);
         fflush (console);
 
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
     }else{
 	    
-        fprintf(console, "[Done]\n");
+        fprintf(console, "[Done] (%s)\n", argv[1]);
         fflush (console);
 
     }
@@ -166,20 +168,20 @@ int main(int argc, char *argv[]){
      * -------------------------------------------
      */
 
-        fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::write_residual_to.c_str());
+        fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        read_status = residual.rd_fits(config::write_residual_to.c_str());
+        read_status = residual.rd_fits(io_t::write_residual_to.c_str());
         if(read_status != EXIT_SUCCESS){
             
-            fprintf(console, "Failed with err code: %d]\n", read_status);
+            fprintf(console, "[Failed][Err code = %d](%s)\n", read_status, io_t::write_residual_to.c_str());
             fflush (console);
 
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         
         }else{
             
-            fprintf(console, "Done]\n");
+            fprintf(console, "[Done] (%s)\n", io_t::write_residual_to.c_str());
             fflush (console);
 
         }
@@ -189,20 +191,20 @@ int main(int argc, char *argv[]){
      * --------------------------------------
      */
 
-        fprintf(console, "(Info)\tReading file:\t\t[%s, ", config::read_aperture_function_from.c_str());
+        fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        read_status = aperture.rd_fits(config::read_aperture_function_from.c_str());
+        read_status = aperture.rd_fits(io_t::read_aperture_function_from.c_str());
         if(read_status != EXIT_SUCCESS){
             
-            fprintf(console, "Failed with err code: %d]\n", read_status);
+            fprintf(console, "[Failed][Err code = %d](%s)\n", read_status, io_t::read_aperture_function_from.c_str());
             fflush (console);
 
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         
         }else{
 
-            fprintf(console, "Done]\n");
+            fprintf(console, "[Done] (%s)\n", io_t::read_aperture_function_from.c_str());
             fflush (console);
 
         }
@@ -522,37 +524,39 @@ int main(int argc, char *argv[]){
 
         }
 
-    /* -----------------------
-     * !(7) Save PSFs to disk.
-     * -----------------------
-     */
+        if(io_t::save){
 
-        fprintf(console, "\n(Info)\tWriting to file:\t[%s, ", config::write_psf_to.c_str());
-        fflush (console);
+        /* -----------------------
+         * !(7) Save PSFs to disk.
+         * -----------------------
+         */
+
+            fprintf(console, "\n(Info)\tWriting to file:\t");
+            fflush (console);
 
 #ifdef _GET_ALL_POINT_SPREAD_FUNCTIONS_
 
-        write_status = psf.wr_fits(config::write_psf_to.c_str(), config::output_clobber);
+            write_status = psf.wr_fits(io_t::write_psf_to.c_str(), io_t::clobber);
         
 #else
 
-        write_status = psf_average.wr_fits(config::write_psf_to.c_str(), config::output_clobber);
+            write_status = psf_average.wr_fits(io_t::write_psf_to.c_str(), io_t::clobber);
 
 #endif
 
-        if(write_status != EXIT_SUCCESS){
+            if(write_status != EXIT_SUCCESS){
 	    
-            fprintf(console, "Failed with err code: %d]\n", write_status);
-            fflush (console);
+                fprintf(console, "[Failed][Err code = %d](%s)\n", write_status, io_t::write_psf_to.c_str());
+                fflush (console);
+    	    
+            }
+	        else{
 	    
-        }
-	    else{
-	    
-            fprintf(console, "Done]\n");
-            fflush (console);
+                fprintf(console, "[Done] (%s)\n", io_t::write_psf_to.c_str());
+                fflush (console);
 
+            }
         }
-
     }
     
 /* -------------------------
@@ -573,9 +577,9 @@ int main(int argc, char *argv[]){
      * dims_residual_per_fried  sizt_vector     Dimensions of phase-screen residuals, per fried.
      */
 
-        const sizt_vector dims_aperture{config::sims_size_x, config::sims_size_y};
-        const sizt_vector dims_psf_single{2 * config::sims_size_x - 1, 2 * config::sims_size_y - 1}; 
-        const sizt_vector dims_residual_per_fried{config::sims_per_fried, config::sims_size_x, config::sims_size_y};
+        const sizt_vector dims_aperture{sims_t::size_x_in_pixels, sims_t::size_y_in_pixels};
+        const sizt_vector dims_psf_single{2 * sims_t::size_x_in_pixels - 1, 2 * sims_t::size_y_in_pixels - 1}; 
+        const sizt_vector dims_residual_per_fried{sims_t::realizations_per_fried, sims_t::size_x_in_pixels, sims_t::size_y_in_pixels};
 
 #ifdef _GET_ALL_POINT_SPREAD_FUNCTIONS_
 
@@ -587,7 +591,7 @@ int main(int argc, char *argv[]){
      * dims_psf_per_fried   Array<precision>    PSFs of residual phase-screens, per fried.
      */
        
-        const sizt_vector dims_psf_per_fried{config::sims_per_fried, 2 * config::sims_size_x - 1, 2 * config::sims_size_y - 1};
+        const sizt_vector dims_psf_per_fried{sims_t::realizations_per_fried, 2 * sims_t::size_x_in_pixels - 1, 2 * sims_t::size_y_in_pixels - 1};
 
 #endif
 
@@ -659,7 +663,7 @@ int main(int argc, char *argv[]){
      * -------------------------------
      */
 
-        fftw_import_wisdom_from_filename(config::read_fft_psf_wisdom_from.c_str());
+        fftw_import_wisdom_from_filename(io_t::read_fft_psf_wisdom_from.c_str());
 
     /*
      * Variable declaration:
@@ -669,8 +673,10 @@ int main(int argc, char *argv[]){
      * forward  fftw_plan   Re-usable FFTW plan for the forward transformation.
      */
 
-        fftw_plan forward = fftw_plan_dft_2d(dims_psf_single[0], dims_psf_single[1], reinterpret_cast<fftw_complex*>(pupil_function[0]),\
-                                             reinterpret_cast<fftw_complex*>(pupil_function_fourier[0]), FFTW_FORWARD, FFTW_MEASURE);
+        fftw_plan forward = fftw_plan_dft_2d(dims_psf_single[0], dims_psf_single[1],\
+                                             reinterpret_cast<fftw_complex*>(pupil_function[0]),\
+                                             reinterpret_cast<fftw_complex*>(pupil_function_fourier[0]),\
+                                             FFTW_FORWARD, FFTW_MEASURE);
 
     /* ----------------------------------------------------
      * Compute PSFs of residual phase-screens until killed.
@@ -685,32 +691,20 @@ int main(int argc, char *argv[]){
          */
 
             MPI_Recv(residual_per_fried[0], residual_per_fried.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
+            
             if(status.MPI_TAG == mpi_cmds::task){
-
-            /* -------------------------------------------
-             * Compute the PSFs of residual phase-screens.
-             * -------------------------------------------
-             */
                 
-                for(sizt ind = 0; ind < config::sims_per_fried; ind++){
+                for(sizt ind = 0; ind < sims_t::realizations_per_fried; ind++){
                     
                 /* --------------------------------------------------------------
                  * If airy disk is requested, don't copy into residual_single[0].
                  * --------------------------------------------------------------
                  */
                   
-                    if(config::get_airy_disk){
-                        
-                        make_psf_from_phase_screen(residual_single, psf_single, aperture, forward);                    
-
-                    }
-                    else{
-
+                    if(aperture_t::airy_disk == false)
                         memcpy(residual_single[0], residual_per_fried[ind], residual_single.get_size() * sizeof(precision));
-                        make_psf_from_phase_screen(residual_single, psf_single, aperture, forward); 
-                   
-                    }                
+
+                    make_psf_from_phase_screen(residual_single, psf_single, aperture, forward);       
 
 #ifdef _GET_ALL_POINT_SPREAD_FUNCTIONS_
 
@@ -760,15 +754,20 @@ int main(int argc, char *argv[]){
 
 #endif
 
-        /* -------------------------
-         * Write FFT wisdom to file.
-         * -------------------------
-         */
-            
-            fftw_export_wisdom_to_filename(config::read_fft_psf_wisdom_from.c_str());
 
         }
+        
+    /* -------------------------
+     * Write FFT wisdom to file.
+     * -------------------------
+     */
+   
+        fftw_export_wisdom_to_filename(io_t::read_fft_psf_wisdom_from.c_str());
+        fftw_destroy_plan(forward);
+        fftw_cleanup();
+
     }
+
 
     MPI_Finalize();
     return(EXIT_SUCCESS);
