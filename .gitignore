@@ -1,5 +1,0 @@
-bin/make_*
-lib/make_*.o
-
-bin/test_*.
-lib/test_*.o
