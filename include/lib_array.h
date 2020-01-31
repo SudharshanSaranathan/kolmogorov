@@ -146,9 +146,9 @@ public:
  * Name             Return type     Description
  * --------------------------------------------
  * operator[]       type*           Returns a pointer to the requested index in the first axis.
- *                                  Mainly used in memcpy, for reading / writing slices of the 
- *                                  data at the specified index, throws exception if index out
- *                                  of bounds.
+ *                                  Mainly used during memcpy, for reading / writing slices of
+ *                                  data at the specified index, throws exception if the argument
+ *                                  is out of bounds.
  * 
  * operator()       type&           Provides read / write access to individual array elements, 
  *                                  overloaded for 1D, 2D, 3D, and 4D arrays, throws exception 
@@ -259,7 +259,7 @@ public:
  * pad  ()      Array<type>     Returns the array padded with zeros.
  * roll ()      Array<type>     Returns a cyclically rolled array.
  * crop ()      Array<type>     Returns a subset of the array.
- * slice()      Array<type>     Returns a slice of the array, at the specified index.
+ * slice()      Array<type>     Returns a slice of the array at the specified index.
  */
 
     Array<type> slice (sizt);
@@ -279,21 +279,18 @@ public:
  * swap()           void            Friend function to swap the data of two instances.
  *                                  Required for the copy-swap idiom.
  *
- * rd_bin()         int             Read into array elements from a binary file. This
- *                                  is the fastest option.
+ * rd_bin()         int             Read into array from a binary file. This is the fastest option.
  *
- * wr_bin()         int             Write the array elements to a binary file. This is
- *                                  the fastest option.*
+ * wr_bin()         int             Write the array to a binary file. This is the fastest option.
  *
- * cast_to_type()   void            Life saving type-casting function for the class. Casts the elements
+ * cast_to_type()   void            Type-casting function for the class. Casts the elements
  *                                  of the array into the type of the argument, stores the type-casted
  *                                  values in the argument. Dimensions must match, throws exception if 
  *                                  they don't. See inline for definition.
  * 
- * cast_to_type()   Array<TYPE>     Life saving type-casting function for the class. Casts the elements
- *                                  of the array into the type of the argument, stores the type-casted
- *                                  values in the argument. Dimensions must match, throws exception if 
- *                                  they don't. See inline for definition.
+ * cast_to_type()   Array<TYPE>     Type-casting function for the class. Returns a new type-casted 
+ *                                  array.
+ * 
  */
 
     template <typename TYPE>
@@ -325,7 +322,7 @@ public:
     /* -----------------------
      * Cast the array to TYPE.
      * -----------------------
-     * If the array being casted is of type std::complex<>, pick only the real part.
+     * If the array being casted is of type std::complex, only the real part is casted.
      */ 
 
         for(sizt ind = 0; ind < this->size; ind++)

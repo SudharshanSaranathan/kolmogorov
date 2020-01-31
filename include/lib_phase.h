@@ -10,8 +10,10 @@
 #include "config.h"
 #include "lib_array.h"
 
+#define MAX(a, b) a > b ? a : b
+#define MIN(a, b) a < b ? a : b
+
 #define _USE_MATH_DEFINES
-#define _APERTURE_
 
 typedef std::chrono::high_resolution_clock clock_;
 
@@ -133,8 +135,8 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, pr
          * --------------
          */
         
-            amp = frq == 0.0 ? 0.0 : sqrt(0.023) * pow(sim_size / fried, 5. / 6.) / pow(frq, 11./6.);
-            
+            amp = frq == 0.0 ? 0.0 : sqrt(0.023) * pow(2.0*sim_size/fried, 5./6.) / pow(frq, 11./6.);
+
         /* 
          * Variable declaration
          * --------------------------------
@@ -145,9 +147,10 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, pr
          * phase    cmpx        Fourier transformed phase.
          */
             
-            precision cosphi = distribution(generator);
-            precision sinphi = distribution(generator);
-            cmpx phase(amp*cosphi, amp*sinphi);
+            precision cos_phi = distribution(generator);
+            precision sin_phi = distribution(generator);
+            
+            cmpx phase(amp*cos_phi, amp*sin_phi);
 
         /* ------------------------------------------------------------------------
          * Set the value of the fourier transform at (xpix, ypix), shifted to edge.
@@ -160,7 +163,7 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, pr
     }
 }
 
-void make_residual_phase_screen(Array<precision>& phase, Array<precision>& basis, Array<precision>& mode_cfs_weights, sizt_vector norm){
+void make_residual_phase_screen(Array<precision>& phase, Array<precision>& basis, Array<precision>& weights, sizt_vector norm){
 
 /*
  * Vector declaration
@@ -172,9 +175,10 @@ void make_residual_phase_screen(Array<precision>& phase, Array<precision>& basis
  * dims_mode_cfs    sizt_vector     Dimensions of mode-amplitudes.
  */
 
-    sizt_vector dims_basis = basis.get_dims();
+    sizt_vector dims_weights = weights.get_dims();
+    sizt_vector dims_basis   = basis.get_dims();
     sizt_vector dims_mode{dims_basis[1], dims_basis[2]};
-    sizt_vector dims_mode_cfs{dims_basis[0]};
+    sizt_vector dims_mode_cfs{dims_weights[0]};
 
 /*
  * Array declaration
@@ -188,12 +192,13 @@ void make_residual_phase_screen(Array<precision>& phase, Array<precision>& basis
     Array<precision> mode(dims_mode);
     Array<precision> mode_cfs(dims_mode_cfs);
 
-/* ------------------------------
- * Loop over the number of modes.
- * ------------------------------
+/* ----------------
+ * Loop over modes.
+ * ----------------
  */
-
-    for(sizt ind = 0; ind < dims_basis[0]; ind++){
+    sizt mode_limit = dims_weights[0] < dims_basis[0] ? dims_weights[0] : dims_basis[0];
+    
+    for(sizt ind = 0; ind < mode_limit; ind++){
 
     /* -----------------------------------------
      * Copy the basis[ind] into individual mode.
@@ -214,7 +219,7 @@ void make_residual_phase_screen(Array<precision>& phase, Array<precision>& basis
      * ------------------------------------------
      */
 
-        phase -= mode * (mode_cfs(ind) * mode_cfs_weights(ind));
+        phase -= mode * (mode_cfs(ind) * weights(ind));
 
     }
 }
