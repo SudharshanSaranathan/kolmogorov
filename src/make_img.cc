@@ -891,9 +891,9 @@ int main(int argc, char *argv[]){
 
                     img_double_c = img_double_c.roll(dims_shift) / img_double_c.get_size();
 
-                /* ---------------------------------------
-                 * Cast the convolved to type <precision>.
-                 * ---------------------------------------
+                /* ---------------------------------------------
+                 * Cast the convolved image to type <precision>.
+                 * ---------------------------------------------
                  */
 
                     imgs = img_double_c.cast_to_type<precision>();   
@@ -902,9 +902,9 @@ int main(int argc, char *argv[]){
 
                     for(sizt ind = 0; ind < dims_psfs[0]; ind++){
 
-                    /* ------------------------------------
-                     * Pad the PSFs to the size of the img.
-                     * ------------------------------------
+                    /* -----------------------------------
+                     * Pad the PSF to the size of the img.
+                     * -----------------------------------
                      */
 
                         for(sizt xpix = 0; xpix < dims_psf[0]; xpix++){

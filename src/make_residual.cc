@@ -590,6 +590,17 @@ int main(int argc, char *argv[]){
 
         }
 
+    /* -----------------------
+     * Kill all MPI processes.
+     * -----------------------
+     */
+
+        for(int pid = 1; pid < processes_total; pid++){
+
+            MPI_Send(fried[0], 1, mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
+
+        }
+
         if(io_t::save){
 
         /* -----------------------------------------

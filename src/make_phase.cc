@@ -73,6 +73,7 @@ int main(int argc, char *argv[]){
     MPI_Datatype mpi_precision = std::is_same<precision, float>::value == true ? MPI_FLOAT : MPI_DOUBLE;
     int process_rank = 0;
     int processes_total = 0;
+    int processes_killed = 0;
     int mpi_recv_count = 0;
     int read_status = 0;
     int write_status = 0;
@@ -270,57 +271,36 @@ int main(int argc, char *argv[]){
      * ----------------------------
      * Name     Type    Description
      * ----------------------------
-     * id       int     Rank of MPI processes.
+     * pid      int     Rank of MPI processes.
      */
 
-        for(int id = 1; id < processes_total; id++){
+        for(int pid = 1; pid < processes_total; pid++){
 
         /* --------------------------------------------------
          * if rank > number of fried parameters, kill MPI process.
          * -------------------------------------------------- 
          */
 
-            if(id > int(fried.get_size())){
+            if(pid > int(fried.get_size())){
 
-                if(fried[0] != nullptr){
-
-                    MPI_Send(fried[0], 1, mpi_precision, id, mpi_cmds::kill, MPI_COMM_WORLD);
-
-                }else{
-
-                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                    fflush (console);
-
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-                }
+                fprintf(stdout, "Killing process: %d\n", pid);
+                MPI_Send(fried[0], 1, mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
 
 #ifdef _USE_APERTURE_
                 
-                if(aperture[0] != nullptr){
-
-                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::kill, MPI_COMM_WORLD);
-
-                }else{
-
-                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                    fflush (console);
-
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-                }
+                MPI_Send(aperture[0], aperture.get_size(), mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
 
 #endif
                 
-            /* -------------------------------------
-             * Decrement number of processes in use.
-             * -------------------------------------
+            /* -----------------------------------------
+             * Decrement number of MPI processes in use.
+             * -----------------------------------------
              */
 		
-                processes_total--;          
+                processes_killed++;          
 
             }
-            
+
         /* --------------------------------------------------------------------------------------------
          * if rank <= number of fried parameters, send fried parameter and aperture function to MPI process.
          * --------------------------------------------------------------------------------------------
@@ -330,7 +310,7 @@ int main(int argc, char *argv[]){
 
                 if(fried[index_of_fried_in_queue] != nullptr){
 
-                    MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
+                    MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
 
                 }else{
 
@@ -345,7 +325,7 @@ int main(int argc, char *argv[]){
 
                 if(aperture[0] != nullptr){
                     
-                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
+                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
 
                 }else{
 
@@ -363,7 +343,7 @@ int main(int argc, char *argv[]){
              * -------------------------------------------------------
              */
 
-                process_fried_map[id] = index_of_fried_in_queue;
+                process_fried_map[pid] = index_of_fried_in_queue;
 
             /* ----------------------------------
              * Increment index_of_fried_in_queue.
@@ -384,6 +364,8 @@ int main(int argc, char *argv[]){
 
             }
         }
+            
+        processes_total -= processes_killed;
 
     /*
      * Array declaration:
@@ -404,9 +386,9 @@ int main(int argc, char *argv[]){
 
         while(fried_completed < fried.get_size()){
         	  
-        /* --------------------------------------------------------------------
-         * Wait for a MPI process to ping master. If pinged, get MPI process information.
-         * --------------------------------------------------------------------
+        /* --------------------------------------------------------------------------------
+         * Wait for a MPI processes to ping master. If pinged, get MPI process information.
+         * --------------------------------------------------------------------------------
          */	
 	
             MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
@@ -511,33 +493,25 @@ int main(int argc, char *argv[]){
                 fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
                 fflush (console);
       	    
-            }
-	        
-        /* -------------------------------------------------------
-         * If no more fried parameters are available, kill MPI process.
-         * -------------------------------------------------------
-         */
-
-            else{
-
-                MPI_Send(nullptr, 0, MPI_CHAR, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
-	        
-            /* --------------------------
-             * Decrement processes_total;
-             * --------------------------
+            }else{
+    
+            /* ---------------------------------------------------------
+             * No more fried parameters to process, so kill MPI workers.
+             * ---------------------------------------------------------
              */
 
-                processes_total--;
+                MPI_Send(fried[0], 1, mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
 
             }
         }
 
+    /* --------------------------------------------
+     * !(6) Save simulations to disk, if requested.
+     * --------------------------------------------
+     */
+
         if(io_t::save){
 
-        /* ------------------------------ 
-         * !(6) Save simulations to disk.
-         * ------------------------------
-         */
 
             fprintf(console, "\n(Info)\tWriting to file:\t");
             fflush (console);
