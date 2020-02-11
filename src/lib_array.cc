@@ -11,7 +11,19 @@
 #include <exception>
 #include <algorithm>
 
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   sizeof_vector(sizt_vector&)
+ * ----------------------------------------
+ */
+
 sizt sizeof_vector(      sizt_vector &vector){
+
+/* -------------------------------
+ * Return the product of elements.
+ * -------------------------------
+ */
+
     sizt N = 1;
     for(sizt ind = 0; ind < vector.size(); ind++){
         N *= vector[ind];
@@ -19,66 +31,150 @@ sizt sizeof_vector(      sizt_vector &vector){
     return(N);
 }
 
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   sizeof_vector(const sizt_vector&)
+ * ----------------------------------------------
+ */
+
 sizt sizeof_vector(const sizt_vector &vector){
+
+/* -------------------------------
+ * Return the product of elements.
+ * -------------------------------
+ */
+
     sizt N = 1;
     for(sizt ind = 0; ind < vector.size(); ind++){
         N *= vector[ind];
     }
     return(N);
 }
+
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::Array()
+ * ----------------------------------------------
+ */
 
 template <class type>
 Array<type>:: Array(){
+
+/* ----------------------------------------------------
+ * Nothing to do. Default values are already specified.
+ * ---------------------------------------------------
+ */
+
 }
+
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::~Array()
+ * ----------------------------------------------
+ */
 
 template <class type>
 Array<type>::~Array(){
 
-    memory<type>::deallocate(data_ptr_1D);
-    memory<type>::deallocate(data_ptr_2D);
-    memory<type>::deallocate(data_ptr_3D);
-    memory<type>::deallocate(data_ptr_4D);
+/* ------------
+ * Free memory.
+ * ------------
+ */
+
+    memory<type>::deallocate(data_ptr_1D, this->owner);
+    memory<type>::deallocate(data_ptr_2D, this->owner);
+    memory<type>::deallocate(data_ptr_3D, this->owner);
+    memory<type>::deallocate(data_ptr_4D, this->owner);
+
+/* ------------------------
+ * Reset flags, clear dims.
+ * ------------------------
+ */
 
     this->dims.clear();
-    this->stat = false;
-    this->size = 0;
+    this->owner = false;
+    this->stat  = false;
+    this->size  = 0;
 }
 
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::Array(const sizt_vector&, type*)
+ * --------------------------------------------------------------
+ */
+
 template <class type>
-Array<type>:: Array(const sizt_vector &dimensions){
+Array<type>:: Array(const sizt_vector &dimensions, type* src){
+
+/* ------------------------------
+ * Copy <dimensions> into <dims>.
+ * Calculate the number of elements in the array, store in <size>.
+ * ---------------------------------------------------------------
+ */
 
     this->dims = dimensions;
     this->size = sizeof_vector(this->dims);
 
+/* ----------------------------------------------
+ * Allocate memory depending on <dims> and <src>.
+ * ----------------------------------------------
+ */
+
     switch(this->dims.size()){
-        case 1: this->data_ptr_1D = memory<type>::allocate(this->dims[0]);
-                this->stat        = this->data_ptr_1D == nullptr ? false : true;
-                this->root_ptr    = this->data_ptr_1D;
-                break;
+        case 1:  this->data_ptr_1D = memory<type>::allocate(this->dims[0], src);
+                 this->stat        = this->data_ptr_1D == nullptr ? false : true;
+                 this->root_ptr    = this->data_ptr_1D;
+                 break;
 
-        case 2: this->data_ptr_2D = memory<type>::allocate(this->dims[0], this->dims[1]);
-                this->stat        = this->data_ptr_2D == nullptr ? false : true;
-                this->root_ptr    = this->data_ptr_2D[0];
-                break;
+        case 2:  this->data_ptr_2D = memory<type>::allocate(this->dims[0], this->dims[1], src);
+                 this->stat        = this->data_ptr_2D == nullptr ? false : true;
+                 this->root_ptr    = this->data_ptr_2D[0];
+                 break;
 
-        case 3: this->data_ptr_3D = memory<type>::allocate(this->dims[0], this->dims[1], this->dims[2]);
-                this->stat        = this->data_ptr_3D == nullptr ? false : true;
-                this->root_ptr    = this->data_ptr_3D[0][0];
-                break;
+        case 3:  this->data_ptr_3D = memory<type>::allocate(this->dims[0], this->dims[1], this->dims[2], src);
+                 this->stat        = this->data_ptr_3D == nullptr ? false : true;
+                 this->root_ptr    = this->data_ptr_3D[0][0];
+                 break;
 
-        case 4: this->data_ptr_4D = memory<type>::allocate(this->dims[0], this->dims[1], this->dims[2], this->dims[3]);
-                this->stat        = this->data_ptr_4D == nullptr ? false : true;
-                this->root_ptr    = this->data_ptr_4D[0][0][0];
-                break;
+        case 4:  this->data_ptr_4D = memory<type>::allocate(this->dims[0], this->dims[1], this->dims[2], this->dims[3], src);
+                 this->stat        = this->data_ptr_4D == nullptr ? false : true;
+                 this->root_ptr    = this->data_ptr_4D[0][0][0];
+                 break;
+
+        default: throw std::logic_error("In function Array<type>::Array(), expected dimensions <= 4");
+                 break;
     }
 }
+
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::Array(const Array<type>&)
+ * -------------------------------------------------------
+ */
 
 template <class type>
 Array<type>:: Array(const Array<type> &src){
 
-    this->nans = src.nans;
-    this->dims = src.dims;
-    this->size = sizeof_vector(this->dims);
+/* -----------------------------------------------------------------
+ * Copy constructor always allocates new memory. Set <owner> = true.
+ * -----------------------------------------------------------------
+ */
+
+    this->owner = true;
+
+/* --------------------------------------------
+ * Copy <src.nans>, <src.dims>, and <src.size>.
+ * --------------------------------------------
+ */
+
+    this->nans  = src.nans;
+    this->dims  = src.dims;
+    this->size  = src.size;
+
+/* ----------------------------------------
+ * Allocate new memory depending on <dims>.
+ * ----------------------------------------
+ */
 
     switch(this->dims.size()){
         case 1: this->data_ptr_1D = memory<type>::allocate(this->dims[0]);
@@ -102,20 +198,43 @@ Array<type>:: Array(const Array<type> &src){
                 break;
     }
 
-    if(this->stat == true && src.stat == true){
+/* ----------------------------------------------
+ * Copy data from <src.root_ptr> into <root_ptr>.
+ * ----------------------------------------------
+ */
+
+    if(this->stat == true && src.stat == true)
         std::memcpy(this->root_ptr, src.root_ptr, this->size * sizeof(type));
-    }
+
 }
+
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_stat()
+ * ----------------------------------------------
+ */
 
 template <class type>
 bool         Array<type>:: get_stat(){
     return(this->stat);
 }
 
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_size()
+ * ----------------------------------------------
+ */
+
 template <class type>
 sizt         Array<type>:: get_size(){
     return(this->size);
 }
+
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_dims(sizt)
+ * ----------------------------------------------
+ */
 
 template <class type>
 sizt         Array<type>:: get_dims(sizt xs){
@@ -124,6 +243,12 @@ sizt         Array<type>:: get_dims(sizt xs){
     else
         return(dims[xs]);   
 }
+
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_total()
+ * ----------------------------------------------
+ */
 
 template <class type>
 type	     Array<type>:: get_total(){
@@ -135,13 +260,31 @@ type	     Array<type>:: get_total(){
     return(total);
 }
 
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_stat()
+ * ----------------------------------------------
+ */
+
 template <class type>
 sizt_vector  Array<type>:: get_dims(){
     return(this->dims);
 }
 
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator[](const sizt)
+ * ----------------------------------------------
+ */
+
 template <class type>
 type* Array<type>::operator[](const sizt xs){
+
+/* ----------------------------------------
+ * Return nullptr if array isn't allocated.
+ * Return nullptr if index out of bounds.
+ * --------------------------------------
+ */
 
     if(this->stat == false)
         return(nullptr);
@@ -149,29 +292,56 @@ type* Array<type>::operator[](const sizt xs){
     if(xs >= this->dims[0])
        return(nullptr);
     
-    switch(this->dims.size()){
+/* -------------------------------------
+ * Return pointer to the slice at index.
+ * -------------------------------------
+ */
 
+    switch(this->dims.size()){
         case 1:  return(this->data_ptr_1D + xs);
         case 2:  return(this->data_ptr_2D[xs]);
         case 3:  return(this->data_ptr_3D[xs][0]);
         case 4:  return(this->data_ptr_4D[xs][0][0]);
         default: return(nullptr);
-
     }
 }
 
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator()(const sizt)
+ * ----------------------------------------------------
+ */
+
 template <class type>
 type& Array<type>::operator()(const sizt xs){
+    
+/* ---------------------
+ * Check if array is 1D.
+ * Check if index if out of bounds.
+ * --------------------------------
+ */
+
     if(this->dims.size() != 1)
         throw std::runtime_error("In Array<type>::operator(), expected " + std::to_string(this->dims.size()) + " argument(s)");
+    
     if(xs >= this->dims[0])
         throw std::range_error("array out of bounds");
 
     return(this->data_ptr_1D[xs]);
 }
 
+/* ------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator()(const sizt)
+ * ----------------------------------------------------
+ */
+
 template <class type>
 type& Array<type>::operator()(const sizt xs, const sizt ys){
+
+/* -------------
+ */
+
     if(this->dims.size() != 2)
         throw std::runtime_error("In Array<type>::operator(), expected " + std::to_string(this->dims.size()) + " argument(s)");
 
@@ -627,27 +797,19 @@ Array<type>  Array<type>::crop(sizt_vector dims_start, sizt_vector dims_type, bo
         throw std::runtime_error("In function Array<type>::crop(), expected " + std::to_string(this->dims.size()) + "D vector(s)");
 
     if(vector_type){
-        
-        for(sizt ind = 0; ind < this->dims.size(); ind++){
-            
+        for(sizt ind = 0; ind < this->dims.size(); ind++){ 
             dims_sub[ind] = dims_type[ind];
             dims_end[ind] = dims_type[ind] + dims_start[ind];
-
             if(dims_end[ind] >= this->dims[ind])
-                throw std::range_error("Array out of bounds\n");
-
+                throw std::range_error("In function Array<type>::crop(), array out of bounds\n");
         }
-
     }else{
-
         for(sizt ind = 0; ind < this->dims.size(); ind++){
-
             dims_end[ind] = dims_type[ind];
             if(dims_start[ind] >= dims_end[ind])
-                throw std::runtime_error("Expected dims_start[" + std::to_string(ind) + "] <= dims_end[" + std::to_string(ind) + "]");
+                throw std::runtime_error("In function Array<type>::crop(), expected dims_start[" + std::to_string(ind) + "] <= dims_end[" + std::to_string(ind) + "]");
             else
                 dims_sub[ind] = dims_end[ind] - dims_start[ind];
-
         }
     }
 
