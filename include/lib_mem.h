@@ -6,18 +6,37 @@
 template <typename type>
 class memory{
 public:
-  
-  static type*    allocate(std::size_t xs){
-    type* data = new type[xs];
+
+/* 
+ * Function declaration:
+ * ----------------------------------------
+ * Name         Return Type     Description
+ * ----------------------------------------
+ * allocate()   type*           Returns 1D pointer pointing to <src> with dimensions
+ *                              xs. If <src> = nullptr, memory is allocated on the heap.
+ */
+
+  static type*    allocate(std::size_t xs, type* src = nullptr){
+    type* data = src == nullptr ? new type[xs] : src;
     return(data);
   }
 
-  static type**   allocate(std::size_t xs, std::size_t ys){
+/* 
+ * Function declaration:
+ * ----------------------------------------
+ * Name         Return Type     Description
+ * ----------------------------------------
+ * allocate()   type**          Returns a 2D pointer pointing to <src> with dimensions
+ *                              (xs, ys). If <src> = nullptr, memory is allocated on the
+ *                              heap.
+ */
+
+  static type**   allocate(std::size_t xs, std::size_t ys, type* src = nullptr){
     type** data = new type*[xs];
     if(data == nullptr)
       return nullptr;
 
-    data[0] = new type[xs*ys]();
+    data[0] = src == nullptr ? new type[xs*ys]() : src;
     if(data[0] == nullptr){
       delete[] data;
       return nullptr;
@@ -29,7 +48,17 @@ public:
     return data;
   }
 
-  static type***  allocate(std::size_t xs, std::size_t ys, std::size_t zs){
+/* 
+ * Function declaration:
+ * ----------------------------------------
+ * Name         Return Type     Description
+ * ----------------------------------------
+ * allocate()   type***         Returns a 3D pointer pointing to <src> with dimensions
+ *                              (xs, ys, zs). If <src> = nullptr, memory is allocated on
+ *                              the heap.
+ */
+
+  static type***  allocate(std::size_t xs, std::size_t ys, std::size_t zs, type* src = nullptr){
     type ***data = new type**[xs]();
     if(data == nullptr)
       return nullptr;
@@ -40,7 +69,7 @@ public:
      return nullptr;
     }
 
-    data[0][0] = new type[xs*ys*zs]();
+    data[0][0] = src == nullptr ? new type[xs*ys*zs]() : src;
     if(data[0][0] == nullptr){
       delete[] data[0];
       delete[] data;
@@ -55,7 +84,17 @@ public:
     return data;
   }
 
-  static type**** allocate(std::size_t xs, std::size_t ys, std::size_t zs, std::size_t ws){
+/* 
+ * Function declaration:
+ * ----------------------------------------
+ * Name         Return Type     Description
+ * ----------------------------------------
+ * allocate()   type****        Returns a 4D pointer pointing to <src> with dimensions
+ *                              (xs, ys, zs, ws). If <src> = nullptr, memory is allocated
+ *                              on the heap.
+ */
+
+  static type**** allocate(std::size_t xs, std::size_t ys, std::size_t zs, std::size_t ws, type* src = nullptr){
     type ****data = new type***[xs]();
     if(data==nullptr)
       return(nullptr);
@@ -93,11 +132,21 @@ public:
    return data;
   }
 
-  static void deallocate(type**** data){
+/* 
+ * Function declaration:
+ * ----------------------------------------
+ * Name         Return Type     Description
+ * ----------------------------------------
+ * deallocate() type****        Frees a 4D pointer. If <free> = false, only
+ *                              the higher dimensional pointers are freed.
+ */
+
+  static void deallocate(type**** data, bool free = true){
+
     if(data != nullptr){
       if(data[0] != nullptr){
         if(data[0][0] != nullptr){
-          if(data[0][0][0] != nullptr){
+          if(data[0][0][0] != nullptr && free){
             delete[] data[0][0][0];
           }
           delete[] data[0][0];
@@ -108,10 +157,20 @@ public:
     }
   }
 
-  static void deallocate(type***  data){
+/* 
+ * Function declaration:
+ * ----------------------------------------
+ * Name         Return Type     Description
+ * ----------------------------------------
+ * deallocate() type****        Frees a 3D pointer. If <free> = false, only
+ *                              the higher dimensional pointers are freed.
+ */
+
+  static void deallocate(type***  data, bool free = true){
+
     if(data != nullptr){
       if(data[0] != nullptr){
-        if(data[0][0] != nullptr){
+        if(data[0][0] != nullptr && free){
           delete[] data[0][0];
         }
         delete[] data[0];
@@ -120,17 +179,35 @@ public:
     }
   }
 
-  static void deallocate(type**   data){
+/* 
+ * Function declaration:
+ * ----------------------------------------
+ * Name         Return Type     Description
+ * ----------------------------------------
+ * deallocate() type****        Frees a 2D pointer. If <free> = false, only 
+ *                              the higher dimensional pointers are freed.
+ */
+
+  static void deallocate(type**   data, bool free = true){
     if(data != nullptr){
-      if(data[0] != nullptr){
+      if(data[0] != nullptr && free){
         delete[] data[0];
       }
       delete[] data;
     }
   }
 
-  static void deallocate(type*    data){
-    if(data != nullptr){
+/* 
+ * Function declaration:
+ * ----------------------------------------
+ * Name         Return Type     Description
+ * ----------------------------------------
+ * deallocate() type****        Frees a 1D pointer. If <free> = false, only 
+ *                              the higher dimensional pointers are freed.
+ */
+
+  static void deallocate(type*    data, bool free = true){
+    if(data != nullptr && free){
       delete[] data;
     }
   }

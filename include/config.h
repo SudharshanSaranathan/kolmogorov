@@ -26,6 +26,7 @@ template <typename type>
 using type_vector = std::vector<type>;
 using sizt_vector = std::vector<sizt>;
 using long_vector = std::vector<long>;
+using uint_vector = std::vector<int>;
 
 typedef struct io_t{
 public:
