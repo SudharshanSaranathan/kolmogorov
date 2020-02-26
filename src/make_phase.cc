@@ -62,20 +62,30 @@ int main(int argc, char *argv[]){
  * --------------------------------------------
  * status           MPI_status      MPI status, see MPI documentation.
  * mpi_precision    MPI_Datatype    MPI Datatype, see MPI documentation.
- * process_rank     int             Rank of MPI processes.
- * process_total    int             Store the total number of MPI processes
- * mpi_recv_count   int             Store the count of data received in MPI_Recv, see MPI documentation for explanation.
- * read_status      int             File read status.
- * write_status     int             File write status.
  */
    
-    MPI_Status status;
+    MPI_Status   status;
     MPI_Datatype mpi_precision = std::is_same<precision, float>::value == true ? MPI_FLOAT : MPI_DOUBLE;
-    int process_rank = 0;
-    int processes_total = 0;
-    int mpi_recv_count = 0;
-    int read_status = 0;
-    int write_status = 0;
+ 
+/*
+ * Variable declaration:
+ * ----------------------------------------
+ * Name                 Type    Description
+ * ----------------------------------------
+ * mpi_process_rank     int     Rank of MPI process, see MPI documentation.
+ * mpi_process_size     int     Number of MPI processes, total.
+ * mpi_process_kill     int     Number of MPI processes, killed.
+ * mpi_recv_count       int     Count of data received in MPI_Recv(), see MPI documentation.
+ * rd_status            int     Read  status of file.
+ * wr_status            int     Write status of file.
+ */
+ 
+    int mpi_process_rank = 0;
+    int mpi_process_size = 0;
+    int mpi_process_kill = 0;
+    int mpi_recv_count   = 0;
+    int rd_status        = 0;
+    int wr_status        = 0;
 
 /* -------------------------
  * Initialize MPI framework.
@@ -83,15 +93,15 @@ int main(int argc, char *argv[]){
  */
    
     MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &processes_total);
-    MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_process_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_process_rank);
 
 /* ------------------------------------------------------
  * Only the master MPI process (rank 0) prints to stdout.
  * ------------------------------------------------------
  */
 
-    FILE *console   = process_rank == 0 ? stdout : fopen("/dev/null","wb");
+    FILE *console   = mpi_process_rank == 0 ? stdout : fopen("/dev/null","wb");
     fprintf(console, "------------------------------------------------------\n");
     fprintf(console, "- Turbulence-degraded phasescreen simulation program -\n");
     fprintf(console, "------------------------------------------------------\n");
@@ -102,36 +112,29 @@ int main(int argc, char *argv[]){
  */
 
     if(argc < 2){
-
         fprintf(console, "(Error)\tExpected configuration file, calling MPI_Abort()\n");
+        fflush (console);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-   
     }
 
     fprintf(console, "(Info)\tReading configuration:\t");
     fflush (console);
     
-    if(config_parse(argv[1]) == EXIT_FAILURE){
-	    
+    if(config_parse(argv[1]) == EXIT_FAILURE){   
         fprintf(console, "[Failed]\n");
         fflush (console);
-
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    
-    }else{
-
-        fprintf(console, "[Done] (%s)\n", argv[1]);
-        fflush (console);
-
     }
     
-/*
- * -------------------------
+    fprintf(console, "[Done] (%s)\n", argv[1]);
+    fflush (console); 
+
+/* -------------------------
  * Workflow for master rank.
  * -------------------------
  */
 
-    if(process_rank == 0){
+    if(mpi_process_rank == 0){
 	
     /*
      * Variable declaration:
@@ -167,21 +170,15 @@ int main(int argc, char *argv[]){
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
         
-        read_status = fried.rd_fits(io_t::read_fried_from.c_str());
-        if(read_status != EXIT_SUCCESS){
-
-            fprintf(console, "[Failed][Err code = %d](%s)\n", read_status, io_t::read_fried_from.c_str());
+        rd_status = fried.rd_fits(io_t::read_fried_from.c_str());
+        if(rd_status != EXIT_SUCCESS){
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_fried_from.c_str());
             fflush (console);
-            
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);	    
-
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
-        else{
-            
-            fprintf(console, "[Done] (%s)\n", io_t::read_fried_from.c_str());
-            fflush (console);
         
-        }
+        fprintf(console, "[Done] (%s)\n", io_t::read_fried_from.c_str());
+        fflush (console);
 
     /*
     * Vector declaration:
@@ -198,7 +195,7 @@ int main(int argc, char *argv[]){
         sizt_vector process_fried_map(fried.get_size() + 1);
     
 #ifdef _USE_APERTURE_
-
+    
     /*
      * Array declaration:
      * -------------------------------------------
@@ -213,177 +210,34 @@ int main(int argc, char *argv[]){
      * If aperture function available, read from file.
      * -----------------------------------------------
      */
-
+        
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
+        rd_status = aperture.rd_fits(io_t::read_aperture_function_from.c_str());
 
-        read_status = aperture.rd_fits(io_t::read_aperture_function_from.c_str());
-        if(read_status != EXIT_SUCCESS){
-
-            fprintf(console, "[Failed][Err code = %d](%s)\n", read_status, io_t::read_aperture_function_from.c_str());
+        if(rd_status != EXIT_SUCCESS){
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_aperture_function_from.c_str());
             fflush (console);
-            
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
 	    }
 
-    /*
-     * Vector declaration:
-     * --------------------------------------------
-     * Name             Type            Description
-     * --------------------------------------------
-     * dims_aperture    sizt_vector     Dimensions of the aperture, in pixels.
-     */
-        
-        const sizt_vector dims_aperture = aperture.get_dims();
-
-    /* ----------------------------------------------------------------------------
-     * Check that dimensions of the aperture match values specified in config file.
-     * ----------------------------------------------------------------------------
+    /* ------------------------------------------------------------
+     * Check if dimensions of aperture match values in config file.
+     * ------------------------------------------------------------
      */
 
-        if(dims_aperture[0] != sims_t::size_x_in_pixels && dims_aperture[1] != sims_t::size_y_in_pixels){
-	        
+        if(aperture.get_dims(0) != sims_t::size_x_in_pixels && aperture.get_dims(1) != sims_t::size_y_in_pixels){
             fprintf(console, "[Failed][Expected aperture size = [%lu, %lu]]\n", sims_t::size_x_in_pixels, sims_t::size_y_in_pixels);
             fflush (console);
-
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
 	    }
-        else{
 
-            fprintf(console, "[Done] (%s)\n", io_t::read_aperture_function_from.c_str());
-            fflush (console);
-
-        }
-
-#endif
-        
-        percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
-        percent_completed = (100.0 * fried_completed) / fried.get_size();
-        
-        fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed);
+        fprintf(console, "[Done] (%s)\n", io_t::read_aperture_function_from.c_str());
         fflush (console);
-    
-    /*
-     * Variable declaration:
-     * ----------------------------
-     * Name     Type    Description
-     * ----------------------------
-     * id       int     Rank of MPI processes.
-     */
+   
+        MPI_Bcast(aperture[0], aperture.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
 
-        for(int id = 1; id < processes_total; id++){
-
-        /* --------------------------------------------------
-         * if rank > number of fried parameters, kill MPI process.
-         * -------------------------------------------------- 
-         */
-
-            if(id > int(fried.get_size())){
-
-                if(fried[0] != nullptr){
-
-                    MPI_Send(fried[0], 1, mpi_precision, id, mpi_cmds::kill, MPI_COMM_WORLD);
-
-                }else{
-
-                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                    fflush (console);
-
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-                }
-
-#ifdef _USE_APERTURE_
-                
-                if(aperture[0] != nullptr){
-
-                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::kill, MPI_COMM_WORLD);
-
-                }else{
-
-                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                    fflush (console);
-
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-                }
-
-#endif
-                
-            /* -------------------------------------
-             * Decrement number of processes in use.
-             * -------------------------------------
-             */
-		
-                processes_total--;          
-
-            }
-            
-        /* --------------------------------------------------------------------------------------------
-         * if rank <= number of fried parameters, send fried parameter and aperture function to MPI process.
-         * --------------------------------------------------------------------------------------------
-         */
-            
-            else{
-
-                if(fried[index_of_fried_in_queue] != nullptr){
-
-                    MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
-
-                }else{
-
-                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                    fflush (console);
-
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-                }
-
-#ifdef _USE_APERTURE_
-
-                if(aperture[0] != nullptr){
-                    
-                    MPI_Send(aperture[0], aperture.get_size(), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
-
-                }else{
-
-                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                    fflush (console);
-
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-                }
-
-#endif
-
-            /* -------------------------------------------------------
-             * Store index_of_fried_in_queue in process_fried_map[id].
-             * -------------------------------------------------------
-             */
-
-                process_fried_map[id] = index_of_fried_in_queue;
-
-            /* ----------------------------------
-             * Increment index_of_fried_in_queue.
-             * ----------------------------------
-	         */
-
-                index_of_fried_in_queue++;
-
-            /* ------------------------------------
-             * Update and display percent_assigned.
-             * ------------------------------------
-             */
-
-                percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
-       
-                fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-                fflush (console);
-
-            }
-        }
+#endif 
 
     /*
      * Array declaration:
@@ -395,55 +249,86 @@ int main(int argc, char *argv[]){
 
         Array<precision> phase(dims_phase);
 
-    /* ------------------------------------------------
-     * !(3) Distribute the fried parameters to MPI processs.
-     * !(4) Store the simulated phase-screens returned by MPI processs.
+    /* ------------------------------------------------------
+     * !(3) Distribute the fried parameters to MPI processes.
+     * !(4) Store the simulated phase-screens returned by MPI processes.
      * !(5) Repeat steps 3-4 for all fried parameters.
      * -----------------------------------------------
+     */
+
+        percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
+        percent_completed = (100.0 * fried_completed) / fried.get_size();
+        fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed);
+        fflush (console);
+
+     /* --------------------------------------------------------
+      * For pid <= fried parameters, distribute fried parameter.
+      * --------------------------------------------------------
+      */
+
+        for(int pid = 1; pid <= fried.get_size(); pid++){
+
+        /* ------------------------------------
+         * Send fried parameter to MPI process.
+         * Record index in process_fried_map.
+         * Update index_of_fried_in_queue.
+         * -------------------------------
+         */
+
+            MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
+            process_fried_map[pid] = index_of_fried_in_queue;
+            index_of_fried_in_queue++;
+
+        /* -------------------------------------------------------
+         * Update and display percent assigned, percent completed.
+         * -------------------------------------------------------
+         */
+
+            percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
+            fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+            fflush (console);
+        }
+
+     /* ---------------------------------------------
+      * For pid > fried parameters, kill MPI process.
+      * ---------------------------------------------
+      */
+     
+        for(int pid = fried.get_size() + 1; pid < mpi_process_size; pid++){   
+            MPI_Send(fried[0], 1, mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
+            mpi_process_kill++;
+        }
+        mpi_process_size -= mpi_process_kill;
+
+    /* --------------------------------------------------------
+     * Loop to simulate phase-screens for all fried parameters.
+     * --------------------------------------------------------
      */
 
         while(fried_completed < fried.get_size()){
         	  
         /* --------------------------------------------------------------------
          * Wait for a MPI process to ping master. If pinged, get MPI process information.
+         * Wait until any MPI process pings root, then get process information.
          * --------------------------------------------------------------------
          */	
 	
             MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
             MPI_Get_count(&status, mpi_precision, &mpi_recv_count);
 
-        /*
-         * Variable declaration:
-         *---------------------------------
-         * Name         Type    Description
-         * --------------------------------
-         * fried_index  sizt    Index of simulated fried parameter.
-         */
-
-        /* -------------------------------------------------
-         * Get index of fried parameter processed by MPI process.
-         * -------------------------------------------------
+        /* ----------------------------------------------------------
+         * Get index of fried parameter corresponding to MPI process.
+         * ----------------------------------------------------------
          */
             
             sizt fried_index = process_fried_map[status.MPI_SOURCE];
 
-        /* -----------------------------------------------------
-         * Get data, and store in phase at the correct location.
-         * -----------------------------------------------------
+        /* -------------------------------------------------------------------------
+         * Receive and store phase-screen simulation at the correct memory location.
+         * -------------------------------------------------------------------------
          */
          
-            if(phase[fried_index] != nullptr){
-
-                MPI_Recv(phase[fried_index], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
-            }else{
-                
-                fprintf(console, "\n(Error)\tNull buffer, calling MPI_Abort()\n");
-                fflush (console);
-       
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-            }
+            MPI_Recv(phase[fried_index], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
         /* --------------------------
          * Increment fried_completed.
@@ -452,65 +337,34 @@ int main(int argc, char *argv[]){
 
             fried_completed++;
       
-        /* -------------------------------------
-         * Update and display percent_completed.
-         * ------------------------------------- 
+        /* -------------------------------------------------------
+         * Update and display percent_assigned, percent_completed.
+         * -------------------------------------------------------
          */
 
-            percent_completed = (100.0 * fried_completed) / fried.get_size();
-	        
+            percent_completed = (100.0 * fried_completed) / fried.get_size();	        
             fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed);
             fflush (console);
 
-        /* ---------------------------------------------------------------------
-         * Assign new fried parameter to MPI process if available, else, kill MPI process.
-         * ---------------------------------------------------------------------
+        /* -----------------------------------------------------------------------
+         * Assign new fried parameter (if available) to MPI process, else kill it.
+         * -----------------------------------------------------------------------
          */
 
             if(index_of_fried_in_queue < fried.get_size()){
 	    
-            /* ----------------------------------------------------------------------------
-             * If unprocessed fried parameters are available, send a new one to the MPI process.
-             * ---------------------------------------------------------------------------- 
-             */
-
-                if(fried[index_of_fried_in_queue] != nullptr){
-
-                    MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
-	
-                }else{
-
-                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                    fflush (console);
-
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-                }
-
-            /* -------------------------
-             * Update process_fried_map.
-             * -------------------------
-             */
-	
+                MPI_Send(fried[index_of_fried_in_queue], 1, mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
                 process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
-
-            /* ----------------------------------
-             * Increment index_of_fried_in_queue.
-             * ----------------------------------
-             */
-
                 index_of_fried_in_queue++;
 
-            /* ------------------------------------
-             * Update and display percent_assigned.
-             * ------------------------------------
+            /* -------------------------------------------------------
+             * Update and display percent_assigned, percent_completed.
+             * -------------------------------------------------------
              */
 
                 percent_assigned  = (100.0 * index_of_fried_in_queue) / fried.get_size();
-                
                 fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-                fflush (console);
-      	    
+                fflush (console); 
             }
 	        
         /* -------------------------------------------------------
@@ -528,7 +382,10 @@ int main(int argc, char *argv[]){
              */
 
                 processes_total--;
+            }else{
 
+                MPI_Send(fried[0], 1, mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
+            
             }
         }
 
@@ -541,19 +398,14 @@ int main(int argc, char *argv[]){
 
             fprintf(console, "\n(Info)\tWriting to file:\t");
             fflush (console);
-
-            write_status = phase.wr_fits(io_t::write_phase_to.c_str(), io_t::clobber);
-            if(write_status != EXIT_SUCCESS){
-            
-                fprintf(console, "[Failed][Err code = %d](%s)\n", write_status, io_t::write_phase_to.c_str());
+            wr_status = phase.wr_fits(io_t::write_phase_to.c_str(), io_t::clobber);
+            if(wr_status != EXIT_SUCCESS){
+                fprintf(console, "[Failed][Err code = %d](%s)\n", wr_status, io_t::write_phase_to.c_str());
                 fflush (console);
-
-            }else{
-
-                fprintf(console, "[Done] (%s)\n", io_t::write_phase_to.c_str());
-                fflush (console);
-
             }
+
+            fprintf(console, "[Done] (%s)\n", io_t::write_phase_to.c_str());
+            fflush (console);
         }
 
     /*
@@ -570,7 +422,7 @@ int main(int argc, char *argv[]){
  * -------------------------
  */    
     
-    else if(process_rank){
+    else if(mpi_process_rank){
     
     /*
      * Vector declaration:
@@ -611,6 +463,7 @@ int main(int argc, char *argv[]){
      * ------------------------------------------------
      * phase            Array<cmpx>         Simulated phase-screen.
      * phase_fourier	Array<cmpx>         Fourier of simulated phase-screen.
+     * phase_cropped    Array<precision>    Simulated phase-screen, cropped.
      * phase_per_fried  Array<precision>    Phase-screen simulations per fried, cropped.
      * aperture         Array<precision>    Aperture function.
      *
@@ -624,8 +477,30 @@ int main(int argc, char *argv[]){
 
         Array<cmpx>      phase(dims_phase);
         Array<cmpx>      phase_fourier(dims_phase);
+        Array<precision> phase_cropped(dims_aperture);
         Array<precision> phase_per_fried(dims_phase_per_fried);
         Array<precision> aperture(dims_aperture);
+
+    /* ----------------------------------------------
+     * If aperture function available, get from root.
+     * ----------------------------------------------
+     */
+
+#ifdef _USE_APERTURE_
+
+        MPI_Bcast(aperture[0], aperture.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
+
+    /*
+     * Variable declaration:
+     * ----------------------------------------
+     * Name             Type        Description
+     * ----------------------------------------
+     * aperture_total   precision   Area of the aperture.
+     */
+
+        precision aperture_total  = aperture.get_total();
+
+#endif
 
     /* -------------------------------
      * Import fft wisdom if available.
@@ -645,7 +520,7 @@ int main(int argc, char *argv[]){
         fftw_plan reverse = fftw_plan_dft_2d(dims_phase[0], dims_phase[1],\
                                              reinterpret_cast<fftw_complex*>(phase_fourier[0]),\
                                              reinterpret_cast<fftw_complex*>(phase[0]),\
-                                             FFTW_BACKWARD, FFTW_MEASURE);
+                                             FFTW_BACKWARD, FFTW_ESTIMATE);
    
     /*
      * Variable declaration:.
@@ -662,8 +537,8 @@ int main(int argc, char *argv[]){
 
         precision fried = 0.0;
 
-        sizt aperture_center_x = sizt(sims_t::size_x_in_pixels / 2.0);
-        sizt aperture_center_y = sizt(sims_t::size_y_in_pixels / 2.0);
+        sizt aperture_center_x = sizt(dims_aperture[0] / 2.0);
+        sizt aperture_center_y = sizt(dims_aperture[1] / 2.0);
         sizt phase_center_x    = sizt(dims_phase[0] / 2.0);
         sizt phase_center_y    = sizt(dims_phase[1] / 2.0);
 
@@ -673,27 +548,6 @@ int main(int argc, char *argv[]){
      */
 
         MPI_Recv(&fried, 1,  mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
-#ifdef _USE_APERTURE_
-
-    /* ------------------------------------------------
-     * If aperture function available, get from master.
-     * ------------------------------------------------
-     */
-
-        MPI_Recv(aperture[0], aperture.get_size(),  mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
-    /*
-     * Variable declaration:
-     * ----------------------------------------
-     * Name             Type        Description
-     * ----------------------------------------
-     * aperture_total   precision   Area of the aperture.
-     */
-
-        precision aperture_total  = aperture.get_total();
-
-#endif
 
     /* ---------------------------------------------------
      * Enter loop to simulate phase-screens, until killed.
@@ -713,6 +567,8 @@ int main(int argc, char *argv[]){
 
                 make_phase_screen_fourier_shifted(phase_fourier, fried, sims_t::size_in_meters * aperture_t::sampling_factor);
                 fftw_execute_dft(reverse, reinterpret_cast<fftw_complex*>(phase_fourier[0]), reinterpret_cast<fftw_complex*>(phase[0]));
+
+                phase_cropped = phase.cast_to_type<precision>().crop(dims_crop_start, dims_aperture);;
 
 #ifdef _USE_APERTURE_
 	
