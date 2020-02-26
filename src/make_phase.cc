@@ -283,7 +283,6 @@ int main(int argc, char *argv[]){
 
             if(pid > int(fried.get_size())){
 
-                fprintf(stdout, "Killing process: %d\n", pid);
                 MPI_Send(fried[0], 1, mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
 
 #ifdef _USE_APERTURE_
