@@ -271,7 +271,7 @@ int main(int argc, char *argv[]){
       * --------------------------------------------------------
       */
 
-        for(int pid = 1; pid < std::min(sizt(mpi_process_size), fried.get_size()); pid++){
+        for(int pid = 1; pid <= std::min(sizt(mpi_process_size) - 1, fried.get_size()); pid++){
 
         /* ------------------------------------
          * Send fried parameter to MPI process.
