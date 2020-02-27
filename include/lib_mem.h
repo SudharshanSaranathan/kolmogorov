@@ -16,10 +16,10 @@ public:
  *                              xs. If <src> = nullptr, memory is allocated on the heap.
  */
 
-  static type*    allocate(std::size_t xs, type* src = nullptr){
-    type* data = src == nullptr ? new type[xs] : src;
-    return(data);
-  }
+    static type*    allocate(std::size_t xs, type* src = nullptr){
+        type* data = src == nullptr ? new type[xs] : src;
+        return(data);
+    }
 
 /* 
  * Function declaration:
@@ -31,22 +31,22 @@ public:
  *                              heap.
  */
 
-  static type**   allocate(std::size_t xs, std::size_t ys, type* src = nullptr){
-    type** data = new type*[xs];
-    if(data == nullptr)
-      return nullptr;
+    static type**   allocate(std::size_t xs, std::size_t ys, type* src = nullptr){
+        type** data = new type*[xs];
+        if(data == nullptr)
+            return nullptr;
 
-    data[0] = src == nullptr ? new type[xs*ys]() : src;
-    if(data[0] == nullptr){
-      delete[] data;
-      return nullptr;
-    }
+        data[0] = src == nullptr ? new type[xs*ys]() : src;
+        if(data[0] == nullptr){
+            delete[] data;
+            return nullptr;
+        }
 
-    for(std::size_t i=1; i<xs; i++){
-      data[i] = data[i-1] + ys;
+        for(std::size_t i=1; i<xs; i++)
+            data[i] = data[i-1] + ys;
+        
+        return data;
     }
-    return data;
-  }
 
 /* 
  * Function declaration:
@@ -58,30 +58,30 @@ public:
  *                              the heap.
  */
 
-  static type***  allocate(std::size_t xs, std::size_t ys, std::size_t zs, type* src = nullptr){
-    type ***data = new type**[xs]();
-    if(data == nullptr)
-      return nullptr;
+    static type***  allocate(std::size_t xs, std::size_t ys, std::size_t zs, type* src = nullptr){
+        type ***data = new type**[xs]();
+        if(data == nullptr)
+            return nullptr;
 
-    data[0] = new type*[xs*ys]();
-    if(data[0] == nullptr){
-      delete[] data;
-     return nullptr;
-    }
+        data[0] = new type*[xs*ys]();
+        if(data[0] == nullptr){
+            delete[] data;
+            return nullptr;
+        }
 
-    data[0][0] = src == nullptr ? new type[xs*ys*zs]() : src;
-    if(data[0][0] == nullptr){
-      delete[] data[0];
-      delete[] data;
-      return nullptr;
-    }
+        data[0][0] = src == nullptr ? new type[xs*ys*zs]() : src;
+        if(data[0][0] == nullptr){
+            delete[] data[0];
+            delete[] data;
+            return nullptr;
+        }
 
-    for(std::size_t i=0; i<xs; i++){
-      *(data+i) = *data + i*ys;
-      for(std::size_t j=0; j<ys; j++)
-        *(*(data+i)+j) = **data + i*ys*zs + j*zs;
-    }
-    return data;
+        for(std::size_t i=0; i<xs; i++){
+            *(data+i) = *data + i*ys;
+            for(std::size_t j=0; j<ys; j++)
+                *(*(data+i)+j) = **data + i*ys*zs + j*zs;
+        }
+        return data;
   }
 
 /* 
@@ -94,43 +94,42 @@ public:
  *                              on the heap.
  */
 
-  static type**** allocate(std::size_t xs, std::size_t ys, std::size_t zs, std::size_t ws, type* src = nullptr){
-    type ****data = new type***[xs]();
-    if(data==nullptr)
-      return(nullptr);
+    static type**** allocate(std::size_t xs, std::size_t ys, std::size_t zs, std::size_t ws, type* src = nullptr){
+        type ****data = new type***[xs]();
+        if(data==nullptr)
+            return(nullptr);
 
-    data[0] = new type**[xs*ys]();
-    if(data[0]==nullptr){
-      delete[] data;
-      return nullptr;
+        data[0] = new type**[xs*ys]();
+        if(data[0]==nullptr){
+            delete[] data;
+            return nullptr;
+        }
+
+        data[0][0] = new type*[xs*ys*zs]();
+        if(data[0][0]==nullptr){
+            delete[] data[0];
+            delete[] data;
+            return(nullptr);
+        }
+
+        data[0][0][0] = new type[xs*ys*zs*ws]();
+        if(data[0][0][0] == nullptr){
+            delete[] data[0][0];
+            delete[] data[0];
+            delete[] data;
+            return nullptr;
+        }
+
+        for(std::size_t i=0; i<xs; i++){
+            *(data+i) = *data + i*ys;
+            for(std::size_t j=0; j<ys; j++){
+                *(*(data+i)+j) = **data + i*ys*zs + j*zs;
+                for(std::size_t k=0; k<zs; k++)
+                    *(*(*(data+i)+j)+k) = ***data + i*ys*zs*ws + j*zs*ws + k*ws;
+            }
+        }
+        return data;
     }
-
-    data[0][0] = new type*[xs*ys*zs]();
-    if(data[0][0]==nullptr){
-      delete[] data[0];
-      delete[] data;
-      return(nullptr);
-    }
-
-    data[0][0][0] = new type[xs*ys*zs*ws]();
-    if(data[0][0][0] == nullptr){
-     delete[] data[0][0];
-     delete[] data[0];
-      delete[] data;
-     return nullptr;
-   }
-
-   for(std::size_t i=0; i<xs; i++){
-     *(data+i) = *data + i*ys;
-     for(std::size_t j=0; j<ys; j++){
-        *(*(data+i)+j) = **data + i*ys*zs + j*zs;
-       for(std::size_t k=0; k<zs; k++){
-         *(*(*(data+i)+j)+k) = ***data + i*ys*zs*ws + j*zs*ws + k*ws;
-       }
-      }
-   }
-   return data;
-  }
 
 /* 
  * Function declaration:
@@ -141,21 +140,21 @@ public:
  *                              the higher dimensional pointers are freed.
  */
 
-  static void deallocate(type**** data, bool free = true){
+    static void deallocate(type**** data, bool free = true){
 
-    if(data != nullptr){
-      if(data[0] != nullptr){
-        if(data[0][0] != nullptr){
-          if(data[0][0][0] != nullptr && free){
-            delete[] data[0][0][0];
-          }
-          delete[] data[0][0];
+        if(data != nullptr){
+            if(data[0] != nullptr){
+                if(data[0][0] != nullptr){
+                    if(data[0][0][0] != nullptr && free){
+                        delete[] data[0][0][0];
+                    }
+                    delete[] data[0][0];
+                }
+                delete[] data[0];
+            }
+            delete[] data;
         }
-        delete[] data[0];
-      }
-      delete[] data;
     }
-  }
 
 /* 
  * Function declaration:
@@ -166,18 +165,18 @@ public:
  *                              the higher dimensional pointers are freed.
  */
 
-  static void deallocate(type***  data, bool free = true){
+    static void deallocate(type***  data, bool free = true){
 
-    if(data != nullptr){
-      if(data[0] != nullptr){
-        if(data[0][0] != nullptr && free){
-          delete[] data[0][0];
+        if(data != nullptr){
+            if(data[0] != nullptr){
+                if(data[0][0] != nullptr && free){
+                    delete[] data[0][0];
+                }
+                delete[] data[0];
+            }
+            delete[] data;
         }
-        delete[] data[0];
-      }
-      delete[] data;
     }
-  }
 
 /* 
  * Function declaration:
@@ -188,14 +187,14 @@ public:
  *                              the higher dimensional pointers are freed.
  */
 
-  static void deallocate(type**   data, bool free = true){
-    if(data != nullptr){
-      if(data[0] != nullptr && free){
-        delete[] data[0];
-      }
-      delete[] data;
+    static void deallocate(type**   data, bool free = true){
+        if(data != nullptr){
+            if(data[0] != nullptr && free){
+                delete[] data[0];
+            }
+            delete[] data;
+        }
     }
-  }
 
 /* 
  * Function declaration:
@@ -206,11 +205,11 @@ public:
  *                              the higher dimensional pointers are freed.
  */
 
-  static void deallocate(type*    data, bool free = true){
-    if(data != nullptr && free){
-      delete[] data;
+    static void deallocate(type*    data, bool free = true){
+        if(data != nullptr && free){
+            delete[] data;
+        }
     }
-  }
 };
 
 #endif
