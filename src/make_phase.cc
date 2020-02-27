@@ -15,11 +15,12 @@
 /* ------------
  * Description:
  * ------------
- * This program simulates phase-screens at the exit pupil of a telescope that have been \\
- * degraded by atmospheric turbulence. The phase-screens are computed as the fourier transform \\
- * of a complex array of spatial frequencies. The amplitude of the complex array follows the \\
- * Kolmogorov-Obukhov power law, and the phase array consists of zero-mean, unit-variance Gaussian \\
- * random numbers. 
+ *
+ * This program simulates the degradation of phase-screens by atmospheric turbulence. The   \\
+ * simulated phase-screens, therefore, statistically represent the spatial distribution of  \\
+ * wave-front errors at the exit pupil of a telescope. The phase-screens are simulated with \\
+ * the property that their power spectrum follows the Kolmogorov-Obukhov power law. Each    \\
+ * phase-screen realization is computed as the fourier transform of a fourier array.
  *
  * ------
  * Usage:
@@ -196,6 +197,11 @@ int main(int argc, char *argv[]){
     
 #ifdef _USE_APERTURE_
     
+    /* -----------------------------------------------
+     * If aperture function available, read from file.
+     * -----------------------------------------------
+     */
+    
     /*
      * Array declaration:
      * -------------------------------------------
@@ -206,11 +212,6 @@ int main(int argc, char *argv[]){
 	
         Array<precision> aperture;
 
-    /* -----------------------------------------------
-     * If aperture function available, read from file.
-     * -----------------------------------------------
-     */
-        
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
         rd_status = aperture.rd_fits(io_t::read_aperture_function_from.c_str());
@@ -221,9 +222,9 @@ int main(int argc, char *argv[]){
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 	    }
 
-    /* ------------------------------------------------------------
-     * Check if dimensions of aperture match values in config file.
-     * ------------------------------------------------------------
+    /* --------------------------------------------------------------------------
+     * Check if dimensions of aperture match the values specified in config file.
+     * --------------------------------------------------------------------------
      */
 
         if(aperture.get_dims(0) != sims_t::size_x_in_pixels && aperture.get_dims(1) != sims_t::size_y_in_pixels){
@@ -235,6 +236,11 @@ int main(int argc, char *argv[]){
         fprintf(console, "[Done] (%s)\n", io_t::read_aperture_function_from.c_str());
         fflush (console);
    
+    /* ----------------------------------------
+     * Broadcast aperture to all MPI processes.
+     * ----------------------------------------
+     */
+
         MPI_Bcast(aperture[0], aperture.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
 
 #endif 
@@ -266,7 +272,7 @@ int main(int argc, char *argv[]){
       * --------------------------------------------------------
       */
 
-        for(int pid = 1; pid <= fried.get_size(); pid++){
+        for(int pid = 1; pid < std::min(sizt(mpi_process_size), fried.get_size()); pid++){
 
         /* ------------------------------------
          * Send fried parameter to MPI process.
@@ -293,7 +299,7 @@ int main(int argc, char *argv[]){
       * For pid > fried parameters, kill MPI process.
       * ---------------------------------------------
       */
-     
+
         for(int pid = fried.get_size() + 1; pid < mpi_process_size; pid++){   
             MPI_Send(fried[0], 1, mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
             mpi_process_kill++;
@@ -374,18 +380,15 @@ int main(int argc, char *argv[]){
 
             else{
 
-                MPI_Send(nullptr, 0, MPI_CHAR, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
+                MPI_Send(fried[0], 1, mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
 	        
             /* --------------------------
-             * Decrement processes_total;
+             * Decrement mpi_process_size;
              * --------------------------
              */
 
-                processes_total--;
-            }else{
+                mpi_process_size--;
 
-                MPI_Send(fried[0], 1, mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
-            
             }
         }
 
@@ -430,7 +433,7 @@ int main(int argc, char *argv[]){
      * Name                     Type            Description
      * ----------------------------------------------------
      * dims_phase_per_fried     sizt_vector     Dimensions of the cropped phase-screens in pixels, per fried.
-     * dims_aperture            sizt_vector     Dimensions of the aperture function, in pixels.
+     * dims_phase_cropped       sizt_vector     Dimensions of a single cropped phase-screen, in pixels.
      * dims_phase               sizt_vector     Dimensions of a single simulated phase-screen, in pixels.
      *
      * --------------------
@@ -442,7 +445,7 @@ int main(int argc, char *argv[]){
      */
 
         const sizt_vector dims_phase_per_fried{sims_t::realizations_per_fried, sims_t::size_x_in_pixels, sims_t::size_y_in_pixels};
-        const sizt_vector dims_aperture{sims_t::size_x_in_pixels, sims_t::size_y_in_pixels};
+        const sizt_vector dims_phase_cropped{sims_t::size_x_in_pixels, sims_t::size_y_in_pixels};
         const sizt_vector dims_phase{sizt(sims_t::size_in_meters * sims_t::size_x_in_pixels * aperture_t::sampling_factor / aperture_t::size),\
                                      sizt(sims_t::size_in_meters * sims_t::size_y_in_pixels * aperture_t::sampling_factor / aperture_t::size)};
 
@@ -454,7 +457,7 @@ int main(int argc, char *argv[]){
      * dims_crop_start  sizt_vector     The starting coordinate for cropping the simulations.
      */
 
-        const sizt_vector dims_crop_start{(dims_phase[0] - dims_aperture[0]) / 2, (dims_phase[1] - dims_aperture[1]) / 2};
+        const sizt_vector dims_crop_start{(dims_phase[0] - dims_phase_cropped[0]) / 2, (dims_phase[1] - dims_phase_cropped[1]) / 2};
 
     /*
      * Array declaration:
@@ -477,16 +480,16 @@ int main(int argc, char *argv[]){
 
         Array<cmpx>      phase(dims_phase);
         Array<cmpx>      phase_fourier(dims_phase);
-        Array<precision> phase_cropped(dims_aperture);
+        Array<precision> phase_cropped(dims_phase_crop);
         Array<precision> phase_per_fried(dims_phase_per_fried);
-        Array<precision> aperture(dims_aperture);
+        Array<precision> aperture(dims_phase_crop);
+
+#ifdef _USE_APERTURE_
 
     /* ----------------------------------------------
      * If aperture function available, get from root.
      * ----------------------------------------------
      */
-
-#ifdef _USE_APERTURE_
 
         MPI_Bcast(aperture[0], aperture.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
 
@@ -537,8 +540,8 @@ int main(int argc, char *argv[]){
 
         precision fried = 0.0;
 
-        sizt aperture_center_x = sizt(dims_aperture[0] / 2.0);
-        sizt aperture_center_y = sizt(dims_aperture[1] / 2.0);
+        sizt aperture_center_x = sizt(dims_phase_crop[0] / 2.0);
+        sizt aperture_center_y = sizt(dims_phase_crop[1] / 2.0);
         sizt phase_center_x    = sizt(dims_phase[0] / 2.0);
         sizt phase_center_y    = sizt(dims_phase[1] / 2.0);
 
@@ -568,14 +571,21 @@ int main(int argc, char *argv[]){
                 make_phase_screen_fourier_shifted(phase_fourier, fried, sims_t::size_in_meters * aperture_t::sampling_factor);
                 fftw_execute_dft(reverse, reinterpret_cast<fftw_complex*>(phase_fourier[0]), reinterpret_cast<fftw_complex*>(phase[0]));
 
-                phase_cropped = phase.cast_to_type<precision>().crop(dims_crop_start, dims_aperture);;
+            /* ----------------------------------------------------
+             * Crop the simulation to the requested size in pixels.
+             * ----------------------------------------------------
+             */
+
+                phase_cropped  = phase.crop(dims_crop_start, dims_phase_cropped).cast_to_type<precision>();
 
 #ifdef _USE_APERTURE_
 	
-            /* ---------------------------------------------------
-             * If aperture available, clip simulation to aperture.
-             * ---------------------------------------------------
+            /* -----------------------------------------------------------
+             * If aperture available, multiply phase-screen with aperture.
+             * -----------------------------------------------------------
              */
+
+                phase_cropped *= aperture;
 
                 for(sizt xs = 0; xs < sims_t::size_x_in_pixels; xs++){
                     for(sizt ys = 0; ys < sims_t::size_y_in_pixels; ys++){
