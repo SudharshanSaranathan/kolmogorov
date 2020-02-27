@@ -480,9 +480,9 @@ int main(int argc, char *argv[]){
 
         Array<cmpx>      phase(dims_phase);
         Array<cmpx>      phase_fourier(dims_phase);
-        Array<precision> phase_cropped(dims_phase_crop);
+        Array<precision> phase_cropped(dims_phase_cropped);
         Array<precision> phase_per_fried(dims_phase_per_fried);
-        Array<precision> aperture(dims_phase_crop);
+        Array<precision> aperture(dims_phase_cropped);
 
 #ifdef _USE_APERTURE_
 
@@ -540,8 +540,8 @@ int main(int argc, char *argv[]){
 
         precision fried = 0.0;
 
-        sizt aperture_center_x = sizt(dims_phase_crop[0] / 2.0);
-        sizt aperture_center_y = sizt(dims_phase_crop[1] / 2.0);
+        sizt aperture_center_x = sizt(dims_phase_cropped[0] / 2.0);
+        sizt aperture_center_y = sizt(dims_phase_cropped[1] / 2.0);
         sizt phase_center_x    = sizt(dims_phase[0] / 2.0);
         sizt phase_center_y    = sizt(dims_phase[1] / 2.0);
 
