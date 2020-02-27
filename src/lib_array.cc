@@ -11,41 +11,39 @@
 #include <exception>
 #include <algorithm>
 
-/* ------------------------
+/* ----------------------------
  * Function header: lib_array.h
- * Function name:   sizeof_vector(sizt_vector&)
- * ----------------------------------------
+ * Function name:   sizeof_vector(sizt_vector&, sizt index = 0)
+ * Description:     Returns the product of elements in a vector
+ * ------------------------------------------------------------
  */
 
-sizt sizeof_vector(      sizt_vector &vector){
+sizt sizeof_vector(      sizt_vector &vector, sizt index){
 
-/* -------------------------------
- * Return the product of elements.
- * -------------------------------
- */
+    if(index >= vector.size())
+        throw std::logic_error("In function sizeof_vector(): Index out of bounds");
 
     sizt N = 1;
-    for(sizt ind = 0; ind < vector.size(); ind++){
+    for(sizt ind = index; ind < vector.size(); ind++){
         N *= vector[ind];
     }
     return(N);
 }
 
-/* ------------------------
+/* ----------------------------
  * Function header: lib_array.h
- * Function name:   sizeof_vector(const sizt_vector&)
- * ----------------------------------------------
+ * Function name:   sizeof_vector(const sizt_vector&, sizt index = 0)
+ * Description:     Returns the product of elements in a vector
+ * ------------------------------------------------------------
  */
 
-sizt sizeof_vector(const sizt_vector &vector){
+sizt sizeof_vector(const sizt_vector &vector, sizt index){
 
-/* -------------------------------
- * Return the product of elements.
- * -------------------------------
- */
+    if(index >= vector.size())
+        throw std::logic_error("In function sizeof_vector(): Index out of bounds");
 
     sizt N = 1;
-    for(sizt ind = 0; ind < vector.size(); ind++){
+    for(sizt ind = index; ind < vector.size(); ind++){
         N *= vector[ind];
     }
     return(N);
