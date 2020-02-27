@@ -57,16 +57,6 @@ make_img: ${MAKE_IMG_OBJS}
 	${MPICC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
 
 clean:
-	rm -rf ${OBJS}
-	rm -rf ${BINDIR}/test_lib_mem
-	rm -rf ${BINDIR}/test_lib_array	
-	rm -rf ${BINDIR}/make_phase
-	rm -rf ${BINDIR}/make_residual
-	rm -rf ${BINDIR}/make_psf
-	rm -rf ${BINDIR}/make_img
+	rm -rf ${OBJDIR}/*
+	rm -rf ${BINDIR}/*
 	
-	rm -rf ${LIB_TEST_OBJS}
-	rm -rf ${MEM_TEST_OBJS}
-	rm -rf ${MAKE_PHASE_OBJS}
-	rm -rf ${MAKE_RES_OBJS}
-	rm -rf ${MAKE_PSF_OBJS}
