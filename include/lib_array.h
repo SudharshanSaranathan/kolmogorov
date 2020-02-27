@@ -25,8 +25,8 @@
  *                                                      definition is used when a valid object exists.
  */
 
-sizt sizeof_vector(      sizt_vector&);
-sizt sizeof_vector(const sizt_vector&);
+sizt sizeof_vector(      sizt_vector&, sizt index = 0);
+sizt sizeof_vector(const sizt_vector&, sizt index = 0);
 
 /* --------------------
  * Template class Array
