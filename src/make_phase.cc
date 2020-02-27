@@ -122,7 +122,7 @@ int main(int argc, char *argv[]){
     fflush (console);
     
     if(config_parse(argv[1]) == EXIT_FAILURE){   
-        fprintf(console, "[Failed]\n");
+        fprintf(console, "[Failed] (%s)\n", argv[1]);
         fflush (console);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]){
      * ----------------------------------------
      * Name		Type		        Description
      * ----------------------------------------
-     * fried	Array<precision>	Fried parameters array, see "lib_array.h" for datatype.
+     * fried	Array<precision>	Array storing the fried parameters.
      */
  
         Array<precision> fried;
@@ -186,7 +186,7 @@ int main(int argc, char *argv[]){
     * -------------------------------------------------
     * Name			        Type			Description
     * -------------------------------------------------
-    * dims_phase_all        sizt_vector     Dimensions of array storing all phase-screens, for all fried parameters.
+    * dims_phase_all        sizt_vector     Dimensions of the array storing the phase-screens.
     * process_fried_map     sizt_vector     Map linking an MPI process to the index of fried parameter.
     */
     
@@ -205,7 +205,7 @@ int main(int argc, char *argv[]){
      * -------------------------------------------
      * Name         Type                Description
      * --------------------------------------------
-     * aperture     Array<precision>    Aperture function array, see "lib_array.h" for datatype.
+     * aperture     Array<precision>    Array storing the aperture function.
      */
 	
         Array<precision> aperture;
@@ -248,7 +248,7 @@ int main(int argc, char *argv[]){
      * --------------------------------------------
      * Name         Type                Description
      * --------------------------------------------
-     * phase_all	Array<precision>	Phase-screens array.
+     * phase_all	Array<precision>	Array storing all phase-screen simulations.
      */
 
         Array<precision> phase_all(dims_phase_all);
