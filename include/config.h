@@ -11,7 +11,7 @@
  * ----------------
  */
 
-using precision = float;
+using precision = double;
 
 using uint   = unsigned int;
 using ulng   = unsigned long;
