@@ -24,6 +24,7 @@ MAKE_PHS_OBJS_ = config.o lib_array.o make_phase.o
 MAKE_RES_OBJS_ = config.o lib_array.o make_residual.o
 MAKE_PSF_OBJS_ = config.o lib_array.o make_psf.o
 MAKE_IMG_OBJS_ = config.o lib_array.o make_img.o
+MAKE_MTD_OBJS_ = config.o lib_array.o methods.o
 
 LIB_TEST_OBJS   = ${patsubst %,${OBJDIR}/%,${LIB_TEST_OBJS_}}
 MEM_TEST_OBJS   = ${patsubst %,${OBJDIR}/%,${MEM_TEST_OBJS_}}
@@ -32,6 +33,7 @@ MAKE_PHS_OBJS = ${patsubst %,${OBJDIR}/%,${MAKE_PHS_OBJS_}}
 MAKE_RES_OBJS = ${patsubst %,${OBJDIR}/%,${MAKE_RES_OBJS_}}
 MAKE_PSF_OBJS = ${patsubst %,${OBJDIR}/%,${MAKE_PSF_OBJS_}}
 MAKE_IMG_OBJS = ${patsubst %,${OBJDIR}/%,${MAKE_IMG_OBJS_}}
+MAKE_MTD_OBJS = ${patsubst %,${OBJDIR}/%,${MAKE_MTD_OBJS_}}
 
 .PHONY: all
 
@@ -55,6 +57,9 @@ make_psf: ${MAKE_PSF_OBJS}
 
 make_img: ${MAKE_IMG_OBJS}
 	${MPICC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
+
+make_methods: ${MAKE_MTD_OBJS}
+	${GCC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
 
 clean:
 	rm -rf ${OBJDIR}/*
