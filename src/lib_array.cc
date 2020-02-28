@@ -110,8 +110,9 @@ Array<type>:: Array(const sizt_vector &dimensions, type* src){
  * ---------------------------------------------------------------
  */
 
-    this->dims = dimensions;
-    this->size = sizeof_vector(this->dims);
+    this->dims  = dimensions;
+    this->size  = sizeof_vector(this->dims);
+    this->owner = src == nullptr ? true : false;
 
 /* ----------------------------------------------
  * Allocate memory depending on <dims> and <src>.
@@ -206,10 +207,21 @@ Array<type>:: Array(const Array<type> &src){
 
 }
 
-/* ------------------------
+/* ------------------------------------
+ * Function header:         lib_array.h
+ * Function name:           Array<type>::get_owner()
+ * -------------------------------------------------
+ */
+
+template <class type>
+bool         Array<type>:: get_owner(){
+    return(this->owner);
+}
+
+/* ----------------------------
  * Function header: lib_array.h
  * Function name:   Array<type>::get_stat()
- * ----------------------------------------------
+ * ----------------------------------------
  */
 
 template <class type>
@@ -217,7 +229,7 @@ bool         Array<type>:: get_stat(){
     return(this->stat);
 }
 
-/* ------------------------
+/* ----------------------------
  * Function header: lib_array.h
  * Function name:   Array<type>::get_size()
  * ----------------------------------------------
@@ -228,7 +240,7 @@ sizt         Array<type>:: get_size(){
     return(this->size);
 }
 
-/* ------------------------
+/* ----------------------------
  * Function header: lib_array.h
  * Function name:   Array<type>::get_dims(sizt)
  * ----------------------------------------------
@@ -627,7 +639,7 @@ void         Array<type>::operator/=(type value){
 }
 
 template <class type>
-Array<type>  Array<type>::slice(sizt index){
+Array<type>  Array<type>::slice(sizt index, bool allocate_new_memory){
 
     if(this->stat == false)
         throw std::runtime_error("In function Array<type>::slice(), cannot slice empty array");
@@ -638,22 +650,23 @@ Array<type>  Array<type>::slice(sizt index){
     if(this->dims.size() == 1)
         throw std::range_error("In function Array<type>::slice(), cannot slice 1D array");
 
-    sizt_vector dims_slice (this->dims.begin() + 1, this->dims.end());
-    Array<type> array_slice(dims_slice);
-    
-    switch(this->dims.size()){
-        
-        case 2: memcpy(array_slice.root_ptr, this->data_ptr_2D[index], sizeof(type) * array_slice.get_size());
-                break;
-        
-        case 3: memcpy(array_slice.root_ptr, this->data_ptr_3D[index], sizeof(type) * array_slice.get_size());
-                break;
-        
-        case 4: memcpy(array_slice.root_ptr, this->data_ptr_4D[index], sizeof(type) * array_slice.get_size());
-                break;
-    }
+    sizt_vector dims_slice(this->dims.begin() + 1, this->dims.end());
+   
+    if(this->dims.size() == 2){
+        Array<type> array_slice(dims_slice, allocate_new_memory == true ? this->data_ptr_2D[index] : nullptr);
+        return(array_slice);
 
-    return(array_slice);
+    }else if(this->dims.size() == 3){
+        Array<type> array_slice(dims_slice, allocate_new_memory == true ? this->data_ptr_3D[index][0] : nullptr);
+        return(array_slice);
+
+    }else if(this->dims.size() == 4){
+        Array<type> array_slice(dims_slice, allocate_new_memory == true ? this->data_ptr_4D[index][0][0] : nullptr);
+        return(array_slice);
+
+    }else{
+        throw std::runtime_error("In function Array<type>:::slice(), expected to slice a 2D/3D/4D array");
+    }
 }
 
 template <class type>
