@@ -278,7 +278,7 @@ public:
     Array<type> pad  (sizt_vector, sizt_vector, type pad_value = static_cast<type>(0));
     Array<type> roll (sizt_vector, bool clockwise = true);
     Array<type> crop (sizt_vector, sizt_vector, bool vector_type = true);
-    Array<type> slice(sizt, bool allocate_new_memory = true);
+    Array<type> slice(sizt, bool copy = true);
 
 public:
 
