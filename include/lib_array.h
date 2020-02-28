@@ -72,11 +72,11 @@ private:
  *                          in <dims>.
  */
 
-    sizt_vector  dims;
+    sizt_vector dims;
     bool owner = true;
-    bool nans = false;
-    bool stat = false;
-    sizt size = 1;
+    bool nans  = false;
+    bool stat  = false;
+    sizt size  = 1;
 
 /*
  * Pointers declaration (PRIVATE)
@@ -142,6 +142,7 @@ public:
  * --------------------------------------------
  * Name             Return type     Description
  * --------------------------------------------
+ * get_owner()      bool            Returns <owner>.
  * get_stat()       bool            Returns <stat>.
  * get_size()       sizt            Returns <size>.
  * get_total()      type            Returns the sum of all elements in the array.
@@ -149,6 +150,7 @@ public:
  * get_dims()       sizt_vector     Returns <dims>.
  */
 
+    bool        get_owner();
     bool        get_stat ();
     sizt        get_size ();
     type	    get_total();
@@ -276,7 +278,7 @@ public:
     Array<type> pad  (sizt_vector, sizt_vector, type pad_value = static_cast<type>(0));
     Array<type> roll (sizt_vector, bool clockwise = true);
     Array<type> crop (sizt_vector, sizt_vector, bool vector_type = true);
-    Array<type> slice(sizt);
+    Array<type> slice(sizt, bool allocate_new_memory = true);
 
 public:
 
