@@ -17,7 +17,7 @@
 /* ------------
  * Description:
  * ------------
- * This program subtracts basis functions defined on the aperture from phase-screen simulations.
+ * This program subtracts basis functions defined on the aperture from phase_all-screen simulations.
  * The subtraction is weighted, if weights are provided. The residual phase-screens represent
  * corrections to the phase-screens either by Adaptive Optics (AO) or by post-facto image
  * processing. 
@@ -41,12 +41,12 @@
  * Program logic:
  * -------------- 
  * 1. Read and parse the config file.
- * 2. Read phase-screen simulations from file.
+ * 2. Read phase_all-screen simulations from file.
  * 3. Read basis functions from file.
  * 4. Read basis weights from file.
- * 5. Distribute phase-screen simulations to workers.
+ * 5. Distribute phase_all-screen simulations to workers.
  * 6. Store residual phase-screens returned by workers.
- * 7. Repeat steps 5-6 for all phase-screen simulations.
+ * 7. Repeat steps 5-6 for all phase_all-screen simulations.
  * 8. Save residual phase-screens to disk.
  *
  * -----------------------
@@ -71,40 +71,41 @@ int main(int argc, char *argv[]){
     MPI_Datatype mpi_precision = std::is_same<precision, float>::value == true ? MPI_FLOAT : MPI_DOUBLE;
 
 /*
- *  Variable declaration:
- *  -----------------------------------------------
- *  Name                Type            Description
- *  ------------------------------------------------
- *  mpi_process_rank    int
- *  mpi_process_size    int
- *  mpi_process_kill    int
- *  rd_status           int
- *  wr_status           int
+ * Variable declaration:
+ * ----------------------------------------
+ * Name                 Type    Description
+ * ----------------------------------------
+ * mpi_process_rank     int     Rank of MPI process, see MPI documentation.
+ * mpi_process_size     int     Number of MPI processes, total.
+ * mpi_process_kill     int     Number of MPI processes, killed.
+ * mpi_recv_count       int     Count of data received in MPI_Recv(), see MPI documentation.
+ * rd_status            int     Read  status of file.
+ * wr_status            int     Write status of file.
  */
 
     int mpi_process_rank = 0;
     int mpi_process_size = 0;
-    int mpi_recv_count = 0;
-    int read_status = 0;
-    int write_status = 0;
+    int mpi_recv_count   = 0;
+    int rd_status        = 0;
+    int wr_status        = 0;
 
-/* ---------------
- * Initialize MPI.
- * ---------------
+/* -------------------------
+ * Initialize MPI framework.
+ * -------------------------
  */
    
     MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &processes_total);
-    MPI_Comm_rank(MPI_COMM_WORLD, &process_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpi_process_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_process_rank);
 
-/* -----------------------------------------------------------
- * Only the master MPI process - rank zero - prints to stdout.
- * -----------------------------------------------------------
+/* ----------------------------------------------------
+ * Only the root MPI process (rank 0) prints to stdout.
+ * ----------------------------------------------------
  */
 
-    FILE *console   = process_rank == 0 ? stdout : fopen("/dev/null","wb");
+    FILE *console   = mpi_process_rank == 0 ? stdout : fopen("/dev/null","wb");
     fprintf(console, "------------------------------------------------------\n");
-    fprintf(console, "- Phase-screen residuals computation program -\n");
+    fprintf(console, "- phase_all-screen residuals computation program -\n");
     fprintf(console, "------------------------------------------------------\n");
 
 /* ------------------------------------
@@ -113,30 +114,22 @@ int main(int argc, char *argv[]){
  */
 
     if(argc < 2){
-
-        fprintf(console, "(Error)\tExpected configuration file, aborting!\n");
+        fprintf(console, "(Error)\tExpected configuration file, calling MPI_Abort()\n");
         fflush (console);
-
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    
     }
 
     fprintf(console, "(Info)\tReading configuration:\t");
     fflush (console);
-
-    if(config_parse(argv[1]) == EXIT_FAILURE){
-
+    
+    if(config_parse(argv[1]) == EXIT_FAILURE){   
         fprintf(console, "[Failed] (%s)\n", argv[1]);
         fflush (console);
-
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    
-    }else{
-	
-        fprintf(console, "[Done] (%s)\n", argv[1]);
-        fflush (console);
-
     }
+    
+    fprintf(console, "[Done] (%s)\n", argv[1]);
+    fflush (console);
 
 /* 
  * ------------------------
@@ -144,37 +137,37 @@ int main(int argc, char *argv[]){
  * ------------------------
  */
 
-    if(process_rank == 0){
+    if(mpi_process_rank == 0){
 
-    /* 
-     * Variable declaration.
-     * --------------------------------------------
-     * Name                     Type    Description
-     * --------------------------------------------
-     * index_of_fried_in_queue  ulng    Index of the next fried parameter.
-     * fried_completed          ulng    Number of fried parameters processed.
-     * percent_assigned         float   Percentage of fried assigned.
-     * percent_completed        float   Percentage of fried completed.
+    /*
+     * Variable declaration:
+     * ----------------------------------------
+     * Name                 Type    Description
+     * ----------------------------------------
+     * fried_next           sizt    Index of the next fried parameter.
+     * fried_done           sizt    Number of fried parameters processed.
+     * percent_assigned     float   Percentage of fried parameters assigned to MPI processs.
+     * percent_completed    float   Percentage of fried parameters completed by MPI processs.
      */
 
-        ulng  index_of_fried_in_queue = 0;
-        ulng  fried_completed         = 0;
-        float percent_assigned        = 0.0;
-        float percent_completed       = 0.0;
+        sizt  fried_next        = 0;
+        sizt  fried_done        = 0;
+        float percent_assigned  = 0.0;
+        float percent_completed = 0.0;
 
     /*
      * Array declaration.
-     * ----------------------------------------
-     * Name     Type                Description
-     * ----------------------------------------
-     * phase    Array<precision>    Phase-screen simulations, see 'lib_array.h' for datatype.
-     * basis    Array<precision>    Basis functions on aperture.
-     * weights  Array<precision>    Basis weights.
+     * --------------------------------------------
+     * Name         Type                Description
+     * ---------------------------------------------
+     * basis        Array<precision>    Array storing the basis functions defined on the aperture.
+     * weights      Array<precision>    Array storing the weights to subtract the basis functions with.
+     * phase_all    Array<precision>    Array storing all phase_all-screen simulations.
      */
 
-        Array<precision> phase;
         Array<precision> basis;
         Array<precision> weights;
+        Array<precision> phase_all;
 
     /* ---------------------------------------------
      * !(2) Read phase-screen simulations from file.
@@ -184,20 +177,15 @@ int main(int argc, char *argv[]){
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        read_status = phase.rd_fits(io_t::write_phase_to.c_str());
-        if(read_status != EXIT_SUCCESS){
-            
-            fprintf(console, "[Failed][Err code = %d](%s)\n", read_status, io_t::write_phase_to.c_str());
+        rd_status = phase_all.rd_fits(io_t::write_phase_to.c_str());
+        if(rd_status != EXIT_SUCCESS){
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::write_phase_to.c_str());
             fflush (console);
-            
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-        }else{
-            
-            fprintf(console, "[Done] (%s)\n", io_t::write_phase_to.c_str());
-            fflush (console);
-
         }
+        
+        fprintf(console, "[Done] (%s)\n", io_t::write_phase_to.c_str());
+        fflush (console);
 
     /* ------------------------------------
      * !(3) Read basis functions from file.
@@ -207,20 +195,15 @@ int main(int argc, char *argv[]){
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        read_status = basis.rd_fits(io_t::read_basis_from.c_str());
-        if(read_status != EXIT_SUCCESS){
-        
-            fprintf(console, "[Failed][Err code = %d](%s)\n", read_status, io_t::read_basis_from.c_str());
-            fflush (console);
-        
+        rd_status = basis.rd_fits(io_t::read_basis_from.c_str());
+        if(rd_status != EXIT_SUCCESS){        
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_basis_from.c_str());
+            fflush (console);        
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-        }else{
-            
-            fprintf(console, "[Done] (%s)\n", io_t::read_basis_from.c_str());
-            fflush (console);
-
         }
+            
+        fprintf(console, "[Done] (%s)\n", io_t::read_basis_from.c_str());
+        fflush (console);
 
     /* ----------------------------------
      * !(4) Read basis weights from file.
@@ -230,170 +213,90 @@ int main(int argc, char *argv[]){
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
         
-        read_status = weights.rd_fits(io_t::read_weights_from.c_str());
-        if(read_status != EXIT_SUCCESS){
-        
-            fprintf(console, "[Failed][Err code = %d](%s)\n", read_status, io_t::read_weights_from.c_str());
-            fflush (console);
-                
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-        
-        }else{
-            
-            fprintf(console, "[Done] (%s)\n", io_t::read_weights_from.c_str());
-            fflush (console);
+        rd_status = weights.rd_fits(io_t::read_weights_from.c_str());
+        if(rd_status != EXIT_SUCCESS){        
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_weights_from.c_str());
+            fflush (console);                
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);        
         }
+            
+        fprintf(console, "[Done] (%s)\n", io_t::read_weights_from.c_str());
+        fflush (console);
 
     /*
      * Vector declaration.
      * ------------------------------------------------
      * Name                 Type            Description
      * ------------------------------------------------
-     * dims_phase           sizt_vector     Dimensions of phase-screen simulations.
-     * dims_basis           sizt_vector     Dimensions of basis functions.
-     * dims_weights         sizt_vector     Dimensions of basis weights.
-     * dims_phase_per_fried sizt_vector     Dimensions of phase-screen simulations, per fried.
-     * process_fried_map    sizt_vector     Map of which process is handling which fried index.
+     * dims_basis           sizt_vector     Dimensions of the array storing the basis functions.
+     * dims_weights         sizt_vector     Dimensions of the array storing the basis weights.
+     * dims_phase_all       sizt_vector     Dimensions of the array storing the phase-screens.
+     * process_fried_map    sizt_vector     Map linking an MPI process to the index of fried parameter.
      */
 
-        const sizt_vector dims_phase   = phase.get_dims();
-        const sizt_vector dims_basis   = basis.get_dims();
-        const sizt_vector dims_weights = weights.get_dims();
-        const sizt_vector dims_phase_per_fried(dims_phase.begin() + 1, dims_phase.end());
+        sizt_vector dims_basis     = basis.get_dims();
+        sizt_vector dims_weights   = weights.get_dims();
+        sizt_vector dims_phase_all = phase_all.get_dims();
         sizt_vector process_fried_map(dims_phase[0] + 1);
 
-    /* ----------------------------------------
-     * Validate the dimensions of input arrays.
-     * ----------------------------------------
+    /* --------------------------------------------
+     * Validate the dimensions of the input arrays.
+     * --------------------------------------------
      */
 
-        if(dims_phase[2] != sims_t::size_x_in_pixels  || dims_phase[3] != sims_t::size_y_in_pixels){
-     
+        if(dims_phase_all[2] != sims_t::size_x_in_pixels  || dims_phase_all[3] != sims_t::size_y_in_pixels){     
             fprintf(console, "(Error)\tExpected phase-screens with size [%lu %lu], calling MPI_Abort()\n", sims_t::size_x_in_pixels, sims_t::size_y_in_pixels);
             fflush (console);
-
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
         }
 
-        if(dims_basis[1] != sims_t::size_x_in_pixels  || dims_basis[2] != sims_t::size_y_in_pixels){
-     
+        if(dims_basis[1] != sims_t::size_x_in_pixels  || dims_basis[2] != sims_t::size_y_in_pixels){     
             fprintf(console, "(Error)\tExpected basis functions with size [%lu %lu], calling MPI_Abort()\n", sims_t::size_x_in_pixels, sims_t::size_y_in_pixels);
-            fflush (console);
-            
+            fflush (console);            
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
         }
 
-        if(dims_weights[0] != dims_phase[0]){
-            
+        if(dims_weights[0] != dims_phase[0]){            
             fprintf(console, "(Error)\tExpected weights with dimensions [%lu %lu], calling MPI_Abort()\n", dims_phase[0], dims_basis[0]);
-            fflush (console);
-            
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    
+            fflush (console);            
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);    
         }
 
      /*
-     * Array declaration.
+     * Array declaration:
      * --------------------------------------------
      * Name         Type                Description
      * --------------------------------------------
      * residual     Array<precision>    Residual phase-screens, see 'lib_array.h' for datatype.
      */
 
-        Array<precision> residual(phase);
+        Array<precision> residual(phase_all);
 
-    /*
-     * Variable declaration.
-     * ----------------------------------------
-     * Name                 Type    Description
-     * ----------------------------------------
-     * dims_basis_naxis     sizt    Number of axes of dims_basis.
+    /* -----------------------------------------------
+     * Broadcast basis functions to all MPI processes.
+     * -----------------------------------------------
      */
 
-        sizt dims_basis_naxis  = dims_basis.size();
+        MPI_Bcast(dims_basis.data(), dims_basis.size(), MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+        MPI_Bcast(basis[0], basis.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
 
-    /* ------------------------
-     * Loop over MPI processes.
-     * ------------------------
-     */
-
-        for(int id = 1; id < processes_total; id++){
-
-        /* --------------------------------------------------
-         * If rank > number of fried parameters, kill worker.
-         * --------------------------------------------------
-         */
-
-            if(id > int(dims_phase[0])){
-
-                MPI_Send(&dims_basis_naxis, 1, MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
-                MPI_Send( dims_basis.data(), dims_basis_naxis, MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
-                MPI_Send( dims_weights.data() + 1, 1, MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
-
-            /* -------------------------------------
-             * Decrement number of processes in use.
-             * -------------------------------------
-             */
-
-                processes_total--;
-                
-            }
-
-        /* ----------------------------------------------------------------
-         * If rank < number of fried parameters, send dims_basis to worker.
-         * ----------------------------------------------------------------
-         */
-
-            else{
-
-                MPI_Send(&dims_basis_naxis, 1, MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
-                MPI_Send( dims_basis.data(), dims_basis_naxis, MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
-                MPI_Send( dims_weights.data() + 1, 1, MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
-
-            }
-
-        }
-
-    /* --------------------------------
-     * Send basis functions to workers.
-     * --------------------------------
-     */
-
-        for(int id = 1; id < processes_total; id++){
-
-            if(basis[0] != nullptr){
-
-                MPI_Send(basis[0], basis.get_size(), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
-
-            }else{
-
-                fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                fflush (console);
-                
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-            }
-        }
-
-    /* ----------------------------------------------------
-     * !(5) Distribute phase-screen simulations to workers.
+    /* --------------------------------------------------------
+     * !(5) Distribute phase_all-screen simulations to workers.
      * !(6) Store residual phase-screens returned by workers.
-     * !(7) Repeat steps 5-6 for all phase-screen simulations.
-     * -------------------------------------------------------
+     * !(7) Repeat steps 5-6 for all phase_all-screen simulations.
+     * -----------------------------------------------------------
      */
 
-        for(int id = 1; id < processes_total; id++){
+        for(int id = 1; id < mpi_process_size; id++){
 
         /* -------------------
          * Send basis weights.
          * -------------------
          */
 
-            if(weights[index_of_fried_in_queue] != nullptr){
+            if(weights[fried_next] != nullptr){
                 
-                MPI_Send(weights[index_of_fried_in_queue], dims_weights[1], mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send(weights[fried_next], dims_weights[1], mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
 
             }else{
 
@@ -405,13 +308,13 @@ int main(int argc, char *argv[]){
             }
 
         /* ------------------------------
-         * Send phase-screen simulations.
+         * Send phase_all-screen simulations.
          * ------------------------------
          */
 
-            if(phase[index_of_fried_in_queue] != nullptr){
+            if(phase_all[fried_next] != nullptr){
                 
-                MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send(phase_all[fried_next], sizeof_vector(dims_phase_per_fried), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
 
             }else{
 
@@ -427,36 +330,36 @@ int main(int argc, char *argv[]){
          * -------------------------
          */
 
-            process_fried_map[id] = index_of_fried_in_queue;
+            process_fried_map[id] = fried_next;
 
         /* ------------------------------------
          * Update and display percent_assigned.
          * ------------------------------------
          */
 
-            percent_assigned  = (100.0 * (index_of_fried_in_queue + 1)) / dims_phase[0];
+            percent_assigned  = (100.0 * (fried_next + 1)) / dims_phase[0];
             
             fprintf(console, "\r(Info)\tComputing residuals: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
             fflush (console);
 
         /* ----------------------------------
-         * Increment index_of_fried_in_queue.
+         * Increment fried_next.
          * ----------------------------------
          */
 
-            index_of_fried_in_queue++;
+            fried_next++;
 
         }
 
-        while(fried_completed < dims_phase[0]){
+        while(fried_done < dims_phase[0]){
 
         /* --------------------------------------------------------------------
          * Wait for a worker to ping master. If pinged, get worker information.
          * --------------------------------------------------------------------
          */	
 	
-            MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-            MPI_Get_count(&status, mpi_precision, &mpi_recv_count);
+            MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
+            MPI_Get_count(&mpi_status, mpi_precision, &mpi_recv_count);
 
         /*
          * Variable declaration:
@@ -464,7 +367,7 @@ int main(int argc, char *argv[]){
          * Name                 Type    Description
          * ----------------------------------------
          * fried_index_weights  sizt    Index of next fried in pointer space, for array weights.
-         * fried_index_phase    sizt    Index of next fried in pointer space, for array phase.
+         * fried_index_phase    sizt    Index of next fried in pointer space, for array phase_all.
          */
 
         /* -------------------------------------------------
@@ -472,38 +375,38 @@ int main(int argc, char *argv[]){
          * -------------------------------------------------
          */	
 	        
-            sizt fried_index_phase   = process_fried_map[status.MPI_SOURCE];
+            sizt fried_index_phase   = process_fried_map[mpi_status.MPI_SOURCE];
 
         /* ------------------------------------------------------
          * Get residual phase-screens, store at correct location.
          * ------------------------------------------------------
          */
 
-            MPI_Recv(residual[fried_index_phase], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(residual[fried_index_phase], sizeof_vector(dims_phase_per_fried), mpi_precision, mpi_status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
 
         /* --------------------------
-         * Increment fried_completed.
+         * Increment fried_done.
          * --------------------------
          */
 
-            fried_completed++;
+            fried_done++;
 
         /* -------------------------------------
          * Update and display percent_completed.
          * -------------------------------------
          */
 
-            percent_completed  = (100.0 * fried_completed) / dims_phase[0];
+            percent_completed  = (100.0 * fried_done) / dims_phase[0];
             
             fprintf(console, "\r(Info)\tComputing residuals:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
             fflush (console);
 
         /* -------------------------------------------------------------------
-         * Send next set of phase-screen simulations, if available, to worker.
+         * Send next set of phase_all-screen simulations, if available, to worker.
          * -------------------------------------------------------------------
          */
 
-            if(index_of_fried_in_queue < dims_phase[0]){
+            if(fried_next < dims_phase[0]){
 
 
            /* -------------------
@@ -511,9 +414,9 @@ int main(int argc, char *argv[]){
             * -------------------
             */
 
-                if(weights[index_of_fried_in_queue] != nullptr){
+                if(weights[fried_next] != nullptr){
                 
-                    MPI_Send(weights[index_of_fried_in_queue], dims_weights[1], mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
+                    MPI_Send(weights[fried_next], dims_weights[1], mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
 
                 }else{
 
@@ -529,9 +432,9 @@ int main(int argc, char *argv[]){
             * -------------------
             */
 
-                if(phase[index_of_fried_in_queue] != nullptr){
+                if(phase_all[fried_next] != nullptr){
                 
-                    MPI_Send(phase[index_of_fried_in_queue], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
+                    MPI_Send(phase_all[fried_next], sizeof_vector(dims_phase_per_fried), mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
 
                 }else{
 
@@ -547,24 +450,24 @@ int main(int argc, char *argv[]){
              * -------------------------
              */
 	
-                process_fried_map[status.MPI_SOURCE] = index_of_fried_in_queue;
+                process_fried_map[mpi_status.MPI_SOURCE] = fried_next;
 
             /* ------------------------------------
              * Update and display percent_assigned.
              * ------------------------------------
              */
 
-                percent_assigned = (100.0 * (index_of_fried_in_queue + 1)) / dims_phase[0];
+                percent_assigned = (100.0 * (fried_next + 1)) / dims_phase[0];
                 
                 fprintf(console, "\r(Info)\tComputing residuals:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
                 fflush (console);
 
             /* ----------------------------------
-             * Increment index_of_fried_in_queue.
+             * Increment fried_next.
              * ----------------------------------
              */
 
-                index_of_fried_in_queue++;
+                fried_next++;
       	    
             }else{
 	    
@@ -573,10 +476,10 @@ int main(int argc, char *argv[]){
              * ------------------------------------------------------
              */
                 
-                if(weights[0] != nullptr && phase[0] != nullptr){
+                if(weights[0] != nullptr && phase_all[0] != nullptr){
 
-                    MPI_Send(weights[0], dims_weights[1], mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
-                    MPI_Send(phase[0], sizeof_vector(dims_phase_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
+                    MPI_Send(weights[0], dims_weights[1], mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
+                    MPI_Send(phase_all[0], sizeof_vector(dims_phase_per_fried), mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
                 
                 }else{
 
@@ -588,37 +491,32 @@ int main(int argc, char *argv[]){
                 }
 
             /* -------------------------
-             * Decrement processes_total
+             * Decrement mpi_process_size
              * -------------------------
              */
 
-                processes_total--;
+                mpi_process_size--;
             }
 
         }
 
+    /* -----------------------------------------
+     * !(8) Save residual phase-screens to disk.
+     * -----------------------------------------
+     */
+
         if(io_t::save){
-
-        /* -----------------------------------------
-         * !(8) Save residual phase-screens to disk.
-         * -----------------------------------------
-         */
-
+        
             fprintf(console, "\n(Info)\tWriting to file:\t");
             fflush (console);
         
-            write_status = residual.wr_fits(io_t::write_residual_to.c_str(), io_t::clobber);
-    	    if(write_status != EXIT_SUCCESS){
-	        
-                fprintf(console, "[Failed][Err code = %d](%s)\n", write_status, io_t::write_residual_to.c_str());
-	            fflush (console);
-    
-            }
-	        else{
-	     
+            wr_status = residual.wr_fits(io_t::write_residual_to.c_str(), io_t::clobber);
+    	    if(wr_status != EXIT_SUCCESS){
+                fprintf(console, "[Failed][Err code = %d](%s)\n", wr_status, io_t::write_residual_to.c_str());
+	            fflush (console);   
+            }else{	     
                 fprintf(console, "[Done] (%s)\n", io_t::write_residual_to.c_str());
                 fflush (console);
-
             }
        }
     }
@@ -628,58 +526,69 @@ int main(int argc, char *argv[]){
  * -------------------------
  */
     
-    else if(process_rank){
+    else if(mpi_process_rank){
 
     /*
-     * Variable declaration.
-     * ----------------------------------------
-     * Name                 Type    Description
-     * ----------------------------------------
-     * dims_basis_naxis     sizt    Number of axes of dims_basis.
+     * Vector declaration.
+     * --------------------------------------------
+     * Name             Type            Description
+     * --------------------------------------------
+     * dims_basis       sizt_vector     Dimensions of the array storing the basis functions.
+     */
+        
+        sizt_vector dims_basis(3);
+
+    /* ------------------------------------------------------
+     * Get dimensions of the basis functions array from root.
+     * ------------------------------------------------------
      */
 
-        sizt dims_basis_naxis;
+        MPI_Bcast(dims_basis.data, dims_basis.size(), MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
 
-    /* ------------------------------------------------------------
-     * Get the number of dimensions of basis functions from master.
-     * ------------------------------------------------------------
+    /*
+     * Array declaration:
+     * ----------------------------------------
+     * Name     Type                Description
+     * ----------------------------------------
+     * basis    Array<precision>    Array storing the basis functions.
      */
 
-        MPI_Recv(&dims_basis_naxis, 1, MPI_UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        Array<precision> basis(dims_basis);
+
+    /* ------------------------------------
+     * Get basis functions array from root.
+     * ------------------------------------
+     */
+     
+        MPI_Bcast(basis[0], basis.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
 
     /*
      * Vector declaration.
      * ----------------------------------------------------
-     * Name                     Type            Description
+     * Name             Type            Description
      * ----------------------------------------------------
-     * dims_phase_per_fried     sizt_vector     Dimensions of phase-screen simulations, per fried.
-     * dims_phase_single        sizt_vector     Dimensions of a single phase-screen.
-     * dims_weights             sizt_vector     Dimensions of the basis weights.
-     * dims_basis               sizt_vector     Dimensions of basis functions.    
+     * dims_modes       sizt_vector     Number of basisfunctions.
+     * dims_phase       sizt_vector     Dimensions of the array storing a single phase-screen.
+     * dims_phase_all   sizt_vector     Dimensions of the array storing all phase-screens, per fried.
      */
 
-        sizt_vector dims_phase_per_fried{sims_t::realizations_per_fried, sims_t::size_x_in_pixels, sims_t::size_y_in_pixels};
-        sizt_vector dims_phase_single{sims_t::size_x_in_pixels, sims_t::size_y_in_pixels};
-        sizt_vector dims_basis(dims_basis_naxis);
-        sizt_vector dims_weights(1);
-        
-        MPI_Recv(dims_basis.data(), dims_basis_naxis, MPI_UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        sizt_vector dims_modes{dims_basis[0]};
+        sizt_vector dims_phase{sims_t::size_x_in_pixels, sims_t::size_y_in_pixels};
+        sizt_vector dims_phase_all{sims_t::realizations_per_fried, dims_phase[0], dims_phase[1]};
 
     /*
      * Array declaration.
      * --------------------------------------------
      * Name         Type                Description
      * --------------------------------------------
-     * phase        Array<precision>    Phase-screen simulations.
-     * basis        Array<precision>    Basis functions.
-     * weights      Array<precision>    Basis weights.
+     * phase        Array<precision>    Array storing a single phase-screen.
+     * weights      Array<precision>    Array storing the weights of the basis functions.
+     * phase_all    Array<precision>    Array storing the phase-screen simulations.
      */
 
-        MPI_Recv(dims_weights.data(), 1, MPI_UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
-        Array<precision> phase(dims_phase_per_fried);
-        Array<precision> basis(dims_basis);
+        Array<precision> phase(dims_phase);
         Array<precision> weights(dims_weights);
+        Array<precision> phase_all(dims_phase_all);
 
     /*
      * Vector declaration.
@@ -691,73 +600,46 @@ int main(int argc, char *argv[]){
 
         sizt_vector basis_norm(dims_basis[0]);
 
-    /* ------------------------------------------------------------------------
-     * Get basis functions from master rank, if this process hasn't been killed.
-     * -------------------------------------------------------------------------
+    /* ------------------------------------------------
+     * Compute L2 normalization of the basis functions.
+     * ------------------------------------------------
      */
 
-        if(status.MPI_TAG != mpi_cmds::kill){
+        for(sizt ind = 0; ind < dims_basis[0]; ind++){
+            for(sizt xs = 0; xs < dims_basis[1]; xs++){
+                for(sizt ys = 0; ys < dims_basis[2]; ys++){
+                    basis_norm[ind] += basis(ind, xs, ys) * basis(ind, xs, ys);
 
-            MPI_Recv(basis[0], basis.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
-        /* ------------------------------------------------
-        * Compute L2 normalization of the basis functions.
-        * ------------------------------------------------
-        */
-
-            for(sizt ind = 0; ind < dims_basis[0]; ind++){
-                for(sizt xs = 0; xs < dims_basis[1]; xs++){
-                    for(sizt ys = 0; ys < dims_basis[2]; ys++){
-                        basis_norm[ind] += basis(ind, xs, ys) * basis(ind, xs, ys);
-                    }
-                }
-            }
-        }
-
-    /* --------------------------------------------
-     * Compute residual phase-screens until killed.
-     * --------------------------------------------
+    /* -----------------------------------------------------------
+     * Enter loop to compute residual phase-screens, until killed.
+     * -----------------------------------------------------------
      */
 
-        while(status.MPI_TAG != mpi_cmds::kill){
+        while(mpi_status.MPI_TAG != mpi_cmds::kill){
 
-        /* ------------------------------
-         * Get basis weights from master.
-         * ------------------------------
+        /* ----------------------
+         * Get weights from root.
+         * ----------------------
          */
 
-            MPI_Recv(weights[0], dims_weights[0], mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(weights[0], dims_weights[0], mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
 
         /* -----------------------------------------
-         * Get phase-screen simulations from master.
+         * Get phase_all-screen simulations from master.
          * -----------------------------------------
          */
 
-            MPI_Recv(phase[0], phase.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-            if(status.MPI_TAG == mpi_cmds::task){
+            MPI_Recv(phase_all[0], phase_all.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
+            
+            if(mpi_status.MPI_TAG == mpi_cmds::task){
 
-            /* ---------------------------------------------
-             * Compute the residuals from the phase-screens.
-             * ---------------------------------------------
-             */
-                Array<precision> phase_single(dims_phase_single);
-                for(sizt sim = 0; sim < dims_phase_per_fried[0]; sim++){
-
-                    memcpy(phase_single[0], phase[sim], phase_single.get_size()*sizeof(precision));
-                    make_residual_phase_screen(phase_single, basis, weights, basis_norm);
-                    memcpy(phase[sim], phase_single[0], phase_single.get_size()*sizeof(precision));
-
+                for(sizt ind = 0; ind < dims_phase_all[0]; ind++){
+                    memcpy(phase[0], phase_all[ind], phase.get_size()*sizeof(precision));
+                    make_residual_phase_screen(phase, basis, weights, basis_norm);
+                    memcpy(phase_all[sim], phase[0], phase.get_size()*sizeof(precision));
                 }
 
-                if(phase[0] != nullptr){
-
-                    MPI_Send(phase[0], phase.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
-
-                }else{
-
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-                }
+                MPI_Send(phase_all[0], phase_all.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
             }
         }
     }
