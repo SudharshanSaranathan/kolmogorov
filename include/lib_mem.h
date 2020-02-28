@@ -145,8 +145,11 @@ public:
         if(data != nullptr){
             if(data[0] != nullptr){
                 if(data[0][0] != nullptr){
-                    if(data[0][0][0] != nullptr && free){
-                        delete[] data[0][0][0];
+                    if(data[0][0][0] != nullptr){
+                        if(free)
+                            delete[] data[0][0][0];
+                        else
+                            data[0][0][0] = nullptr;
                     }
                     delete[] data[0][0];
                 }
@@ -169,8 +172,11 @@ public:
 
         if(data != nullptr){
             if(data[0] != nullptr){
-                if(data[0][0] != nullptr && free){
-                    delete[] data[0][0];
+                if(data[0][0] != nullptr){
+                    if(free)
+                        delete[] data[0][0];
+                    else
+                        data[0][0] = nullptr;
                 }
                 delete[] data[0];
             }
@@ -189,8 +195,11 @@ public:
 
     static void deallocate(type**   data, bool free = true){
         if(data != nullptr){
-            if(data[0] != nullptr && free){
-                delete[] data[0];
+            if(data[0] != nullptr){
+                if(free)
+                    delete[] data[0];
+                else
+                    data[0] = nullptr;
             }
             delete[] data;
         }
@@ -206,8 +215,11 @@ public:
  */
 
     static void deallocate(type*    data, bool free = true){
-        if(data != nullptr && free){
-            delete[] data;
+        if(data != nullptr){
+            if(free)
+                delete[] data;
+            else
+                data = nullptr;
         }
     }
 };
