@@ -112,7 +112,7 @@ public:
             return(nullptr);
         }
 
-        data[0][0][0] = new type[xs*ys*zs*ws]();
+        data[0][0][0] = src == nullptr ? new type[xs*ys*zs*ws]() : src;
         if(data[0][0][0] == nullptr){
             delete[] data[0][0];
             delete[] data[0];
