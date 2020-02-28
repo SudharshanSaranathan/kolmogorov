@@ -639,7 +639,7 @@ void         Array<type>::operator/=(type value){
 }
 
 template <class type>
-Array<type>  Array<type>::slice(sizt index, bool allocate_new_memory){
+Array<type>  Array<type>::slice(sizt index, bool copy){
 
     if(this->stat == false)
         throw std::runtime_error("In function Array<type>::slice(), cannot slice empty array");
@@ -650,23 +650,22 @@ Array<type>  Array<type>::slice(sizt index, bool allocate_new_memory){
     if(this->dims.size() == 1)
         throw std::range_error("In function Array<type>::slice(), cannot slice 1D array");
 
-    sizt_vector dims_slice(this->dims.begin() + 1, this->dims.end());
-   
-    if(this->dims.size() == 2){
-        Array<type> array_slice(dims_slice, allocate_new_memory == true ? this->data_ptr_2D[index] : nullptr);
-        return(array_slice);
-
-    }else if(this->dims.size() == 3){
-        Array<type> array_slice(dims_slice, allocate_new_memory == true ? this->data_ptr_3D[index][0] : nullptr);
-        return(array_slice);
-
-    }else if(this->dims.size() == 4){
-        Array<type> array_slice(dims_slice, allocate_new_memory == true ? this->data_ptr_4D[index][0][0] : nullptr);
-        return(array_slice);
-
-    }else{
-        throw std::runtime_error("In function Array<type>:::slice(), expected to slice a 2D/3D/4D array");
+    type *slice_ptr = nullptr;
+    switch(this->dims.size()){
+        case 2: slice_ptr = this->data_ptr_2D[index];
+                break;
+        case 3: slice_ptr = this->data_ptr_3D[index][0];
+                break;
+        case 4: slice_ptr = this->data_ptr_4D[index][0][0];
+                break;
+        default:throw std::runtime_error("In function Array<type>::slice(), expected to slice a 2D/3D/4D array");
+                break;
     }
+
+    sizt_vector dims_slice(this->dims.begin() + 1, this->dims.end());
+    Array<type> data_slice(dims_slice, copy == true ? nullptr : slice_ptr);
+    
+    return(data_slice);
 }
 
 template <class type>
