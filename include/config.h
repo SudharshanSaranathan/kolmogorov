@@ -1,6 +1,10 @@
 #ifndef _CONFIG_
 #define _CONFIG_
 
+#define _CHKSTAT_
+#define _CHKDIMS_
+#define _CHKBNDS_
+
 #include <string>
 #include <limits>
 #include <vector>

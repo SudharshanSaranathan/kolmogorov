@@ -140,13 +140,13 @@ public:
  *                              the higher dimensional pointers are freed.
  */
 
-    static void deallocate(type**** data, bool free = true){
+    static void deallocate(type**** data, bool owner = true){
 
         if(data != nullptr){
             if(data[0] != nullptr){
                 if(data[0][0] != nullptr){
                     if(data[0][0][0] != nullptr){
-                        if(free)
+                        if(owner)
                             delete[] data[0][0][0];
                         else
                             data[0][0][0] = nullptr;
@@ -168,12 +168,12 @@ public:
  *                              the higher dimensional pointers are freed.
  */
 
-    static void deallocate(type***  data, bool free = true){
+    static void deallocate(type***  data, bool owner = true){
 
         if(data != nullptr){
             if(data[0] != nullptr){
                 if(data[0][0] != nullptr){
-                    if(free)
+                    if(owner)
                         delete[] data[0][0];
                     else
                         data[0][0] = nullptr;
@@ -193,10 +193,10 @@ public:
  *                              the higher dimensional pointers are freed.
  */
 
-    static void deallocate(type**   data, bool free = true){
+    static void deallocate(type**   data, bool owner = true){
         if(data != nullptr){
             if(data[0] != nullptr){
-                if(free)
+                if(owner)
                     delete[] data[0];
                 else
                     data[0] = nullptr;
@@ -214,9 +214,9 @@ public:
  *                              the higher dimensional pointers are freed.
  */
 
-    static void deallocate(type*    data, bool free = true){
+    static void deallocate(type*    data, bool owner = true){
         if(data != nullptr){
-            if(free)
+            if(owner)
                 delete[] data;
             else
                 data = nullptr;

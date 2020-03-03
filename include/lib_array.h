@@ -4,6 +4,10 @@
 #define _USE_APERTURE_
 #define _USE_SINGLE_PRECISION_
 
+#define _CHKSTAT_
+#define _CHKDIMS_
+#define _CHKBNDS_
+
 #include "config.h"
 #include "fitsio.h"
 
@@ -264,21 +268,23 @@ public:
 /* 
  * Class methods declaration (PUBLIC)
  * See lib_array.cc for definitions
- * ----------------------------------------
- * Name         Type            Description
- * ----------------------------------------
- * abs  ()      Array<type>     Returns the std::abs() of the array.
- * pad  ()      Array<type>     Returns the array padded with zeros.
- * roll ()      Array<type>     Returns a cyclically rolled array.
- * crop ()      Array<type>     Returns a subset of the array.
- * slice()      Array<type>     Returns a slice of the array at the specified index.
+ * --------------------------------------------
+ * Name             Type            Description
+ * --------------------------------------------
+ * get_abs  ()      Array<type>     Returns the std::abs() of the array.
+ * get_norm ()      Array<type>     Returns the std::norm() of the array.
+ * get_pad  ()      Array<type>     Returns the array padded with zeros.
+ * get_roll ()      Array<type>     Returns a cyclically rolled array.
+ * get_crop ()      Array<type>     Returns a subset of the array.
+ * get_slice()      Array<type>     Returns a slice of the array at the specified index.
  */
 
-    Array<type> abs  ();
-    Array<type> pad  (sizt_vector, sizt_vector, type pad_value = static_cast<type>(0));
-    Array<type> roll (sizt_vector, bool clockwise = true);
-    Array<type> crop (sizt_vector, sizt_vector, bool vector_type = true);
-    Array<type> slice(sizt, bool copy = true);
+    Array<type> get_abs  ();
+    Array<type> get_norm ();
+    Array<type> get_pad  (sizt_vector, sizt_vector, type pad_value = static_cast<type>(0));
+    Array<type> get_roll (sizt_vector, bool clockwise = true);
+    Array<type> get_crop (sizt_vector, sizt_vector, bool vector_type = true);
+    Array<type> get_slice(sizt, bool copy = true);
 
 public:
 
