@@ -99,10 +99,8 @@ int main(int argc, char *argv[]){
  */
 
     if(argc < 2){
-
         fprintf(console, "(Error)\tExpected configuration file, aborting!\n");
         fflush (console);
-        
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
@@ -110,17 +108,12 @@ int main(int argc, char *argv[]){
     fflush (console);
     
     if(config_parse(argv[1]) == EXIT_FAILURE){
-        
         fprintf(console, "[Failed] (%s)\n", argv[1]);
         fflush (console);
-
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
     }else{
-	    
         fprintf(console, "[Done] (%s)\n", argv[1]);
         fflush (console);
-
     }
 
 /* 
@@ -322,7 +315,7 @@ int main(int argc, char *argv[]){
          * ---------------------------------------------------------
          */
 
-            img_fourier_resampled = img_fourier.roll(dims_shift).crop(dims_crop_start, dims_img_resampled).roll(dims_shift_resampled, false);
+            img_fourier_resampled = img_fourier.get_roll(dims_shift).get_crop(dims_crop_start, dims_img_resampled).get_roll(dims_shift_resampled, false);
 
         /* ---------------------------------------------------------------
          * Execute the reverse fourier transform of the resampled fourier.
@@ -336,7 +329,7 @@ int main(int argc, char *argv[]){
          * ------------------------------------------
          */
 
-            img      = img_cmpx_resampled.abs().cast_to_type<precision>();
+            img      = img_cmpx_resampled.get_abs().cast_to_type<precision>();
             dims_img = dims_img_resampled;
 
             fprintf(console, "[Done] (%lu %lu)\n", dims_img_resampled[0], dims_img_resampled[1]);
@@ -406,28 +399,15 @@ int main(int argc, char *argv[]){
                 MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
                 MPI_Send( dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
 
-            /* -------------------------------------
-             * Decrement number of processes in use.
-             * -------------------------------------
-             */
-
                 processes_total--;
                 
-            }
+            }else{
 
-        /* -------------------------------------------------------------------
-         * If rank < number of fried parameters, send dims_residual to worker.
-         * -------------------------------------------------------------------
-         */
-
-            else{
-            
                 MPI_Send(&dims_psfs_per_fried_naxis,  1, MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
                 MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
                 MPI_Send( dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
             
             }
-
         }
 
     /* ----------------------------
@@ -435,20 +415,8 @@ int main(int argc, char *argv[]){
      * ----------------------------
      */
 
-        for(int id = 1; id < processes_total; id++){
-
-            if(img[0] != nullptr){
-                
-                MPI_Send(img[0], img.get_size(), mpi_precision,  id, mpi_cmds::task, MPI_COMM_WORLD);
-
-            }else{
-
-                fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                fflush (console);
-
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-            }
-        }
+        for(int id = 1; id < processes_total; id++)
+            MPI_Send(img[0], img.get_size(), mpi_precision,  id, mpi_cmds::task, MPI_COMM_WORLD);
 
     /* ------------------------------------
      * !(4) Distribute the PSFs to workers.
@@ -464,18 +432,7 @@ int main(int argc, char *argv[]){
          * -------------------------
          */
 
-            if(psfs[index_of_fried_in_queue] != nullptr){
-                
-                MPI_Send(psfs[index_of_fried_in_queue], sizeof_vector(dims_psfs_per_fried), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
-
-            }else{
-
-                fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
-                fflush (console);
-
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-                
-            }
+            MPI_Send(psfs[index_of_fried_in_queue], sizeof_vector(dims_psfs_per_fried), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
 
         /* -------------------------
          * Update process_fried_map.
@@ -500,7 +457,6 @@ int main(int argc, char *argv[]){
          */
 
             index_of_fried_in_queue++;
-
         }
 
         while(fried_completed < dims_psfs[0]){
@@ -528,19 +484,7 @@ int main(int argc, char *argv[]){
          * ------------------------------------
          */
 
-            if(imgs[fried_index_image] != nullptr){
-                
-                MPI_Recv(imgs[fried_index_image], sizeof_vector(dims_imgs_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
-            }else{
-
-                fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
-                fflush (console);
-
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-                
-            }
-
+            MPI_Recv(imgs[fried_index_image], sizeof_vector(dims_imgs_per_fried), mpi_precision, status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
         /* --------------------------
          * Increment fried_completed.
@@ -571,18 +515,7 @@ int main(int argc, char *argv[]){
              * -------------------------
              */
 
-                if(psfs[index_of_fried_in_queue] != nullptr){
-
-                    MPI_Send(psfs[index_of_fried_in_queue], sizeof_vector(dims_psfs_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
-
-                }else{
-
-                    fprintf(console, "(Error)\tNull buffer, calling MPI_Abort()\n");
-                    fflush (console);
-
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-                
-                }    
+                MPI_Send(psfs[index_of_fried_in_queue], sizeof_vector(dims_psfs_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
 	
             /* -------------------------
              * Update process_fried_map.
@@ -608,28 +541,7 @@ int main(int argc, char *argv[]){
 
                 index_of_fried_in_queue++;
       	    
-            }else{
-	   
-            /* ---------------------------------------------------------
-             * If no more degraded images need to computed, kill worker.
-             * ---------------------------------------------------------
-             */
-		        
-                if(psfs[0] != nullptr){
-                    
-                    MPI_Send(psfs[0], sizeof_vector(dims_psfs_per_fried), mpi_precision, status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
-	        
-                }else{
-
-                    fprintf(console, "(Error)\tNull buffer in MPI_Send(), calling MPI_Abort()\n");
-                    fflush (console);
-                
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-                
-                }
-
             }
-
         }
 
     /* -----------------------------------
@@ -644,14 +556,11 @@ int main(int argc, char *argv[]){
             fflush (console);
 
             write_status = imgs.wr_fits(io_t::write_images_to.c_str(), io_t::clobber);
-            if(write_status != EXIT_SUCCESS){
-	    
+            if(write_status != EXIT_SUCCESS){	    
                 fprintf(console, "[Failed][Err code = %d](%s)\n", write_status, io_t::write_images_to.c_str());
                 fflush (console);
 	    
-            }
-	        else{
-	    
+            }else{
                 fprintf(console, "[Done](%0.2lfG)\n", imgs.get_size()*sizeof(precision)/1E9);
                 fflush (console);
             }
@@ -759,19 +668,10 @@ int main(int argc, char *argv[]){
      * --------------------------------------------------------------------
      */
 
-        if(status.MPI_TAG != mpi_cmds::kill){
-    
-            if(img[0] != nullptr){
-
-                MPI_Recv(img[0], img.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
-            }else{
-
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-
-            }
-
-        } 
+        if(status.MPI_TAG != mpi_cmds::kill)
+            MPI_Recv(img[0], img.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        else
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
     /*
      * Array declaration.
@@ -889,7 +789,7 @@ int main(int argc, char *argv[]){
                  * -------------------------------------------------------------------------
                  */
 
-                    img_double_c = img_double_c.roll(dims_shift) / img_double_c.get_size();
+                    img_double_c = img_double_c.get_roll(dims_shift) / img_double_c.get_size();
 
                 /* ---------------------------------------
                  * Cast the convolved to type <precision>.
@@ -939,7 +839,7 @@ int main(int argc, char *argv[]){
                      * -------------------------------------------------------------------------
                      */
                     
-                        img_double_c = img_double_c.roll(dims_shift) / img_double.get_size();
+                        img_double_c = img_double_c.get_roll(dims_shift) / img_double.get_size();
                         for(sizt xpix = 0; xpix < dims_img[0]; xpix++){
                             for(sizt ypix = 0; ypix < dims_img[1]; ypix++){
                                 imgs(ind, xpix, ypix) = static_cast<precision>(img_double_c(xpix, ypix));
