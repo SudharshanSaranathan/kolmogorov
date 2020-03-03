@@ -67,16 +67,18 @@ int main(int argc, char *argv[]){
 /*
  *  Variable declaration:
  *  -------------------------------------------
- *  Name		    Type            Description
+ *  Name		        Type        Description
  *  -------------------------------------------
- *  mpi_process_rank    int             Rank of MPI processes.
- *  mpi_process_size    int             Store the total number of MPI processes
- *  mpi_recv_count      int             Store the count of data received in MPI_Recv, see MPI documentation for explanation.
- *  rd_status           int             File read status.
- *  wr_status           int             File write status.
+ *  mpi_process_rank    int         MPI process rank.
+ *  mpi_process_size    int         MPI processes, total.
+ *  mpi_process_kill    int         MPI processes killed.
+ *  mpi_recv_count      int         Count of data received in MPI_Recv().
+ *  rd_status           int         File read status.
+ *  wr_status           int         File write status.
  */
     int mpi_process_rank = 0;
     int mpi_process_size = 0;
+    int mpi_process_kill = 0;
     int mpi_recv_count = 0;
     int rd_status = 0;
     int wr_status = 0;
@@ -347,15 +349,14 @@ int main(int argc, char *argv[]){
      * process_fried_map        sizt_vector     Map of which process is handling which fried index.
      */
 
-        const sizt_vector dims_psfs_per_fried(dims_psfs.begin() + 1, dims_psfs.end());
+        sizt_vector dims_psfs_per_fried(dims_psfs.begin() + 1, dims_psfs.end());
         sizt_vector dims_imgs(dims_psfs);
         
         dims_imgs.rbegin()[0] = dims_img.rbegin()[0];
         dims_imgs.rbegin()[1] = dims_img.rbegin()[1];
 
-        const sizt_vector dims_imgs_per_fried(dims_imgs.begin() + 1, dims_imgs.end());
-        sizt_vector       process_fried_map(dims_psfs[0] + 1);
-
+        sizt_vector dims_imgs_per_fried(dims_imgs.begin() + 1, dims_imgs.end());
+        sizt_vector process_fried_map(dims_psfs[0] + 1);
 
     /*
      * Array declaration.
@@ -377,42 +378,32 @@ int main(int argc, char *argv[]){
 
         sizt dims_psfs_per_fried_naxis = dims_psfs_per_fried.size();
 
-    /* ------------------------
-     * Loop over MPI processes.
-     * ------------------------
+    /* ---------------------------------------------
+     * Distribute array dimensions to MPI processes.
+     * ---------------------------------------------
      */
 
-        for(int id = 1; id < mpi_process_size; id++){
+        for(int pid = 1; pid < mpi_process_size; pid++){
 
-        /* --------------------------------------------------
-         * If rank > number of fried parameters, kill worker.
-         * --------------------------------------------------
-         */
-
-            if(id > int(dims_psfs[0])){
-
-                MPI_Send(&dims_psfs_per_fried_naxis,  1, MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
-                MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
-                MPI_Send( dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::kill, MPI_COMM_WORLD);
-
-                mpi_process_size--;
-                
+            if(pid > int(dims_psfs[0])){
+                MPI_Send(&dims_psfs_per_fried_naxis,  1, MPI_UNSIGNED_LONG, pid, mpi_cmds::kill, MPI_COMM_WORLD);
+                MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI_UNSIGNED_LONG, pid, mpi_cmds::kill, MPI_COMM_WORLD);
+                MPI_Send( dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, pid, mpi_cmds::kill, MPI_COMM_WORLD);
+                mpi_process_kill++;
             }else{
-
-                MPI_Send(&dims_psfs_per_fried_naxis,  1, MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
-                MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
-                MPI_Send( dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, id, mpi_cmds::task, MPI_COMM_WORLD);
-            
+                MPI_Send(&dims_psfs_per_fried_naxis,  1, MPI_UNSIGNED_LONG, pid, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI_UNSIGNED_LONG, pid, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send( dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, pid, mpi_cmds::task, MPI_COMM_WORLD);
             }
         }
+        mpi_process_size -= mpi_process_kill;
 
-    /* ----------------------------
-     * Distribute image to workers.
-     * ----------------------------
+    /* ----------------------------------
+     * Distribute image to MPI processes.
+     * ----------------------------------
      */
 
-        for(int id = 1; id < mpi_process_size; id++)
-            MPI_Send(img[0], img.get_size(), mpi_precision,  id, mpi_cmds::task, MPI_COMM_WORLD);
+        MPI_Bcast(img[0], img.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
 
     /* ------------------------------------
      * !(4) Distribute the PSFs to workers.
@@ -421,21 +412,21 @@ int main(int argc, char *argv[]){
      * -----------------------------------
      */
 
-        for(int id = 1; id < mpi_process_size; id++){
+        for(int pid = 1; pid < mpi_process_size; pid++){
 
         /* -------------------------
          * Send the PSFs to workers.
          * -------------------------
          */
 
-            MPI_Send(psfs[fried_next], sizeof_vector(dims_psfs_per_fried), mpi_precision, id, mpi_cmds::task, MPI_COMM_WORLD);
+            MPI_Send(psfs[fried_next], sizeof_vector(dims_psfs_per_fried), mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
 
         /* -------------------------
          * Update process_fried_map.
          * -------------------------
          */
 
-            process_fried_map[id] = fried_next;
+            process_fried_map[pid] = fried_next;
 
         /* ------------------------------------
          * Update and display percent_assigned.
@@ -547,7 +538,7 @@ int main(int argc, char *argv[]){
      */
 
         for(int pid = 1; pid < mpi_process_size; pid++)
-             MPI_Send(psfs[0], sizeof_vector(dims_psfs_per_fried), mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::kill, MPI_COMM_WORLD);
+             MPI_Send(psfs[0], sizeof_vector(dims_psfs_per_fried), mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
 
     /* -----------------------------------
      * !(7) Save convolved images to disk.
@@ -668,13 +659,13 @@ int main(int argc, char *argv[]){
         Array<cmpx>      psf_fourier(dims_img);
         Array<cmpx>      img_fourier_c(dims_img);
 
-    /* --------------------------------------------------------------------
-     * If the MPI process has not been killed, get image from MPI rank = 0.
-     * --------------------------------------------------------------------
+    /* ------------------------------------------------------------
+     * If the MPI process has not been killed, get image from root.
+     * ------------------------------------------------------------
      */
 
         if(mpi_status.MPI_TAG != mpi_cmds::kill)
-            MPI_Recv(img[0], img.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
+            MPI_Bcast(img[0], img.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
         else
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 
