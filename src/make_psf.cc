@@ -1,5 +1,3 @@
-#define _GET_ALL_POINT_SPREAD_FUNCTIONS_
-
 #include "mpi.h"
 #include "fftw3.h"
 #include "config.h"
@@ -12,6 +10,8 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <iostream>
+
+#define _GET_ALL_POINT_SPREAD_FUNCTIONS_
 
 /* ------------
  * Description:
