@@ -205,24 +205,6 @@ int main(int argc, char *argv[]){
         fprintf(console, "[Done] (%s)\n", io_t::read_basis_from.c_str());
         fflush (console);
 
-    /* ----------------------------------
-     * !(4) Read basis weights from file.
-     * ----------------------------------
-     */
-
-        fprintf(console, "(Info)\tReading file:\t\t");
-        fflush (console);
-        
-        rd_status = weights.rd_fits(io_t::read_weights_from.c_str());
-        if(rd_status != EXIT_SUCCESS){        
-            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_weights_from.c_str());
-            fflush (console);                
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);        
-        }
-            
-        fprintf(console, "[Done] (%s)\n", io_t::read_weights_from.c_str());
-        fflush (console);
-
     /*
      * Vector declaration.
      * ------------------------------------------------
@@ -234,10 +216,62 @@ int main(int argc, char *argv[]){
      * process_fried_map    sizt_vector     Map linking an MPI process to the index of fried parameter.
      */
 
-        sizt_vector dims_basis     = basis.get_dims();
-        sizt_vector dims_weights   = weights.get_dims();
-        sizt_vector dims_phase_all = phase_all.get_dims();
+        sizt_vector dims_basis       = basis.get_dims();
+        sizt_vector dims_phase_all   = phase_all.get_dims();
+        sizt_vector dims_weights{dims_phase_all[0], dims_basis[0]};
         sizt_vector process_fried_map(dims_phase_all[0] + 1);
+
+    /* -----------------------------------------------
+     * !(4) Read basis weights from file, if provided.
+     * -----------------------------------------------
+     */
+        if(io_t::read_weights_from == "_ONES_"){
+
+            fprintf(console, "(Info)\tUsing weights = 1\t");
+            fflush (console);
+
+        /* -----------------------
+         * Set all weights to 1.0.
+         * -----------------------
+         */
+            Array<precision> AO_weights(dims_weights);
+            for(sizt xpix = 0; xpix < dims_weights[0]; xpix++)
+                for(sizt ypix = 0; ypix < dims_weights[1]; ypix++)
+                    AO_weights(xpix, ypix) = 1.0;
+
+            weights = AO_weights;
+        }else if(io_t::read_weights_from == "_ZEROS_"){
+
+            fprintf(console, "(Info)\tUsing weights = 0\t");
+            fflush (console);
+
+        /* -----------------------
+         * Set all weights to 0.0.
+         * -----------------------
+         */
+            
+            Array<precision> AO_weights(dims_weights);
+            weights = AO_weights;
+        }else{
+
+            fprintf(console, "(Info)\tReading file:\t\t");
+            fflush (console);
+         
+            rd_status = weights.rd_fits(io_t::read_weights_from.c_str());
+            if(rd_status != EXIT_SUCCESS){        
+                fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_weights_from.c_str());
+                fflush (console);                
+                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);        
+            }else if(dims_weights[0] != weights.get_dims(0)){
+                fprintf(console, "(Error)\tExpected weights with dimensions [%lu, %lu]\n", dims_weights[0], dims_weights[1]);
+                fflush (console);
+                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+            }
+            
+            dims_weights = weights.get_dims();
+            fprintf(console, "[Done] (%s)\n", io_t::read_weights_from.c_str());
+            fflush (console);
+        }
 
     /* --------------------------------------------
      * Validate the dimensions of the input arrays.
@@ -254,12 +288,6 @@ int main(int argc, char *argv[]){
             fprintf(console, "(Error)\tExpected basis functions with size [%lu %lu], calling MPI_Abort()\n", sims_t::size_x_in_pixels, sims_t::size_y_in_pixels);
             fflush (console);            
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-        }
-
-        if(dims_weights[0] != dims_phase_all[0]){            
-            fprintf(console, "(Error)\tExpected weights with dimensions [%lu %lu], calling MPI_Abort()\n", dims_phase_all[0], dims_basis[0]);
-            fflush (console);            
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);    
         }
 
      /*
