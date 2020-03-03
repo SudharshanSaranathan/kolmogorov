@@ -134,9 +134,9 @@ int main(int argc, char *argv[]){
     fprintf(console, "[Done] (%s)\n", argv[1]);
     fflush (console); 
 
-/* -------------------------
- * Workflow for master rank.
- * -------------------------
+/* ------------------
+ * MPI root workflow.
+ * ------------------
  */
 
     if(mpi_process_rank == 0){
@@ -157,6 +157,15 @@ int main(int argc, char *argv[]){
         float percent_assigned  = 0;
         float percent_completed = 0;
 
+
+    /* -------------------------------------
+     * !(2) Read fried parameters from file.
+     * -------------------------------------
+     */
+
+        fprintf(console, "(Info)\tReading file:\t\t");
+        fflush (console);
+
     /*
      * Array declaration:
      * ----------------------------------------
@@ -166,16 +175,8 @@ int main(int argc, char *argv[]){
      */
  
         Array<precision> fried;
-
-    /* -------------------------------------
-     * !(2) Read fried parameters from file.
-     * -------------------------------------
-     */
-
-        fprintf(console, "(Info)\tReading file:\t\t");
-        fflush (console);
-        
         rd_status = fried.rd_fits(io_t::read_fried_from.c_str());
+
         if(rd_status != EXIT_SUCCESS){
             fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_fried_from.c_str());
             fflush (console);
@@ -543,18 +544,10 @@ int main(int argc, char *argv[]){
      * --------------------------------------------
      * fried            precision   Fried parameter received from root.
      * piston           precision   Piston of the cropped phase-screen.
-     * crop_center_x    sizt        Center of the cropped phase-screen, in x.
-     * crop_center_y    sizt        Center of the cropped phase-screen, in y.
-     * sims_center_x    sizt        Center of the simulated phase-screen, in x.
-     * sims_center_y    sizt        Center of the simulated phase-screen, in y.
      */
 
         precision fried  = 0.0; 
         precision piston = 0.0;
-        sizt crop_center_x = sizt(dims_phase_cropped[0] / 2.0);
-        sizt crop_center_y = sizt(dims_phase_cropped[1] / 2.0);
-        sizt sims_center_x = sizt(dims_phase_complex[0] / 2.0);
-        sizt sims_center_y = sizt(dims_phase_complex[1] / 2.0);
 
     /* --------------------------------
      * Get fried parameter from master.
