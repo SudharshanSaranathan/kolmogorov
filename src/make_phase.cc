@@ -8,6 +8,7 @@
 
 #include <ctime>
 #include <cmath>
+#include <chrono>
 #include <cstdlib>
 #include <unistd.h>
 #include <iostream>
@@ -53,6 +54,9 @@
  * Each comment block has a title that explains the succeeding code. 
  * Titles starting with !, followed by a number n indicate a block handling step n.
  */
+
+typedef std::chrono::high_resolution_clock Time;
+typedef std::chrono::duration<float>       Period;
 
 int main(int argc, char *argv[]){
 
@@ -271,6 +275,7 @@ int main(int argc, char *argv[]){
       * --------------------------------------------------------
       */
 
+        Time::time_point time_start = Time::now();
         for(int pid = 1; pid <= std::min(sizt(mpi_process_size) - 1, fried.get_size()); pid++){
 
         /* ------------------------------------
@@ -373,6 +378,9 @@ int main(int argc, char *argv[]){
             }
         }
 
+        Period duration = Time::now() - time_start;
+        fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed] (%0.2lf)", percent_assigned, percent_completed, duration.count()); 
+    
     /* ---------------------------
      * Shutdown all MPI processes.
      * ---------------------------
@@ -572,70 +580,30 @@ int main(int argc, char *argv[]){
                 make_phase_screen_fourier_shifted(phase_fourier, fried, sims_t::size_in_meters * aperture_t::sampling_factor);
                 fftw_execute_dft(reverse, reinterpret_cast<fftw_complex*>(phase_fourier[0]), reinterpret_cast<fftw_complex*>(phase_complex[0]));
 
-            /* ----------------------------------------------------
-             * Crop the simulation to the requested size in pixels.
-             * ----------------------------------------------------
+            /* ------------------------------------------
+             * Crop the simulation to the requested size.
+             * ------------------------------------------
              */
 
-                phase_cropped  = phase_complex.crop(dims_crop_begin, dims_phase_cropped).cast_to_type<precision>();
+                phase_cropped  = phase_complex.get_crop(dims_crop_begin, dims_phase_cropped).cast_to_type<precision>();
 
 #ifdef _USE_APERTURE_
 	
-            /* -----------------------------------------------------------
-             * If aperture available, multiply phase-screen with aperture.
-             * -----------------------------------------------------------
+            /* ------------------------------------------------------------------------------------
+             * If aperture is available, clip the phase-screen with the aperture and remove piston.
+             * ------------------------------------------------------------------------------------
              */
 
                 phase_cropped *= aperture;
-                phase_cropped -= aperture * (phase_cropped.get_total() / aperture_total);
-
-                for(sizt xs = 0; xs < sims_t::size_x_in_pixels; xs++){
-                    for(sizt ys = 0; ys < sims_t::size_y_in_pixels; ys++){
-
-                        phase_all(ind, xs, ys) = aperture(xs, ys) * static_cast<precision>(phase_complex(xs + sims_center_x - crop_center_x, ys + sims_center_y - crop_center_y).real());
-                        piston += phase_all(ind, xs, ys) / aperture_total;
-                    
-                    }
-                }
-	    
-            /* ------------------------------------------------------
-             * Subtract phase-screen mean over aperture a.k.a piston.
-             * ------------------------------------------------------
-             */
-                
-                for(sizt xs = 0; xs < sims_t::size_x_in_pixels; xs++){
-                    for(sizt ys = 0; ys < sims_t::size_y_in_pixels; ys++){
-                        phase_all(ind, xs, ys) -= aperture(xs, ys) * piston;
-                    }
-                }
+                piston = phase_cropped.get_total() / aperture.get_total();
+                phase_cropped -= aperture * piston;
 
 #else
-	
-            /* -------------------------------------------------------------
-             * If aperture not available, clip simulation to requested size.
-             * -------------------------------------------------------------
-             */
-
-                for(sizt xs = 0; xs < sims_t::size_x_in_pixels; xs++){
-                    for(sizt ys = 0; ys < sims_t::size_y_in_pixels; ys++){
-                        phase_all(ind, xs, ys) = static_cast<precision>(phase_complex(xs + (sims_center_x - crop_center_x), ys + (sims_center_y - crop_center_y)).real());
-                        piston += phase_all(ind, xs, ys);
-                    }
-                }
-
-            /* ----------------------------------------
-             * Subtract phase-screen mean a.k.a piston.
-             * ----------------------------------------
-             */
-
-                piston /= (sims_t::size_x_in_pixels * sims_t::size_y_in_pixels);
-                for(sizt xs = 0; xs < sims_t::size_x_in_pixels; xs++){
-                    for(sizt ys = 0; ys < sims_t::size_y_in_pixels; ys++){
-                        phase_all(ind, xs, ys) -= piston;
-                    }
-                }
+                piston = phase_cropped.get_total() / phase_cropped.get_size();
+                phase_cropped -= piston;
 
 #endif
+                memcpy(phase_all[ind], phase_cropped[0], phase_cropped.get_size() * sizeof(precision));
 
             }
 	    
