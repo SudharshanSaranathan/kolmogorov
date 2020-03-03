@@ -20,8 +20,10 @@
 
 sizt sizeof_vector(      sizt_vector &vector, sizt index){
 
+#ifdef _CHKBNDS_
     if(index >= vector.size())
         throw std::logic_error("In function sizeof_vector(): Index out of bounds");
+#endif
 
     sizt N = 1;
     for(sizt ind = index; ind < vector.size(); ind++){
@@ -39,8 +41,10 @@ sizt sizeof_vector(      sizt_vector &vector, sizt index){
 
 sizt sizeof_vector(const sizt_vector &vector, sizt index){
 
+#ifdef _CHKBNDS_
     if(index >= vector.size())
         throw std::logic_error("In function sizeof_vector(): Index out of bounds");
+#endif
 
     sizt N = 1;
     for(sizt ind = index; ind < vector.size(); ind++){
@@ -74,9 +78,9 @@ Array<type>:: Array(){
 template <class type>
 Array<type>::~Array(){
 
-/* ------------
- * Free memory.
- * ------------
+/* -----------------------
+ * Free the data pointers.
+ * -----------------------
  */
 
     memory<type>::deallocate(data_ptr_1D, this->owner);
@@ -89,13 +93,19 @@ Array<type>::~Array(){
  * ------------------------
  */
 
+    this->root_ptr    = nullptr;
+    this->data_ptr_1D = nullptr;
+    this->data_ptr_2D = nullptr;
+    this->data_ptr_3D = nullptr;
+    this->data_ptr_4D = nullptr;
+    
     this->dims.clear();
     this->owner = false;
     this->stat  = false;
     this->size  = 0;
 }
 
-/* ------------------------
+/* ----------------------------
  * Function header: lib_array.h
  * Function name:   Array<type>::Array(const sizt_vector&, type*)
  * --------------------------------------------------------------
@@ -106,17 +116,28 @@ Array<type>:: Array(const sizt_vector &dimensions, type* src){
 
 /* ------------------------------
  * Copy <dimensions> into <dims>.
- * Calculate the number of elements in the array, store in <size>.
- * ---------------------------------------------------------------
+ * ------------------------------
  */
 
     this->dims  = dimensions;
+    
+/* ---------------------------------------------------------
+ * Initialize <size> to the number of elements in the array.
+ * ---------------------------------------------------------
+ */
+    
     this->size  = sizeof_vector(this->dims);
+
+/* --------------------------------------------------------------------
+ * If <src> is not a nullptr, the current instance acts like a pointer.
+ * -------------------------------------------------------------------------
+ */
+
     this->owner = src == nullptr ? true : false;
 
-/* ----------------------------------------------
- * Allocate memory depending on <dims> and <src>.
- * ----------------------------------------------
+/* ---------------------------------------------------------
+ * Initialize <data_ptr_...> according to <dims>, and <src>.
+ * ---------------------------------------------------------
  */
 
     switch(this->dims.size()){
@@ -170,9 +191,9 @@ Array<type>:: Array(const Array<type> &src){
     this->dims  = src.dims;
     this->size  = src.size;
 
-/* ----------------------------------------
- * Allocate new memory depending on <dims>.
- * ----------------------------------------
+/* ----------------------------------------------
+ * Initialize <data_ptr_...> according to <dims>.
+ * ----------------------------------------------
  */
 
     switch(this->dims.size()){
@@ -232,7 +253,7 @@ bool         Array<type>:: get_stat(){
 /* ----------------------------
  * Function header: lib_array.h
  * Function name:   Array<type>::get_size()
- * ----------------------------------------------
+ * ----------------------------------------
  */
 
 template <class type>
@@ -243,25 +264,44 @@ sizt         Array<type>:: get_size(){
 /* ----------------------------
  * Function header: lib_array.h
  * Function name:   Array<type>::get_dims(sizt)
- * ----------------------------------------------
+ * --------------------------------------------
  */
 
 template <class type>
 sizt         Array<type>:: get_dims(sizt xs){
+
+#ifdef _CHKBNDS_
     if(xs >= dims.size())
-        return 0;
-    else
-        return(dims[xs]);   
+        throw std::runtime_error("In function Array<type>::get_dims(), index out of bounds");
+#endif
+
+        return(dims[xs]);
 }
 
-/* ------------------------
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_stat()
+ * ----------------------------------------
+ */
+
+template <class type>
+sizt_vector  Array<type>:: get_dims(){
+    return(this->dims);
+}
+
+/* ----------------------------
  * Function header: lib_array.h
  * Function name:   Array<type>::get_total()
- * ----------------------------------------------
+ * -----------------------------------------
  */
 
 template <class type>
 type	     Array<type>:: get_total(){
+
+#ifdef _CHKSTAT_
+    if(this->stat == false)
+        throw std::runtime_error("In function Array<type>::get_total(), cannot compute total of empty array");
+#endif
 
     type total = static_cast<type>(0);
     for(sizt ind = 0; ind < this->size; ind++){
@@ -270,38 +310,25 @@ type	     Array<type>:: get_total(){
     return(total);
 }
 
-/* ------------------------
- * Function header: lib_array.h
- * Function name:   Array<type>::get_stat()
- * ----------------------------------------------
- */
-
-template <class type>
-sizt_vector  Array<type>:: get_dims(){
-    return(this->dims);
-}
-
-/* ------------------------
+/* ----------------------------
  * Function header: lib_array.h
  * Function name:   Array<type>::operator[](const sizt)
- * ----------------------------------------------
+ * ----------------------------------------------------
  */
 
 template <class type>
 type* Array<type>::operator[](const sizt xs){
 
-/* ----------------------------------------
- * Return nullptr if array isn't allocated.
- * Return nullptr if index out of bounds.
- * --------------------------------------
- */
-
+#ifdef _CHKSTAT_
     if(this->stat == false)
         return(nullptr);
+#endif
 
+#ifdef _CHKBNDS_
     if(xs >= this->dims[0])
        return(nullptr);
-    
+#endif
+
 /* -------------------------------------
  * Return pointer to the slice at index.
  * -------------------------------------
@@ -316,7 +343,7 @@ type* Array<type>::operator[](const sizt xs){
     }
 }
 
-/* ------------------------
+/* ----------------------------
  * Function header: lib_array.h
  * Function name:   Array<type>::operator()(const sizt)
  * ----------------------------------------------------
@@ -325,70 +352,123 @@ type* Array<type>::operator[](const sizt xs){
 template <class type>
 type& Array<type>::operator()(const sizt xs){
     
-/* ---------------------
- * Check if array is 1D.
- * Check if index if out of bounds.
- * --------------------------------
- */
+#ifdef _CHKSTAT_
+    if(this->stat == false)
+        throw std::runtime_error("In Array<type>::operator()(), cannot perform operation on empty array");
+#endif
 
+#ifdef _CHKDIMS_
     if(this->dims.size() != 1)
-        throw std::runtime_error("In Array<type>::operator(), expected " + std::to_string(this->dims.size()) + " argument(s)");
-    
+        throw std::runtime_error("In Array<type>::operator()(), expected " + std::to_string(this->dims.size()) + " argument(s)");
+#endif
+
+#ifdef _CHKBNDS_
     if(xs >= this->dims[0])
-        throw std::range_error("array out of bounds");
+        throw std::range_error("In function Array<type>::operator()(), index out of bounds");
+#endif
 
     return(this->data_ptr_1D[xs]);
 }
 
-/* ------------------------
+/* ----------------------------
  * Function header: lib_array.h
- * Function name:   Array<type>::operator()(const sizt)
- * ----------------------------------------------------
+ * Function name:   Array<type>::operator()(const sizt, const sizt)
+ * ----------------------------------------------------------------
  */
 
 template <class type>
 type& Array<type>::operator()(const sizt xs, const sizt ys){
 
-/* -------------
- */
+#ifdef _CHKSTAT_
+    if(this->stat == false)
+        throw std::runtime_error("In Array<type>::operator()(), cannot perform operation on empty array");
+#endif
 
+#ifdef _CHKDIMS_
     if(this->dims.size() != 2)
-        throw std::runtime_error("In Array<type>::operator(), expected " + std::to_string(this->dims.size()) + " argument(s)");
+        throw std::runtime_error("In Array<type>::operator()(), expected " + std::to_string(this->dims.size()) + " argument(s)");
+#endif
 
+#ifdef _CHKBNDS_
     if(xs >= this->dims[0] || ys >= this->dims[1])
-        throw std::range_error("array out of bounds");
+        throw std::range_error("In function Array<type>::operator()(), index out of bounds");
+#endif
 
     return(this->data_ptr_2D[xs][ys]);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator()(const sizt, const sizt, const sizt)
+ * ----------------------------------------------------------------------------
+ */
+
 template <class type>
 type& Array<type>::operator()(const sizt xs, const sizt ys, const sizt zs){
+    
+#ifdef _CHKSTAT_
+    if(this->stat == false)
+        throw std::runtime_error("In Array<type>::operator()(), cannot perform operation on empty array");
+#endif
+    
+#ifdef _CHKDIMS_
     if(this->dims.size() != 3)
-        throw std::runtime_error("In Array<type>::operator(), expected " + std::to_string(this->dims.size()) + " argument(s)");
+        throw std::runtime_error("In Array<type>::operator()(), expected " + std::to_string(this->dims.size()) + " argument(s)");
+#endif
 
+#ifdef _CHKBNDS_
     if(xs >= this->dims[0] || ys >= this->dims[1] || zs >= this->dims[2])
-        throw std::range_error("array out of bounds");
+        throw std::range_error("In function Array<type>::operator()(), index out of bounds");
+#endif
 
     return(this->data_ptr_3D[xs][ys][zs]);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator()(const sizt, const sizt, const sizt, const sizt)
+ * ----------------------------------------------------------------------------------------
+ */
+
 template <class type>
 type& Array<type>::operator()(const sizt xs, const sizt ys, const sizt zs, const sizt ws){
-    if(this->dims.size() != 4)
-        throw std::runtime_error("In Array<type>::operator(), expected " + std::to_string(this->dims.size()) + " argument(s)");
 
+#ifdef _CHKSTAT_
+    if(this->stat == false)
+        throw std::runtime_error("In Array<type>::operator()(), cannot perform operation on empty array");
+#endif
+
+#ifdef _CHKDIMS_
+    if(this->dims.size() != 4)
+        throw std::runtime_error("In Array<type>::operator()(), expected " + std::to_string(this->dims.size()) + " argument(s)");
+#endif
+
+#ifdef _CHKBNDS_
     if(xs >= this->dims[0] || ys >= this->dims[1] || zs >= this->dims[2] || ws >this->dims[3])
-        throw std::range_error("array out of bounds");
+        throw std::range_error("In function Array<type>::operator()(), index out of bounds");
+#endif
 
     return(this->data_ptr_4D[xs][ys][zs][ws]);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::swap(Array<type>&, Array<type>&)
+ * --------------------------------------------------------------
+ */
+
 template <typename type>
 void swap(Array<type>& src_a, Array<type>& src_b){
 
-    std::swap(src_a.stat, src_b.stat);
-    std::swap(src_a.size, src_b.size);
-    std::swap(src_a.dims, src_b.dims);
+/* -----------------------
+ * Swap all class methods.
+ * -----------------------
+ */
+
+    std::swap(src_a.stat,  src_b.stat);
+    std::swap(src_a.size,  src_b.size);
+    std::swap(src_a.dims,  src_b.dims);
+    std::swap(src_a.owner, src_b.owner);
 
     std::swap(src_a.root_ptr   , src_b.root_ptr);
     std::swap(src_a.data_ptr_1D, src_b.data_ptr_1D);
@@ -397,21 +477,42 @@ void swap(Array<type>& src_a, Array<type>& src_b){
     std::swap(src_a.data_ptr_4D, src_b.data_ptr_4D);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator= (Array<type>)
+ * -----------------------------------------------------
+ */
+
 template <class type>
 Array<type>& Array<type>::operator= (Array<type> src){
+
+/* ----------------
+ * Copy-swap idiom.
+ * ----------------
+ */
 
     swap(*this, src);
     return(*this);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator+ (const Array<type>)
+ * -----------------------------------------------------------
+ */
+
 template <class type>
 Array<type>  Array<type>::operator+ (const Array<type> &src){
 
+#ifdef _CHKSTAT_
     if(!this->stat || !src.stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator+(), cannot perform operation on empty array");
+#endif
 
+#ifdef _CHKDIMS_
     if(this->dims != src.dims)
-        throw std::logic_error("expected matching dimensions");
+        throw std::logic_error("In function Array<type>::operator+(), expected argument with equal dimensions");
+#endif
 
     Array<type> sum(src.dims);
     for(sizt ind = 0; ind < src.size; ind++){
@@ -421,14 +522,24 @@ Array<type>  Array<type>::operator+ (const Array<type> &src){
     return(sum);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator- (const Array<type>)
+ * -----------------------------------------------------------
+ */
+
 template <class type>
 Array<type>  Array<type>::operator- (const Array<type> &src){
 
+#ifdef _CHKSTAT_
     if(!this->stat || !src.stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator-(), cannot perform operation on empty array");
+#endif
 
+#ifdef _CHKDIMS_
     if(this->dims != src.dims)
-        throw std::logic_error("expected matching dimensions");
+        throw std::logic_error("In function Array<type>::operator-(), expected argument with equal dimensions");
+#endif
 
     Array<type> diff(src.dims);
     for(sizt ind = 0; ind < src.size; ind++){
@@ -438,14 +549,24 @@ Array<type>  Array<type>::operator- (const Array<type> &src){
     return(diff);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator* (const Array<type>)
+ * -----------------------------------------------------------
+ */
+
 template <class type>
 Array<type>  Array<type>::operator* (const Array<type> &src){
 
+#ifdef _CHK_STAT
     if(!this->stat || !src.stat)
-        throw std::logic_error("In Array<type>::operator*(), expected allocated arguments");
+        throw std::logic_error("In Array<type>::operator*(), cannot perform operation on empty array");
+#endif
 
+#ifdef _CHKDIMS_
     if(this->dims != src.dims)
-        throw std::logic_error("In Array<type>::operator*(), expected matching dimensions");
+        throw std::logic_error("In Array<type>::operator*(), expected argument with equal dimensions");
+#endif
 
     Array<type> product(src.dims);
     for(sizt ind = 0; ind < src.size; ind++){
@@ -455,17 +576,32 @@ Array<type>  Array<type>::operator* (const Array<type> &src){
     return(product);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator/ (const Array<type>)
+ * -----------------------------------------------------------
+ */
+
 template <class type>
 Array<type>  Array<type>::operator/ (const Array<type> &src){
 
+#ifdef _CHKSTAT_
     if(!this->stat || !src.stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator/(), cannot perform operation on empty array");
+#endif
 
+#ifdef _CHKDIMS_
     if(this->dims != src.dims)
-        throw std::logic_error("expected matching dimensions");
+        throw std::logic_error("In function Array<type>::operator/(), expected argument with equal dimensions");
+#endif
 
     Array<type> div(src.dims);
     type null = static_cast<type>(0);
+
+/* -----------------------------------------
+ * Handle divide-by-zero with std::infinity.
+ * -----------------------------------------
+ */
 
     for(sizt ind = 0; ind < src.size; ind++){
         div.root_ptr[ind] = src.root_ptr[ind] == null ? std::numeric_limits<type>::infinity() : this->root_ptr[ind] / src.root_ptr[ind];
@@ -473,64 +609,120 @@ Array<type>  Array<type>::operator/ (const Array<type> &src){
     return(div);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator+=(const Array<type>&)
+ * -----------------------------------------------------------
+ */
+
 template <class type>
 void         Array<type>::operator+=(const Array<type> &src){
-    
-    if(!this->stat || !src.stat)
-        throw std::logic_error("expected allocated arguments");
 
+#ifdef _CHKSTAT_    
+    if(!this->stat || !src.stat)
+        throw std::logic_error("In function Array<type>::operator+=(), cannot perform operation on empty array");
+#endif
+
+#ifdef _CHKDIMS_
     if(this->dims != src.dims)
-        throw std::logic_error("expected matching dimensions");
+        throw std::logic_error("In function Array<type>::operator+=(), expected argument with equal dimensions");
+#endif
 
     for(sizt ind = 0; ind < src.size; ind++){
         this->root_ptr[ind] += src.root_ptr[ind];
     }
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator-=(const Array<type>&)
+ * -----------------------------------------------------------
+ */
+
 template <class type>
 void         Array<type>::operator-=(const Array<type> &src){
     
+#ifdef _CHKSTAT_    
+    if(!this->stat || !src.stat)
+        throw std::logic_error("In function Array<type>::operator-=(), cannot perform operation on empty array");
+#endif
+
+#ifdef _CHKDIMS_
     if(this->dims != src.dims)
-        throw std::logic_error("expected matching dimensions");
+        throw std::logic_error("In function Array<type>::operator-=(), expected argument with equal dimensions");
+#endif
 
     for(sizt ind = 0; ind < src.size; ind++){
         this->root_ptr[ind] -= src.root_ptr[ind];
     }
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator*=(const Array<type>&)
+ * -----------------------------------------------------------
+ */
+
 template <class type>
 void         Array<type>::operator*=(const Array<type> &src){
     
+#ifdef _CHKSTAT_    
     if(!this->stat || !src.stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator*=(), cannot perform operation on empty array");
+#endif
 
+#ifdef _CHKDIMS_
     if(this->dims != src.dims)
-        throw std::logic_error("expected matching dimensions");
+        throw std::logic_error("In function Array<type>::operator*=(), expected argument with equal dimensions");
+#endif
 
     for(sizt ind = 0; ind < src.size; ind++){
         this->root_ptr[ind] *= src.root_ptr[ind];
     }
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator/=(const Array<type>&)
+ * -----------------------------------------------------------
+ */
+
 template <class type>
 void         Array<type>::operator/=(const Array<type> &src){
     
+#ifdef _CHKSTAT_    
     if(!this->stat || !src.stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator/=(), cannot perform operation on empty array");
+#endif
 
+#ifdef _CHKDIMS_
     if(this->dims != src.dims)
-        throw std::logic_error("expected matching dimensions");
+        throw std::logic_error("In function Array<type>::operator/=(), expected argument with equal dimensions");
+#endif
+
+/* -------------------------------------------
+ * Handle divide-by-zero with std::infinity().
+ * -------------------------------------------
+ */
 
     for(sizt ind = 0; ind < src.size; ind++)
         this->root_ptr[ind] /= src.root_ptr[ind] == static_cast<type>(0) ? std::numeric_limits<type>::infinity() : src.root_ptr[ind];
     
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator+(type)
+ * ---------------------------------------------
+ */
+
 template <class type>
 Array<type>  Array<type>::operator +(type value){
 
+#ifdef _CHKSTAT_    
     if(!this->stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator+(), cannot perform operation on empty array");
+#endif
 
     Array<type> sum(this->dims);
     for(sizt ind = 0; ind < this->size; ind++){
@@ -539,11 +731,19 @@ Array<type>  Array<type>::operator +(type value){
     return(sum);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator-(type)
+ * ---------------------------------------------
+ */
+
 template <class type>
 Array<type>  Array<type>::operator -(type value){
 
+#ifdef _CHKSTAT_
     if(!this->stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator-(), cannot perform operation on empty array");
+#endif
 
     Array<type> diff(this->dims);
     for(sizt ind = 0; ind < this->size; ind++){
@@ -552,11 +752,19 @@ Array<type>  Array<type>::operator -(type value){
     return(diff);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator*(type)
+ * ---------------------------------------------
+ */
+
 template <class type>
 Array<type>  Array<type>::operator *(type value){
 
+#ifdef _CHKSTAT_
     if(!this->stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator*(), cannot perform operation on empty array");
+#endif
 
     Array<type> product(this->dims);
     for(sizt ind = 0; ind < this->size; ind++){
@@ -565,11 +773,19 @@ Array<type>  Array<type>::operator *(type value){
     return(product);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator/(type)
+ * ---------------------------------------------
+ */
+
 template <class type>
 Array<type>  Array<type>::operator /(type value){
 
+#ifdef _CHKSTAT_
     if(!this->stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator/(), cannot perform operation on empty array");
+#endif
 
     Array<type> div(this->dims);
     type null = static_cast<type>(0);
@@ -587,44 +803,76 @@ Array<type>  Array<type>::operator /(type value){
     return(div);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator+=(type)
+ * ----------------------------------------------
+ */
+
 template <class type>
 void         Array<type>::operator+=(type value){
 
+#ifdef _CHKSTAT_
     if(!this->stat)
         throw std::logic_error("In function Array<type>::operator+=(), cannot perform operation on empty array");
+#endif
 
     for(sizt ind = 0; ind < this->size; ind++){
         this->root_ptr[ind] += value;
     }
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator-=(type)
+ * ----------------------------------------------
+ */
+
 template <class type>
 void         Array<type>::operator-=(type value){
 
+#ifdef _CHKSTAT_
     if(!this->stat)
         throw std::logic_error("In function Array<type>::operator-=(), cannot perform operation on empty array");
+#endif
 
     for(sizt ind = 0; ind < this->size; ind++){
         this->root_ptr[ind] -= value;
     }
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator*=(type)
+ * ---------------------------------------------
+ */
+
 template <class type>
 void         Array<type>::operator*=(type value){
 
+#ifdef _CHKSTAT_
     if(!this->stat)
         throw std::logic_error("In function Array<type>::operator*=(), cannot perform operation on empty array");
+#endif
 
     for(sizt ind = 0; ind < this->size; ind++){
         this->root_ptr[ind] *= value;
     }
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::operator/=(type)
+ * ----------------------------------------------
+ */
+
 template <class type>
 void         Array<type>::operator/=(type value){
 
+#ifdef _CHKSTAT_
     if(!this->stat)
-        throw std::logic_error("expected allocated arguments");
+        throw std::logic_error("In function Array<type>::operator/=(), cannot perform operation on empty array");
+#endif
 
     type null = static_cast<type>(0);
     if(value == null){
@@ -638,17 +886,26 @@ void         Array<type>::operator/=(type value){
     }
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_slice(sizt, bool)
+ * ---------------------------------------------------
+ */
+
 template <class type>
-Array<type>  Array<type>::slice(sizt index, bool copy){
+Array<type>  Array<type>::get_slice(sizt index, bool copy){
 
-    if(this->stat == false)
-        throw std::runtime_error("In function Array<type>::slice(), cannot slice empty array");
+#ifdef _CHKSTAT_
+    if(!this->stat)
+        throw std::runtime_error("In function Array<type>::get_slice(), cannot perform operation on empty array");
+#endif
 
+#ifdef _CHKDIMS_
     if(index >= dims[0])
-        throw std::range_error("In function Array<type>::slice(), array out of bounds");
-
+        throw std::range_error("In function Array<type>::get_slice(), index out of bounds");
     if(this->dims.size() == 1)
-        throw std::range_error("In function Array<type>::slice(), cannot slice 1D array");
+        throw std::range_error("In function Array<type>::get_slice(), cannot slice 1D array");
+#endif
 
     type *slice_ptr = nullptr;
     switch(this->dims.size()){
@@ -658,7 +915,7 @@ Array<type>  Array<type>::slice(sizt index, bool copy){
                 break;
         case 4: slice_ptr = this->data_ptr_4D[index][0][0];
                 break;
-        default:throw std::runtime_error("In function Array<type>::slice(), expected to slice a 2D/3D/4D array");
+        default:throw std::runtime_error("In function Array<type>::get_slice(), expected to slice a 2D/3D/4D array");
                 break;
     }
 
@@ -668,11 +925,19 @@ Array<type>  Array<type>::slice(sizt index, bool copy){
     return(data_slice);
 }
 
-template <class type>
-Array<type>  Array<type>::abs(){
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_abs()
+ * ---------------------------------------
+ */
 
+template <class type>
+Array<type>  Array<type>::get_abs(){
+
+#ifdef _CHKSTAT_
     if(this->stat == false)
-        throw std::runtime_error("In function Array<type>::abs(), cannot find absolute value of empty array");
+        throw std::runtime_error("In function Array<type>::get_abs(), cannot find absolute value of empty array");
+#endif
 
     Array<type> absolute(this->dims);
     for(sizt ind = 0; ind < this->size; ind++)
@@ -682,20 +947,51 @@ Array<type>  Array<type>::abs(){
 
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_norm()
+ * ----------------------------------------
+ */
+
 template <class type>
-Array<type>  Array<type>::pad(sizt_vector dims_padded, sizt_vector dims_start, type pad_value){
+Array<type>  Array<type>::get_norm(){
 
+#ifdef _CHKSTAT_
     if(this->stat == false)
-        throw std::runtime_error("In function Array<type>::pad(), cannot pad empty array");
+        throw std::runtime_error("In function Array<type>::get_norm(), cannot find absolute value of empty array");
+#endif
 
+    Array<type> norm(this->dims);
+    for(sizt ind = 0; ind < this->size; ind++)
+        norm.root_ptr[ind] = std::abs(this->root_ptr[ind]) * std::abs(this->root_ptr[ind]);
+
+    return(norm);
+
+}
+
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_pad(sizt_vector, sizt_vector, type)
+ * ---------------------------------------------------------------------
+ */
+
+template <class type>
+Array<type>  Array<type>::get_pad(sizt_vector dims_padded, sizt_vector dims_start, type pad_value){
+
+#ifdef _CHKSTAT_
+    if(this->stat == false)
+        throw std::runtime_error("In function Array<type>::get_pad(), cannot pad empty array");
+#endif
+
+#ifdef _CHKDIMS_
     if(this->dims.size() != dims_start.size() || this->dims.size() != dims_padded.size())
-        throw std::runtime_error("In function Array<type>::pad(), expected " + std::to_string(this->dims.size()) + "D vector(s) as argument(s)");
-
+        throw std::runtime_error("In function Array<type>::get_pad(), expected " + std::to_string(this->dims.size()) + "D vector(s) as argument(s)");
     for(sizt ind = 0; ind < this->dims.size(); ind++){
         if(this->dims[ind] + dims_start[ind] > dims_padded[ind])
-            throw std::runtime_error("In function Array<type>::pad(), dimensions of the padded array are too small");
+            throw std::runtime_error("In function Array<type>::get_pad(), dimensions of the padded array are too small");
     }
-
+#endif
+    
     Array<type> array_padded(dims_padded);
     switch(this->dims.size()){
 
@@ -736,21 +1032,29 @@ Array<type>  Array<type>::pad(sizt_vector dims_padded, sizt_vector dims_start, t
 
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_roll(sizt_vector, bool)
+ * ---------------------------------------------------------
+ */
+
 template <class type>
-Array<type>  Array<type>::roll(sizt_vector shift, bool clockwise){
+Array<type>  Array<type>::get_roll(sizt_vector shift, bool clockwise){
 
+#ifdef _CHKSTAT_
     if(this->stat == false)
-        throw std::runtime_error("In function Array<type>::roll(), cannot find absolute value of empty array");
+        throw std::runtime_error("In function Array<type>::get_roll(), cannot find absolute value of empty array");
+#endif
 
+#ifdef _CHKDIMS_
     if(this->dims.size() != shift.size())
-        throw std::runtime_error("In function Array<type>::roll(), empty argument");
-
+        throw std::runtime_error("In function Array<type>::get_roll(), empty argument");
+#endif
+    
     Array<type> array_rolled(this->dims);
-
     if(!clockwise){
-        for(sizt ind = 0; ind < this->dims.size(); ind++){
+        for(sizt ind = 0; ind < this->dims.size(); ind++)
             shift[ind] += (this->dims[ind] % 2);
-        }
     }
 
     switch(shift.size()){
@@ -797,31 +1101,46 @@ Array<type>  Array<type>::roll(sizt_vector shift, bool clockwise){
     return(array_rolled);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::get_crop(sizt_vector, sizt_vector, bool)
+ * ----------------------------------------------------------------------
+ */
+
 template <typename type>
-Array<type>  Array<type>::crop(sizt_vector dims_start, sizt_vector dims_type, bool vector_type){
+Array<type>  Array<type>::get_crop(sizt_vector dims_start, sizt_vector dims_type, bool vector_type){
 
     sizt_vector dims_end(this->dims.size());
     sizt_vector dims_sub(this->dims.size());
 
-    if(this->dims.size() != dims_start.size() || this->dims.size() != dims_type.size())
-        throw std::runtime_error("In function Array<type>::crop(), expected " + std::to_string(this->dims.size()) + "D vector(s)");
+#ifdef _CHKSTAT_
+    if(!this->stat)
+        throw std::runtime_error("In function Array<type>::get_crop(), cannot perform operation on empty array");
+#endif
 
+#ifdef _CHKDIMS_
+    if(this->dims.size() != dims_start.size() || this->dims.size() != dims_type.size())
+        throw std::runtime_error("In function Array<type>::get_crop(), expected " + std::to_string(this->dims.size()) + "D vector(s)");
+#endif
+
+#ifdef _CHKBNDS_
     if(vector_type){
         for(sizt ind = 0; ind < this->dims.size(); ind++){ 
             dims_sub[ind] = dims_type[ind];
             dims_end[ind] = dims_type[ind] + dims_start[ind];
             if(dims_end[ind] >= this->dims[ind])
-                throw std::range_error("In function Array<type>::crop(), array out of bounds\n");
+                throw std::range_error("In function Array<type>::get_crop(), array out of bounds\n");
         }
     }else{
         for(sizt ind = 0; ind < this->dims.size(); ind++){
             dims_end[ind] = dims_type[ind];
             if(dims_start[ind] >= dims_end[ind])
-                throw std::runtime_error("In function Array<type>::crop(), expected dims_start[" + std::to_string(ind) + "] <= dims_end[" + std::to_string(ind) + "]");
+                throw std::runtime_error("In function Array<type>::get_crop(), expected dims_start[" + std::to_string(ind) + "] <= dims_end[" + std::to_string(ind) + "]");
             else
                 dims_sub[ind] = dims_end[ind] - dims_start[ind];
         }
     }
+#endif
 
     Array<type> array_cropped(dims_sub);
     switch(this->dims.size()){
@@ -862,6 +1181,12 @@ Array<type>  Array<type>::crop(sizt_vector dims_start, sizt_vector dims_type, bo
     return(array_cropped);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::rd_bin(const char*)
+ * -------------------------------------------------
+ */
+
 template <class type>
 int          Array<type>::rd_bin(const char *filename){
 
@@ -880,6 +1205,12 @@ int          Array<type>::rd_bin(const char *filename){
     return(EXIT_SUCCESS);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::wr_bin(const char*, bool)
+ * -------------------------------------------------------
+ */
+
 template <class type>
 int          Array<type>::wr_bin(const char *filename, bool clobber){
 
@@ -893,36 +1224,43 @@ int          Array<type>::wr_bin(const char *filename, bool clobber){
     return(EXIT_SUCCESS);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::rd_fits/(const char*)
+ * ---------------------------------------------
+ */
+
 template <class type>
 int          Array<type>::rd_fits(const char *filename){
 
+/* ------------------------------------------------------------------------
+ * Determine the datatype and bitpix corresponding to the current instance.
+ * ------------------------------------------------------------------------
+ */
+
     int this_bitpix   = 0;
     int this_datatype = 0;
-    if(std::is_same<type, float>::value){
 
+    if(std::is_same<type, float>::value){
         this_bitpix   = -32;
         this_datatype = TFLOAT;
-
     }else if(std::is_same<type, double>::value){
-
         this_bitpix   = -64;
         this_datatype = TDOUBLE;
-
     }else if(std::is_same<type, std::complex<float>>::value){
-
         this_bitpix   = -32;
         this_datatype = TCOMPLEX;
-
     }else if(std::is_same<type, std::complex<double>>::value){
-
         this_bitpix   = -64;
         this_datatype = TDBLCOMPLEX;
-
     }else{
-
         return(EXIT_FAILURE);
-
     }
+
+/* ---------------------------
+ * Create temporary variables.
+ * ---------------------------
+ */
 
     fitsfile *file = nullptr;
     sizt count = 1;
@@ -937,19 +1275,40 @@ int          Array<type>::rd_fits(const char *filename){
     if(status != 0)
         return(status);
  
+/* ---------------------------
+ * Probe FITS file dimensions.
+ * ---------------------------
+ */
+
     fits_get_img_dim (file, &n_axis, &status); dims.resize(n_axis);
     fits_get_img_size(file,  n_axis, (long int*)dims.data(), &status);
     fits_get_img_type(file, &bitpix, &status);
     if(status != 0)
         return(status);
 
+/* ---------------------------------------------------------------------
+ * In CFITSIO convention, dimensions of the array are stored in reverse.
+ * ---------------------------------------------------------------------
+ */
+
     std::reverse(dims.begin(), dims.end());
+
+/* --------------------------------------
+ * Create <data> to store the FITS array.
+ * --------------------------------------
+ */
+
     Array<type> data(dims);
     if(data.get_stat() == false)
         return(EXIT_FAILURE);
 
     count = sizeof_vector(dims);
     fpix.resize(n_axis); std::fill(fpix.begin(), fpix.end(), 1);
+
+/* ---------------------------------------------------------------------
+ * Read data from file. <this_datatype> determined earlier is used here.
+ * ---------------------------------------------------------------------
+ */
 
     fits_read_pix(file, this_datatype, (long int*)fpix.data(), count, nullptr, data[0], nullptr, &status);
     if(status != 0)
@@ -961,36 +1320,37 @@ int          Array<type>::rd_fits(const char *filename){
     return(EXIT_SUCCESS);
 }
 
+/* ----------------------------
+ * Function header: lib_array.h
+ * Function name:   Array<type>::wr_fits/(const char*, bool)
+ * ---------------------------------------------------------
+ */
+
 template <class type>
 int 	     Array<type>::wr_fits(const char *name, bool clobber){
+
+/* ------------------------------------------------------------------------
+ * Determine the datatype and bitpix corresponding to the current instance.
+ * ------------------------------------------------------------------------
+ */
 
     int this_bitpix   = 0;
     int this_datatype = 0;
 
     if(std::is_same<type, float>::value){
-
         this_bitpix   = -32;
         this_datatype = TFLOAT;
-
     }else if(std::is_same<type, double>::value){
-
         this_bitpix   = -64;
         this_datatype = TDOUBLE;
-
     }else if(std::is_same<type, std::complex<float>>::value){
-
         this_bitpix   = -32;
         this_datatype = TCOMPLEX;
-
     }else if(std::is_same<type, std::complex<double>>::value){
-
         this_bitpix   = -64;
         this_datatype = TDBLCOMPLEX;
-
     }else{
-
         return(EXIT_FAILURE);
-
     }
 
 /*
@@ -998,7 +1358,7 @@ int 	     Array<type>::wr_fits(const char *name, bool clobber){
  * ----------------------------------------
  * Name	        Type            Description
  * ----------------------------------------
- * status	    int             Execution status of FITS routines. 
+ * status	    int             CFITSIO routines use this to set errors.
  * fileptr	    fitsfile        FITS file pointer.
  * filename	    std::string     FITS file name.
  * dimensions	std::vector     Dimensions of the array, reversed.
