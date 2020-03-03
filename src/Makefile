@@ -24,7 +24,7 @@ MAKE_PHS_OBJS_ = config.o lib_array.o make_phase.o
 MAKE_RES_OBJS_ = config.o lib_array.o make_residual.o
 MAKE_PSF_OBJS_ = config.o lib_array.o make_psf.o
 MAKE_IMG_OBJS_ = config.o lib_array.o make_img.o
-MAKE_MTD_OBJS_ = config.o lib_array.o methods.o
+MAKE_MTD_OBJS_ = config.o lib_array.o make_methods.o
 
 LIB_TEST_OBJS   = ${patsubst %,${OBJDIR}/%,${LIB_TEST_OBJS_}}
 MEM_TEST_OBJS   = ${patsubst %,${OBJDIR}/%,${MEM_TEST_OBJS_}}
