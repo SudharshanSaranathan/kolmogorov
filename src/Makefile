@@ -6,9 +6,9 @@ INCDIR = ../include
 OBJDIR = ../lib
 BINDIR = ../bin
 
-IFLAGS = -I${INCDIR} -I/opt/local/cfitsio/cfitsio-3.350/include
-LFLAGS = -L/opt/local/cfitsio/cfitsio-3.350/lib
-OFLAGS = -O3 -ffast-math
+IFLAGS = -I${INCDIR} -I/usr/include
+LFLAGS = -L/usr/lib -L/usr/lib64/
+OFLAGS = -Ofast
 LIBS   = -lm -lstdc++ -lcfitsio -lfftw3 -lmpi -lm -lpthread -lrt
 
 DEPS_  = config.h lib_array.h lib_mem.h lib_phase.h
