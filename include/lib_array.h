@@ -4,6 +4,10 @@
 #define _USE_APERTURE_
 #define _USE_SINGLE_PRECISION_
 
+#define _CHKSTAT_
+#define _CHKDIMS_
+#define _CHKBNDS_
+
 #include "config.h"
 #include "fitsio.h"
 
@@ -14,18 +18,19 @@
 
 /*
  * Function declaration
- * ------------------------------------------------
- * Name                 Return type     Description 
- * ------------------------------------------------
- * sizeof_vector()      sizt            Returns the product of the sizt_vector elements,
- *                                      used for temporary arguments.
+ * ----------------------------------------------------------------
+ * Name                                 Return type     Description 
+ * ----------------------------------------------------------------
+ * sizeof_vector(const sizt_vector&)    sizt            Returns the product of the vector elements, this
+ *                                                      definition is used for vectors whose scope is
+ *                                                      temporary.
  *
- * sizeof_vector(const) sizt            Returns the product of the sizt_vector elements,
- *                                      when a reference exists.
+ * sizeof_vector(sizt_vector&)          sizt            Returns the product of the vector elements, this
+ *                                                      definition is used when a valid object exists.
  */
 
-sizt sizeof_vector(      sizt_vector&);
-sizt sizeof_vector(const sizt_vector&);
+sizt sizeof_vector(      sizt_vector&, sizt index = 0);
+sizt sizeof_vector(const sizt_vector&, sizt index = 0);
 
 /* --------------------
  * Template class Array
@@ -38,37 +43,64 @@ private:
 
 /*
  * Variable declaration (PRIVATE)
- * --------------------------------
- * Name     Type        Description
- * --------------------------------
- * dims     sizt_vector Dimensions of the array.
- * nans     bool        Does the array have NaNs?
- * stat     bool        Has memory been allocated on the heap?
- * size     sizt        Total number of elements in the array.
+ * ------------------------------------
+ * Name     Type            Description
+ * ------------------------------------
+ * dims     sizt_vector     A vector storing the dimensions of the array. The number of elements
+ *                          in <dims> indicate the rank of the array (1D, 2D, 3D or 4D), while
+ *                          each element in <dims> represents the size of the array along that
+ *                          axis. For example, a 512 x 512 array would have <dims> = {512, 512}.
+ *                      
+ * owner    bool            True:   If <root_ptr> points to memory that was allocated on the heap
+ *                                  by the current instance i.e. the memory block "belongs" to the
+ *                                  current instance. The destructor frees the access pointers as
+ *                                  well as the <root_ptr>.
+ *                                  
+ *                          False:  If <root_ptr> points to memory that was allocated on the heap
+ *                                  by a different instance i.e. the current instance is like a 
+ *                                  pointer. The destructor frees the access pointers, but not the
+ *                                  <root_ptr> so as to prevent multiple frees of the same memory.
+ *
+ * nans     bool            True:   If the array has std::nans.
+ *
+ *                          False:  If the array does not have std::nans.
+ *
+ * stat     bool            True:   If <root_ptr> is pointing to a valid memory address. Always
+ *                                  check if <stat> == true before accessing data to avoid seg-
+ *                                  faults.
+ *
+ *                          False:  If <root_ptr> = nullptr. For example, when a new instance is
+ *                                  initialized with the default constructor. 
+ *
+ * size     sizt            Number of elements in the array, obtained as the product of elements
+ *                          in <dims>.
  */
 
     sizt_vector dims;
-    bool        nans = false;
-    bool        stat = false;
-    sizt        size = 1;
+    bool owner = true;
+    bool nans  = false;
+    bool stat  = false;
+    sizt size  = 1;
 
 /*
  * Pointers declaration (PRIVATE)
  * ------------------------------------
  * Name         Type        Description
  * ------------------------------------
- * data_ptr_1D  type*       1D pointer.  
- * data_ptr_2D  type**      2D array of pointers.       
- * data_ptr_3D  type***     3D array of pointers.
- * data_ptr_4D  type****    4D array of pointers.
- * root_ptr     type*       1D pointer to a contiguous array. 
+ * data_ptr_1D  type*       Pointer for accessing elements of a 1D array using matrix syntax.
+ *                          For example, <data_ptr_1D[5]> accesses the 6th element.
  *
- * -------------------
- * Additional Comments
- * -------------------
- * The pointers data_ptr_1D, data_ptr_2D, data_ptr_3D, data_ptr_4D, only provide
- * python-like access to the underlying array elements. Actual data is stored in
- * root_ptr.
+ * data_ptr_2D  type**      Pointers for accessing elements of a 2D array using matrix syntax.
+ *                          For example, <data_ptr_2D[i][j]> accesses the element at row i, column j.
+ *                          In pointer arithmetic, <data_ptr_2D[i][j]> = <root_ptr[i*dims[1] + j]>;
+ *            
+ * data_ptr_3D  type***     Pointers for accessing elements of a 3D array using matrix syntax.
+ *                          See the description of <data_ptr_2D>.
+ *
+ * data_ptr_4D  type****    Pointers for accessing elements of a 4D array using matrix syntax.
+ *                          See the description of <data_ptr_2D>.
+ *
+ * root_ptr     type*       Pointer pointing to the contiguous block of memory that stores all data.
  */
 
     type*    data_ptr_1D = nullptr;
@@ -84,15 +116,25 @@ public:
  * ----------------------------------------------------
  * Name         Type                        Description
  * ----------------------------------------------------
- * Array()     ~Array()                     Class destructor.
- * Array()      Array()                     Class constructor, default.
- * Array()      Array(const sizt_vector&)   Class constructor, dimensions.
- * Array()      Array(const Array<type>&)   Class constructor, copy.
+ * Array()     ~Array()                     Destructor, uses <copy> to determine if <root_ptr>
+ *                                          must also be freed.
+ *
+ * Array()      Array()                     Default constructor.
+ *
+ * Array()      Array(const sizt_vector&,\  Constructor that takes <dims> as the first argument.
+ *                    type* src = nullptr)  If the second argument is nullptr, memory is allocated
+ *                                          on the heap and stored in <root_ptr>. Otherwise, <src>
+ *                                          is copied to <root_ptr>. 
+ *
+ *                                          Note: It is the user's responsibility to ensure that <src>
+ *                                                can hold as many elements as sizeof_vector(<dims>).
+ *
+ * Array()      Array(const Array<type>&)   Copy constructor. Memory is newly allocated.
  */
 
    ~Array();
     Array();
-    Array(const sizt_vector&);
+    Array(const sizt_vector&, type* src = nullptr);
     Array(const Array<type>&);
 
 public:
@@ -101,21 +143,23 @@ public:
  * Class methods declaration (PUBLIC)
  * See lib_array.cc for definitions
  *
- * ---------------------------------------------------
- * Name             Return type            Description
- * ---------------------------------------------------
- * get_stat()       bool            Returns true if instance is allocated / holds data.
- * get_sizt()       sizt            Returns total number of elements in the array.
- * get_total()      type            Returns the sum of all the elements.
- * get_dims(sizt)   sizt            Returns the dimension of the requested axis, throws exception if axis out of bounds.
- * get_dims()       sizt_vector     Returns a sizt_vector containing all dimensions.
+ * --------------------------------------------
+ * Name             Return type     Description
+ * --------------------------------------------
+ * get_owner()      bool            Returns <owner>.
+ * get_stat()       bool            Returns <stat>.
+ * get_size()       sizt            Returns <size>.
+ * get_total()      type            Returns the sum of all elements in the array.
+ * get_dims(sizt)   sizt            Returns the size of the requested axis.
+ * get_dims()       sizt_vector     Returns <dims>.
  */
 
-    bool        get_stat  ();
-    sizt        get_size  ();
-    type	    get_total ();
-    sizt        get_dims  (sizt);
-    sizt_vector get_dims  ();
+    bool        get_owner();
+    bool        get_stat ();
+    sizt        get_size ();
+    type	    get_total();
+    sizt        get_dims (sizt);
+    sizt_vector get_dims ();
 
 public:
 
@@ -125,64 +169,57 @@ public:
  * --------------------------------------------
  * Name             Return type     Description
  * --------------------------------------------
- * operator[]       type*           Returns a pointer to the requested index in the first axis.
- *                                  Mainly used during memcpy, for reading / writing slices of
- *                                  data at the specified index, throws exception if the argument
- *                                  is out of bounds.
+ * operator[]       type*           Returns a pointer to the memory location of the requested
+ *                                  index in the first axis i.e. if the array is a 512 x 512
+ *                                  image, array[100] returns a pointer to the starting of
+ *                                  the 100th row. This function is useful for reading or
+ *                                  writing slices of data at a time.
  * 
- * operator()       type&           Provides read / write access to individual array elements, 
- *                                  overloaded for 1D, 2D, 3D, and 4D arrays, throws exception 
- *                                  if indices out of bounds.
+ * operator()       type&           Provides read / write access to the elements of the array,
+ *                                  overloaded for 1D, 2D, 3D, and 4D arrays, throws exception
+ *                                  if the index is out of bounds.
  *
- * operator=()      Array<type>&    Assignment operator that copies the argument into the array,
- *                                  using the copy-swap idiom. Dimensions of the argument array
- *                                  must match, throws exception if they don't.
+ * operator=()      Array<type>&    Assignment operator for the class that used the copy-swap 
+ *                                  idiom. 
  *
- * operator+()      Array<type>     Returns a new array that is the sum of the current array,
- *                                  and the argument. If argument is an array, dimensions must
- *                                  match, throws exception if they don't. If argument is a
- *                                  single value, adds the value to all elements.
+ * operator+()      Array<type>     Adds the argument to the array elements and returns the sum.
+ *                                  If argument is an array, addition is performed element-wise
+ *                                  i.e. dimensions must be the same.
  * 
- * operator-()      Array<type>     Returns a new array that is the subtraction of the argument
- *                                  from the current array. If argument is an array, dimensions
- *                                  must match, throws exception if they don't. If argument is
- *                                  a single value, subtracts the value from all elements.
+ * operator-()      Array<type>     Subtracts the argument from the array elements and returns
+ *                                  the difference. If argument is an array, subtraction is
+ *                                  performed element-wise i.e. dimensions must be the
+ *                                  same.
  *                                  
- * operator*()      Array<type>     Returns a new array that is the product of the current array,
- *                                  and the argument. If argument is an array, dimensions must 
- *                                  match, throws exception if they don't. If argument is a value,
- *                                  multiplies the value with all elements.
+ * operator*()      Array<type>     Multiplies the array elements with the argument and returns
+ *                                  the product. If argument is an array, multiplication is 
+ *                                  performed element-wise i.e. dimensions must be the same. 
  *
- * operator/()      Array<type>     Returns a new array that is the division of the current array,
- *                                  by the argument. If argument is an array, dimensions must
- *                                  match, throws exception if they don't. If argument is a single
- *                                  value, divides all elements with the value.
+ * operator/()      Array<type>     Divides the array elements with the argument and returns the
+ *                                  quotient. If argument is an array, division is performed
+ *                                  element-wise i.e. dimensions must be the same.
  *
- *                                  Note: If zeroes are encountered during division, the corresponding
- *                                        array elements in the return array are set to NANs.
+ *                                  Note: If the divisor has zeros, the corresponding elements
+ *                                        in the return array are set to std::nans.
  * 
- * operator+=()     void            Addition operator that adds the argument to the current array.
- *                                  If argument is an array, dimensions must match, throws exception
- *                                  if they don't. If argument is a single value, adds the value to
- *                                  all elements.
+ * operator+=()     void            Adds the argument to the array elements. If argument is an 
+ *                                  array, addition is performed element-wise i.e. dimensions must
+ *                                  match. 
  *                       
- * operator-=()     void            Subtraction operator that subtracts the argument from the current
- *                                  array. If argument is an array, dimensions must match, throws 
- *                                  exception if they don't. If argument is a single value, subtracts 
- *                                  the value from all elements.
+ * operator-=()     void            Subtracts the argument from the array elements. If argument
+ *                                  is an array, subtraction is performed element-wise i.e. dimensions
+ *                                  must match. 
  *
- * operator*=()     void            Multiplication operator that multiplies the argument to the current 
- *                                  array. If argument is an array, dimensions must match, throws 
- *                                  exception if they don't. If argument is a single value, multiplies 
- *                                  the value to all elements.
+ * operator*=()     void            Multiplies the array elements with the argument. If argument
+ *                                  is an array, multiplication is performed element-wise i.e.
+ *                                  dimensions must match. 
  * 
- * operator/=()     void            Division operator that divides the current array by  the argument.
- *                                  If argument is an array, dimensions must match, throws exception
- *                                  if they don't. If argument is a single value, divides all elements
- *                                  by the value. 
+ * operator/=()     void            Divides the array elements with the argument. If argument is
+ *                                  an array, division is performed element-wise i.e. dimensions
+ *                                  must match.
  *
- *                                  Note: If zeroes are encountered during division, the corresponding
- *                                        array elements in the return array are set to NANs.
+ *                                  Note: If the divisor has zeros, the corresponding elements in 
+ *                                        the array are set to std::nans.
  *
  * -----------------------------------
  * Usage tip for overloaded operators:
@@ -202,7 +239,6 @@ public:
  */
   
     type* operator[](const sizt);
-
     type& operator()(const sizt);
     type& operator()(const sizt, const sizt);
     type& operator()(const sizt, const sizt, const sizt);
@@ -232,21 +268,23 @@ public:
 /* 
  * Class methods declaration (PUBLIC)
  * See lib_array.cc for definitions
- * ----------------------------------------
- * Name         Type            Description
- * ----------------------------------------
- * abs  ()      Array<type>     Returns the std::abs() of the array.
- * pad  ()      Array<type>     Returns the array padded with zeros.
- * roll ()      Array<type>     Returns a cyclically rolled array.
- * crop ()      Array<type>     Returns a subset of the array.
- * slice()      Array<type>     Returns a slice of the array at the specified index.
+ * --------------------------------------------
+ * Name             Type            Description
+ * --------------------------------------------
+ * get_abs  ()      Array<type>     Returns the std::abs() of the array.
+ * get_norm ()      Array<type>     Returns the std::norm() of the array.
+ * get_pad  ()      Array<type>     Returns the array padded with zeros.
+ * get_roll ()      Array<type>     Returns a cyclically rolled array.
+ * get_crop ()      Array<type>     Returns a subset of the array.
+ * get_slice()      Array<type>     Returns a slice of the array at the specified index.
  */
 
-    Array<type> abs  ();
-    Array<type> pad  (sizt_vector, sizt_vector, type pad_value = static_cast<type>(0));
-    Array<type> roll (sizt_vector, bool clockwise = true);
-    Array<type> crop (sizt_vector, sizt_vector, bool vector_type = true);
-    Array<type> slice(sizt);
+    Array<type> get_abs  ();
+    Array<type> get_norm ();
+    Array<type> get_pad  (sizt_vector, sizt_vector, type pad_value = static_cast<type>(0));
+    Array<type> get_roll (sizt_vector, bool clockwise = true);
+    Array<type> get_crop (sizt_vector, sizt_vector, bool vector_type = true);
+    Array<type> get_slice(sizt, bool copy = true);
 
 public:
 
@@ -256,12 +294,11 @@ public:
  * --------------------------------------------
  * Name             Return type     Description
  * --------------------------------------------
- * swap()           void            Friend function to swap the data of two instances.
- *                                  Required for the copy-swap idiom.
+ * swap()           void            Friend function to swap two instances. Required for the copy-swap idiom.
  *
- * rd_bin()         int             Read into array from a binary file. This is the fastest option.
+ * rd_bin()         int             Read array from a binary file, the fastest option.
  *
- * wr_bin()         int             Write the array to a binary file. This is the fastest option.
+ * wr_bin()         int             Write array to a binary file, the fastest option.
  *
  * cast_to_type()   void            Type-casting function for the class. Casts the elements
  *                                  of the array into the type of the argument, stores the type-casted

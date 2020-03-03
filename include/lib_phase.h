@@ -170,13 +170,14 @@ void make_residual_phase_screen(Array<precision>& phase, Array<precision>& basis
  * --------------------------------------------
  * Name             Type            Description
  * --------------------------------------------
- * dims_basis       sizt_vector     Dimensions of the basis functions.
- * dims_mode        sizt_vector     Dimensions of an individual mode.
- * dims_mode_cfs    sizt_vector     Dimensions of mode-amplitudes.
+ * dims_basis       sizt_vector     Dimensions of the array storing the basis functions.
+ * dims_weights     sizt_vector     Dimensions of the array storing the basis weights.
+ * dims_mode        sizt_vector     Dimensions of the array storing a single basis mode.
+ * dims_mode_cfs    sizt_vector     Dimensions of the array storing the mode amplitudes.
  */
 
+    sizt_vector dims_basis = basis.get_dims();
     sizt_vector dims_weights = weights.get_dims();
-    sizt_vector dims_basis   = basis.get_dims();
     sizt_vector dims_mode{dims_basis[1], dims_basis[2]};
     sizt_vector dims_mode_cfs{dims_weights[0]};
 
@@ -192,34 +193,30 @@ void make_residual_phase_screen(Array<precision>& phase, Array<precision>& basis
     Array<precision> mode(dims_mode);
     Array<precision> mode_cfs(dims_mode_cfs);
 
-/* ----------------
- * Loop over modes.
- * ----------------
+/* ------------------------------------------------
+ * Determine mode limit, and loop over basis modes.
+ * ------------------------------------------------
  */
-    sizt mode_limit = dims_weights[0] < dims_basis[0] ? dims_weights[0] : dims_basis[0];
-    
+    sizt      mode_limit = std::min(dims_weights[0], dims_basis[0]);
+    precision mode_cfs_weighted = 0.0;
+
     for(sizt ind = 0; ind < mode_limit; ind++){
 
-    /* -----------------------------------------
-     * Copy the basis[ind] into individual mode.
-     * -----------------------------------------
-     */
-
-        memcpy(mode[0], basis[ind], mode.get_size() * sizeof(precision));
-
+        mode = basis.get_slice(ind, false);
+    
     /* ----------------------------------------------
      * Get the mode-amplitude of the individual mode.
      * ----------------------------------------------
      */
      
-        mode_cfs(ind) = (phase * mode).get_total()  / norm[ind];
+        mode_cfs(ind) = (phase * mode).get_total() * (weights(ind) / norm[ind]);
 
     /* ------------------------------------------
      * Subtract the weighted mode from the phase.
      * ------------------------------------------
      */
 
-        phase -= mode * (mode_cfs(ind) * weights(ind));
+        phase -= (mode * mode_cfs(ind));
 
     }
 }
@@ -256,12 +253,22 @@ void make_psf_from_phase_screen(Array<precision>& phase, Array<precision>& psf, 
     sizt psf_center_y   = dims_psf[1] / 2;
 
 /*
- * Array declaration
+ * Variable declaration:
  * --------------------------------------------
  * Name             Type            Description
  * --------------------------------------------
- * pupil_function   Array<cmpx>     Pupil function, see 'lib_array.h' for datatype.
- * complex_psf      Array<cmpx>     Complex PSF, see 'lib_array.h' for datatype.
+ * dims_pad_begin   sizt_vector     
+ */
+
+    sizt_vector dims_pad_begin{(dims_phase[0] - dims_psf[0])/2, (dims_phase[1] - dims_psf[1])/2};
+
+/*
+ * Array declaration:
+ * --------------------------------------------
+ * Name             Type            Description
+ * --------------------------------------------
+ * pupil_function   Array<cmpx>     Array storing the pupil function.
+ * complex_psf      Array<cmpx>     Array storing the complex PSF.
  *
  * --------------------
  * Additional comments:
@@ -269,8 +276,8 @@ void make_psf_from_phase_screen(Array<precision>& phase, Array<precision>& psf, 
  * Pupil function has the same dimensions as the PSF.
  */
 
-    Array<cmpx>   pupil_function(dims_psf);
-    Array<cmpx>   complex_psf(dims_psf);
+    Array<cmpx> pupil_function(dims_psf);
+    Array<cmpx> complex_psf(dims_psf);
 
 /* -------------------------
  * Construct pupil function.
@@ -312,18 +319,7 @@ void make_psf_from_phase_screen(Array<precision>& phase, Array<precision>& psf, 
  * psf_copy     Array<precision>    Shifted copy of the PSF, see 'lib_array.h' for datatype.
  */
 
-    Array<precision> psf_copy(psf);
-
-/* ------------------------------------------------------------
- * PSF is computed as the power spectrum of the pupil function.
- * ------------------------------------------------------------
- */
-
-    for(sizt xpix = 0; xpix < dims_psf[0]; xpix++){
-        for(sizt ypix = 0; ypix < dims_psf[1]; ypix++){
-            psf_copy(xpix, ypix) = static_cast<precision>(std::norm(complex_psf(xpix, ypix)));
-        }
-    }
+    Array<precision> psf_copy = complex_psf.get_norm().cast_to_type<precision>();
 
 /*
  * Variable declaration.

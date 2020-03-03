@@ -1,6 +1,10 @@
 #ifndef _CONFIG_
 #define _CONFIG_
 
+#define _CHKSTAT_
+#define _CHKDIMS_
+#define _CHKBNDS_
+
 #include <string>
 #include <limits>
 #include <vector>
@@ -11,7 +15,7 @@
  * ----------------
  */
 
-using precision = float;
+using precision = double;
 
 using uint   = unsigned int;
 using ulng   = unsigned long;
@@ -26,6 +30,7 @@ template <typename type>
 using type_vector = std::vector<type>;
 using sizt_vector = std::vector<sizt>;
 using long_vector = std::vector<long>;
+using uint_vector = std::vector<int>;
 
 typedef struct io_t{
 public:
