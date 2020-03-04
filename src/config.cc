@@ -29,8 +29,10 @@ float aperture_t::size            = 1.0;
 float aperture_t::sampling_factor = 1.5;
 bool  aperture_t::airy_disk       = false;
 
+float image_t::normalization     = 1600.0;
 float image_t::original_sampling = 1.0;
 float image_t::degraded_sampling = 1.0;
+imgft image_t::write_format      = imgft::FITS;
 
 int config_parse(const char* filename){
   
@@ -104,6 +106,9 @@ int config_parse(const char* filename){
         else if(key == "airy_disk")
 	        aperture_t::airy_disk = value == "true";
         
+        else if(key == "normalization")
+	        image_t::normalization = std::stof(value);
+
         else if(key == "original_sampling")
 	        image_t::original_sampling = std::stof(value);
     

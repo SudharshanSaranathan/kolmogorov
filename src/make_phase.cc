@@ -266,7 +266,7 @@ int main(int argc, char *argv[]){
 
         /* ------------------------------------
          * Send fried parameter to MPI process.
-         * Record index in <process_fried_map>.
+         * Record index sent in <process_fried_map>.
          * Increment <fried_next>.
          * -----------------------
          */
@@ -312,7 +312,8 @@ int main(int argc, char *argv[]){
 	
             MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
             MPI_Get_count(&mpi_status, mpi_precision, &mpi_recv_count);
-            MPI_Recv(phase_all[process_fried_map[mpi_status.MPI_SOURCE]], sizeof_vector(dims_phase_all, 1), mpi_precision, mpi_status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
+            MPI_Recv(phase_all[process_fried_map[mpi_status.MPI_SOURCE]], sizeof_vector(dims_phase_all, 1),\
+                     mpi_precision, mpi_status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
             fried_done++;
       
         /* ---------------------------------------------------
@@ -323,7 +324,6 @@ int main(int argc, char *argv[]){
             percent_completed = (100.0 * fried_done) / fried.get_size();	        
             fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed);
             fflush (console);
-
 
             if(fried_next < fried.get_size()){
         

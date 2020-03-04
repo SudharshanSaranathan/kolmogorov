@@ -5,8 +5,12 @@
 
 int main(){
 
-    sizt_vector   dims{64, 64, 64};
+    sizt_vector dims{64, 64, 64};
+    sizt_vector dims_start{16, 16};
+    sizt_vector dims_pad{128, 128};
+
     Array<double> array(dims);
+    Array<double> array_padded(dims_pad);
 
     for(sizt xpix = 0; xpix < dims[0]; xpix++){
         for(sizt ypix = 0; ypix < dims[1]; ypix++){
@@ -16,14 +20,8 @@ int main(){
         }
     }
 
-    Array<double> slice = array.get_slice(10, false);
-    slice(32, 32) = 12.0;
-
-    slice = array.get_slice(5, false);
-    slice(24, 24) = 2.4323;
-
-    fprintf(stdout, "%0.2lf %0.2lf\n", slice(24,24), array(5,24,24));
-    fprintf(stdout, "%d %d\n", slice.get_owner(), array.get_owner());
+    array_padded = array.get_slice(32).get_pad(dims_start, dims_pad);
+    array_padded.wr_fits(std::string("array_padded.fits").c_str());
 
     return(0);
 }

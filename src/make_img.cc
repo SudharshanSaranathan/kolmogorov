@@ -112,7 +112,6 @@ int main(int argc, char *argv[]){
         fflush (console);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
-
     fprintf(console, "(Info)\tReading configuration:\t");
     fflush (console);
     
@@ -126,9 +125,9 @@ int main(int argc, char *argv[]){
     }
 
 /* 
- * ------------------------------------
- * Workflow for MPI process with rank 0
- * ------------------------------------
+ * ------------------
+ * MPI root workflow.
+ * ------------------
  */
 
     if(mpi_process_rank == 0){
@@ -302,25 +301,15 @@ int main(int argc, char *argv[]){
                                                           reinterpret_cast<fftw_complex*>(img_cmpx_resampled[0]),\
                                                           FFTW_BACKWARD, FFTW_ESTIMATE);
         
-        /* ---------------------------------------------------
-         * Execute the forward fourier transform of the image.
-         * ---------------------------------------------------
+        /* -----------------------------------------------------------
+         * Execute the forward fourier transform of the complex image.
+         * Resample image in fourier space after shifting the zero frequency.
+         * Execute the reverse fourier transform of the resampled complex image.
+         * ---------------------------------------------------------------------
          */
         
             fftw_execute_dft(img_cmpx_forward, reinterpret_cast<fftw_complex*>(img_cmpx[0]), reinterpret_cast<fftw_complex*>(img_fourier[0]));
-        
-        /* ---------------------------------------------------------
-         * Shift the zero frequency to center, resample, shift back.
-         * ---------------------------------------------------------
-         */
-
-            img_fourier_resampled = img_fourier.get_roll(dims_shift).get_crop(dims_crop_start, dims_img_resampled).get_roll(dims_shift_resampled, false);
-
-        /* ---------------------------------------------------------------
-         * Execute the reverse fourier transform of the resampled fourier.
-         * ---------------------------------------------------------------
-         */
-
+            img_fourier_resampled = img_fourier.get_roll(dims_shift, true).get_crop(dims_crop_start, dims_img_resampled).get_roll(dims_shift_resampled, false);
             fftw_execute_dft(img_cmpx_reverse, reinterpret_cast<fftw_complex*>(img_fourier_resampled[0]), reinterpret_cast<fftw_complex*>(img_cmpx_resampled[0]));
 
         /* ------------------------------------------
@@ -343,20 +332,18 @@ int main(int argc, char *argv[]){
      * ----------------------------------------------------
      * Name                     Type            Description
      * ----------------------------------------------------
-     * dims_psfs_per_fried      sizt_vector     Dimensions of PSFs, per_fried.
-     * dims_imgs                sizt_vector     Dimensions of the convolved images.
-     * dims_imgs_per_fried      sizt_vector     Dimensions of the convolved images, per fried.
-     * process_fried_map        sizt_vector     Map of which process is handling which fried index.
+     * dims_imgs                sizt_vector     Dimensions of the array storing the convolved images.
+     * dims_psfs_per_fried      sizt_vector     Dimensions of the array storing the PSFs, per fried.
+     * process_fried_map        sizt_vector     Map linking an MPI process to the fried index it \\
+     *                                          worked on.
      */
 
-        sizt_vector dims_psfs_per_fried(dims_psfs.begin() + 1, dims_psfs.end());
         sizt_vector dims_imgs(dims_psfs);
-        
+        sizt_vector dims_psfs_per_fried(dims_psfs.begin() + 1, dims_psfs.end());
+        sizt_vector process_fried_map(dims_psfs[0] + 1);
+
         dims_imgs.rbegin()[0] = dims_img.rbegin()[0];
         dims_imgs.rbegin()[1] = dims_img.rbegin()[1];
-
-        sizt_vector dims_imgs_per_fried(dims_imgs.begin() + 1, dims_imgs.end());
-        sizt_vector process_fried_map(dims_psfs[0] + 1);
 
     /*
      * Array declaration.
@@ -378,32 +365,53 @@ int main(int argc, char *argv[]){
 
         sizt dims_psfs_per_fried_naxis = dims_psfs_per_fried.size();
 
-    /* ---------------------------------------------
-     * Distribute array dimensions to MPI processes.
-     * ---------------------------------------------
-     */
-
-        for(int pid = 1; pid < mpi_process_size; pid++){
-
-            if(pid > int(dims_psfs[0])){
-                MPI_Send(&dims_psfs_per_fried_naxis,  1, MPI_UNSIGNED_LONG, pid, mpi_cmds::kill, MPI_COMM_WORLD);
-                MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI_UNSIGNED_LONG, pid, mpi_cmds::kill, MPI_COMM_WORLD);
-                MPI_Send( dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, pid, mpi_cmds::kill, MPI_COMM_WORLD);
-                mpi_process_kill++;
-            }else{
-                MPI_Send(&dims_psfs_per_fried_naxis,  1, MPI_UNSIGNED_LONG, pid, mpi_cmds::task, MPI_COMM_WORLD);
-                MPI_Send( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI_UNSIGNED_LONG, pid, mpi_cmds::task, MPI_COMM_WORLD);
-                MPI_Send( dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, pid, mpi_cmds::task, MPI_COMM_WORLD);
-            }
-        }
-        mpi_process_size -= mpi_process_kill;
-
     /* ----------------------------------
      * Distribute image to MPI processes.
      * ----------------------------------
      */
 
-        MPI_Bcast(img[0], img.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
+        MPI_Bcast(&dims_psfs_per_fried_naxis,                           1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+        MPI_Bcast( dims_psfs_per_fried.data(), dims_psfs_per_fried.size(), MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+        MPI_Bcast( dims_img.data(),                       dims_img.size(), MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+        MPI_Bcast( img[0],                                 img.get_size(), mpi_precision,     0, MPI_COMM_WORLD);
+
+    /* ------------------------------------
+     * !(4) Distribute the PSFs to workers.
+     * -----------------------------------
+     */
+
+        for(int pid = 1; sizt(pid) < std::min(sizt(mpi_process_size) - 1, dims_psfs[0]); pid++){
+
+        /* -------------------------------------------
+         * Send the PSFs at fried_next to MPI process.
+         * Record the sent index in <process_fried_map>.
+         * ---------------------------------------------
+         */
+
+            MPI_Send(psfs[fried_next], sizeof_vector(dims_psfs, 1), mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
+            process_fried_map[pid] = fried_next;
+
+        /* --------------------------------------------------------------------------------
+         * Display <percent_assigned> and <percent_completed>, then increment <fried_next>.
+         * --------------------------------------------------------------------------------
+         */
+
+            percent_assigned  = (100.0 * (fried_next)) / dims_psfs[0];
+            fprintf(console, "\r(Info)\tConvolving image:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+            fflush (console);
+            fried_next++;
+        }
+
+    /* --------------------------
+     * Kill excess MPI processes.
+     * --------------------------
+     */
+
+        for(int pid = dims_psfs[0] + 1; pid < mpi_process_size; pid++){   
+            MPI_Send(psfs[fried_next], sizeof_vector(dims_psfs, 1), mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
+            mpi_process_kill++;
+        }
+        mpi_process_size -= mpi_process_kill;
 
     /* ------------------------------------
      * !(4) Distribute the PSFs to workers.
@@ -412,141 +420,70 @@ int main(int argc, char *argv[]){
      * -----------------------------------
      */
 
-        for(int pid = 1; pid < mpi_process_size; pid++){
-
-        /* -------------------------
-         * Send the PSFs to workers.
-         * -------------------------
-         */
-
-            MPI_Send(psfs[fried_next], sizeof_vector(dims_psfs_per_fried), mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
-
-        /* -------------------------
-         * Update process_fried_map.
-         * -------------------------
-         */
-
-            process_fried_map[pid] = fried_next;
-
-        /* ------------------------------------
-         * Update and display percent_assigned.
-         * ------------------------------------
-         */
-
-            percent_assigned  = (100.0 * (fried_next + 1)) / dims_psfs[0];
-            
-            fprintf(console, "\r(Info)\tConvolving image:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-            fflush (console);
-
-        /* ----------------------------------
-         * Increment fried_next.
-         * ----------------------------------
-         */
-
-            fried_next++;
-        }
-
         while(fried_done < dims_psfs[0]){
 
-        /* --------------------------------------------------------------------
-         * Wait for a worker to ping master. If pinged, get worker information.
-         * --------------------------------------------------------------------
+        /* -------------------------------------------------------------------
+         * Wait for an MPI process to ping root, then get process information.
+         * Store the convolved images returned by MPI process at correct location.
+         * Increment <fried_done>.
+         * -----------------------
          */	
 	
             MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
             MPI_Get_count(&mpi_status, mpi_precision, &mpi_recv_count);
-            
-        /*
-         * Variable declaration:
-         * ----------------------------------------
-         * Name                 Type    Description
-         * ----------------------------------------
-         * fried_index_image    sizt    Index of fried parameter processed by a particular MPI process.
-         */
-
-            sizt fried_index_image = process_fried_map[mpi_status.MPI_SOURCE];
-
-
-        /* ------------------------------------
-         * Get PSFs, store at correct location.
-         * ------------------------------------
-         */
-
-            MPI_Recv(imgs[fried_index_image], sizeof_vector(dims_imgs_per_fried), mpi_precision, mpi_status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
-
-        /* --------------------------
-         * Increment fried_done.
-         * --------------------------
-         */
-
+            MPI_Recv(imgs[process_fried_map[mpi_status.MPI_SOURCE]], sizeof_vector(dims_imgs, 1), mpi_precision, mpi_status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
             fried_done++;
 
-        /* -------------------------------------
-         * Update and display percent_completed.
-         * -------------------------------------
+        /* ---------------------------------------------------
+         * Display <percent_assigned> and <percent_completed>.
+         * ---------------------------------------------------
          */
 
             percent_completed  = (100.0 * fried_done) / dims_psfs[0];
-           
             fprintf(console, "\r(Info)\tConvolving image:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
             fflush (console);
 
-        /* -----------------------------------------------
-         * Send next set of PSFs, if available, to worker.
-         * -----------------------------------------------
-         */
-
             if(fried_next < dims_psfs[0]){
 
-            /* -------------------------
-             * Send the PSFs to workers.
+            /* ------------------------------------------------------------------
+             * If more images need to be convolved, send new PSFs to MPI process.
+             * Record sent index in <process_fried_map>.
              * -------------------------
              */
 
                 MPI_Send(psfs[fried_next], sizeof_vector(dims_psfs_per_fried), mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
-	
-            /* -------------------------
-             * Update process_fried_map.
-             * -------------------------
-             */
-	
                 process_fried_map[mpi_status.MPI_SOURCE] = fried_next;
 
-            /* ------------------------------------
-             * Update and display percent_assigned.
-             * ------------------------------------
+            /* --------------------------------------------------------------------------------
+             * Display <percent_assigned> and <percent_completed>, then increment <fried_next>.
+             * --------------------------------------------------------------------------------
              */
 
-                percent_assigned = (100.0 * (fried_next + 1)) / dims_psfs[0];
-
+                percent_assigned = (100.0 * (fried_next)) / dims_psfs[0];
                 fprintf(console, "\r(Info)\tConvolving image:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
                 fflush (console);
-
-            /* ----------------------------------
-             * Increment fried_next.
-             * ----------------------------------
-             */
-
                 fried_next++;
-      	    
             }
         }
+        
+        percent_assigned = (100.0 * (fried_next)) / dims_psfs[0];
+        fprintf(console, "\r(Info)\tConvolving image:\t[%0.1lf %% assigned, %0.1lf %% completed]\n", percent_assigned, percent_completed); 
+        fflush (console);
 
-    /* -----------------------
-     * Shutdown MPI processes.
-     * -----------------------
+    /* ---------------------------
+     * Shutdown all MPI processes.
+     * ---------------------------
      */
 
         for(int pid = 1; pid < mpi_process_size; pid++)
-             MPI_Send(psfs[0], sizeof_vector(dims_psfs_per_fried), mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
+             MPI_Send(psfs[0], sizeof_vector(dims_psfs, 1), mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
 
-    /* -----------------------------------
-     * !(7) Save convolved images to disk.
-     * -----------------------------------
-     */
-
-        fprintf(console, "\n");
         if(io_t::save){
+    
+        /* -----------------------------------
+         * !(7) Save convolved images to disk.
+         * -----------------------------------
+         */
 
             fprintf(console, "(Info)\tWriting to file:\t");
             fflush (console);
@@ -563,9 +500,9 @@ int main(int argc, char *argv[]){
         }
     }
     
-/* -----------------------------------------
- * Workflow for MPI processes with rank > 0.
- * -----------------------------------------
+/* ---------------------
+ * MPI process workflow.
+ * ---------------------
  */
     
     else if(mpi_process_rank){
@@ -594,32 +531,15 @@ int main(int argc, char *argv[]){
         sizt_vector dims_img(2);
         sizt_vector dims_psfs;
 
-    /* -------------------------------------------------------
-     * Get dimensionality of the PSFs array from master.
-     * -------------------------------------------------------
+    /* ----------------------------------------------------------------------------------
+     * Get dimensions of PSFs and image from root, then resize the corresponding vectors.
+     * ----------------------------------------------------------------------------------
      */
 
-        MPI_Recv(&dims_psfs_naxis, 1, MPI_UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
-
-    /* ---------------------------
-     * Resize dims_psfs_per_fried.
-     * ---------------------------
-     */
+        MPI_Bcast(&dims_psfs_naxis, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
         dims_psfs.resize(dims_psfs_naxis);
-    
-    /* ---------------------------------------------------
-     * Get dimensions of the psfs, per fried, from master.
-     * ---------------------------------------------------
-     */
-
-        MPI_Recv(dims_psfs.data(), dims_psfs.size(), MPI_UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
-    
-    /* ----------------------------------------
-     * Get dimensions of the image from master.
-     * ----------------------------------------
-     */
-
-        MPI_Recv(dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
+        MPI_Bcast(dims_psfs.data(), dims_psfs.size(), MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+        MPI_Bcast(dims_img.data(), dims_img.size(), MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
         
     /*
      * Vector declaration.
@@ -659,15 +579,12 @@ int main(int argc, char *argv[]){
         Array<cmpx>      psf_fourier(dims_img);
         Array<cmpx>      img_fourier_c(dims_img);
 
-    /* ------------------------------------------------------------
-     * If the MPI process has not been killed, get image from root.
-     * ------------------------------------------------------------
+    /* --------------------
+     * Get image from root.
+     * --------------------
      */
 
-        if(mpi_status.MPI_TAG != mpi_cmds::kill)
-            MPI_Bcast(img[0], img.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
-        else
-            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        MPI_Bcast(img[0], img.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
 
     /*
      * Array declaration.
@@ -715,10 +632,10 @@ int main(int argc, char *argv[]){
      * psf_center_y     sizt    Center of the PSF.
      */
 
-        sizt img_center_x = dims_img[0] / 2;
-        sizt img_center_y = dims_img[1] / 2;
-        sizt psf_center_x = dims_psf[0] / 2;
-        sizt psf_center_y = dims_psf[1] / 2;
+        sizt img_center_x = sizt(dims_img[0] / 2);
+        sizt img_center_y = sizt(dims_img[1] / 2);
+        sizt psf_center_x = sizt(dims_psf[0] / 2);
+        sizt psf_center_y = sizt(dims_psf[1] / 2);
 
     /*
      * Variable declaration:
@@ -735,118 +652,106 @@ int main(int argc, char *argv[]){
      * -------------------------------------------
      */
 
+        MPI_Recv(psfs[0], psfs.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
         while(mpi_status.MPI_TAG != mpi_cmds::kill){
 
-        /* --------------------------------
-         * Get the PSFs from MPI rank zero.
-         * --------------------------------
+        /* ----------------------------------------------------
+         * Use time to seed the poisson random number generator
+         * ----------------------------------------------------
          */
 
-            MPI_Recv(psfs[0], psfs.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
-
-            if(mpi_status.MPI_TAG == mpi_cmds::task){
-
-                if(dims_psfs.size() == 2){
+            Time::time_point time_start = Time::now();
+            if(dims_psfs.size() == 2){
                     
+            /* ------------------------------------
+             * Pad the PSFs to the size of the img.
+             * ------------------------------------
+             */
+
+                psf_double = psfs.cast_to_type<double>().get_pad(dims_pad_start, dims_img);
+                  
+            /* -----------------------------------------
+             * Execute the forward transform of the PSF.
+             * Convolve the image in fourier space.
+             * Execute the reverse transform of the convolved image.
+             * -----------------------------------------------------
+             */
+
+                fftw_execute_dft_r2c(psf_forward, psf_double[0], reinterpret_cast<fftw_complex*>(psf_fourier[0]));
+                img_fourier_c = img_fourier * psf_fourier;
+                fftw_execute_dft_c2r(img_reverse, reinterpret_cast<fftw_complex*>(img_fourier_c[0]), img_double_c[0]);
+
+            /* ------------------------------------------------------------------------
+             * Shift the convolved image and normalize by the total number of elements.
+             * The cast the convolved image to type <precision>.
+             * -------------------------------------------------
+             */
+
+                img_double_c = img_double_c.get_roll(dims_shift) / img_double_c.get_size();
+                imgs = img_double_c.cast_to_type<precision>();   
+
+            }else if(dims_psfs.size() == 3){
+
+                for(sizt ind = 0; ind < dims_psfs[0]; ind++){
+
                 /* ------------------------------------
                  * Pad the PSFs to the size of the img.
                  * ------------------------------------
                  */
 
-                    for(sizt xpix = 0; xpix < dims_psf[0]; xpix++){
-                        for(sizt ypix = 0; ypix < dims_psf[1]; ypix++){
-                            psf_double(xpix + img_center_x - psf_center_x, ypix + img_center_y - psf_center_y) = static_cast<double>(psfs(xpix, ypix));
-                        }
-                    }
-                  
+                    psf_double = psfs.get_slice(ind).cast_to_type<double>().get_pad(dims_pad_start, dims_img);
+
                 /* -----------------------------------------
                  * Execute the forward transform of the PSF.
-                 * -----------------------------------------
-                 */
-
-                    fftw_execute_dft_r2c(psf_forward, psf_double[0], reinterpret_cast<fftw_complex*>(psf_fourier[0]));
-                    
-                /* ---------------------------------------------------------------
-                 * Multiply the fourier of the image and the PSF i.e. convolution.
-                 * ---------------------------------------------------------------
-                 */
-                    
-                    img_fourier_c = img_fourier * psf_fourier;
-
-                /* -----------------------------------------------------
-                 * Execute the reverse fourier transform of the product.
+                 * Convolve the image in fourier space.
+                 * Execute the reverse transform of the convolved image.
                  * -----------------------------------------------------
                  */
 
+                    fftw_execute_dft_r2c(psf_forward, psf_double[0], reinterpret_cast<fftw_complex*>(psf_fourier[0]));
+                    img_fourier_c = img_fourier * psf_fourier;
                     fftw_execute_dft_c2r(img_reverse, reinterpret_cast<fftw_complex*>(img_fourier_c[0]), img_double_c[0]);
 
                 /* -------------------------------------------------------------------------
                  * Shift the convolved image, and normalize by the total number of elements.
                  * -------------------------------------------------------------------------
                  */
+                    
+                    img_double_c = img_double_c.get_roll(dims_shift) / img_double.get_size();
+                    for(sizt xpix = 0; xpix < dims_img[0]; xpix++)
+                        for(sizt ypix = 0; ypix < dims_img[1]; ypix++)
+                            imgs(ind, xpix, ypix) = static_cast<precision>(img_double_c(xpix, ypix));
 
-                    img_double_c = img_double_c.get_roll(dims_shift) / img_double_c.get_size();
+                /*
+                 * Variable declaration
+                 * --------------------------------------------
+                 * Name         Type                Description
+                 * --------------------------------------------
+                 * duration     Time::duration      Time duration until execution of this line. 
+                 * mersenne     sizt                Seed for mersenne twister random number generator.
+                 * gemerator    std::mt19937        Mersenne Twister Random number generator. 
+                 */
+    
+                    Time::duration duration = Time::now() - time_start;
+                    sizt           mersenne = duration.count();
+                    std::mt19937   generator(mersenne);
 
-                /* ---------------------------------------
-                 * Cast the convolved to type <precision>.
-                 * ---------------------------------------
+                /* --------------------------------------
+                 * Add the noise to the convolved images.
+                 * --------------------------------------
                  */
 
-                    imgs = img_double_c.cast_to_type<precision>();   
-
-                }else if(dims_psfs.size() == 3){
-
-                    for(sizt ind = 0; ind < dims_psfs[0]; ind++){
-
-                    /* ------------------------------------
-                     * Pad the PSFs to the size of the img.
-                     * ------------------------------------
-                     */
-
-                        for(sizt xpix = 0; xpix < dims_psf[0]; xpix++){
-                            for(sizt ypix = 0; ypix < dims_psf[1]; ypix++){
-                                psf_double(xpix + img_center_x - psf_center_x, ypix + img_center_y - psf_center_y) = static_cast<double>(psfs(ind, xpix, ypix));
-                            }
-                        }
-                   
-                    /* -----------------------------------------
-                     * Execute the forward transform of the PSF.
-                     * -----------------------------------------
-                     */
-
-                        fftw_execute_dft_r2c(psf_forward, psf_double[0], reinterpret_cast<fftw_complex*>(psf_fourier[0]));
-                    
-                    /* ---------------------------------------------------------------
-                     * Multiply the fourier of the image and the PSF i.e. convolution.
-                     * ---------------------------------------------------------------
-                     */
-                    
-                        img_fourier_c = img_fourier * psf_fourier;
-                     
-                    /* -----------------------------------------------------
-                     * Execute the reverse fourier transform of the product.
-                     * -----------------------------------------------------
-                     */
-                     
-                        fftw_execute_dft_c2r(img_reverse, reinterpret_cast<fftw_complex*>(img_fourier_c[0]), img_double_c[0]);
-
-                    /* -------------------------------------------------------------------------
-                     * Shift the convolved image, and normalize by the total number of elements.
-                     * -------------------------------------------------------------------------
-                     */
-                    
-                        img_double_c = img_double_c.get_roll(dims_shift) / img_double.get_size();
-                        for(sizt xpix = 0; xpix < dims_img[0]; xpix++){
-                            for(sizt ypix = 0; ypix < dims_img[1]; ypix++){
-                                imgs(ind, xpix, ypix) = static_cast<precision>(img_double_c(xpix, ypix));
-                            }
+                    for(sizt xpix = 0; xpix < dims_img[0]; xpix++){
+                        for(sizt ypix = 0; ypix < dims_img[1]; ypix++){
+                            std::poisson_distribution<int> distribution(image_t::normalization * imgs(ind, xpix, ypix));
+                            imgs(ind, xpix, ypix) = distribution(generator);
                         }
                     }
                 }
-
-                MPI_Send(imgs[0], imgs.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
-
             }
+            
+            MPI_Send(imgs[0], imgs.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+            MPI_Recv(psfs[0], psfs.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
         }
 
         fftw_destroy_plan(psf_forward);

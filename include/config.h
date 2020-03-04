@@ -1,10 +1,8 @@
 #ifndef _CONFIG_
 #define _CONFIG_
 
-#define _CHKSTAT_
-#define _CHKDIMS_
-#define _CHKBNDS_
-
+#include <chrono>
+#include <random>
 #include <string>
 #include <limits>
 #include <vector>
@@ -31,6 +29,15 @@ using type_vector = std::vector<type>;
 using sizt_vector = std::vector<sizt>;
 using long_vector = std::vector<long>;
 using uint_vector = std::vector<int>;
+
+typedef std::chrono::high_resolution_clock Time;
+typedef std::chrono::duration<float>       Period;
+
+typedef enum imgft {
+    BIN  = 0,
+    ANA  = 1,
+    FITS = 2
+} imgft;
 
 typedef struct io_t{
 public:
@@ -75,9 +82,11 @@ public:
 
 typedef struct image_t{
 public:
-    
-    static float original_sampling;
-    static float degraded_sampling;
+
+    static float  normalization;
+    static float  original_sampling;
+    static float  degraded_sampling;
+    static imgft  write_format;
 
 } image_t;
 

@@ -15,7 +15,7 @@
 
 #define _USE_MATH_DEFINES
 
-typedef std::chrono::high_resolution_clock clock_;
+typedef std::chrono::high_resolution_clock Time;
 
 template <class type> 
 void make_aperture_function(Array<type>& aperture, type aperture_radius){
@@ -64,10 +64,10 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, pr
  * ----------------------------------------
  * Name             Type        Description
  * ----------------------------------------
- * time_stamp       clock_      System clock.  
+ * time_stamp       Time      System clock.  
  */
 
-    clock_::time_point time_start = clock_::now();
+    Time::time_point time_start = Time::now();
 
 /*
  * Vector declaration
@@ -100,11 +100,11 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, pr
  * ------------------------------------------------
  * Name             Type                Description
  * ------------------------------------------------
- * duration         clock_::duration    Time duration until execution of this line. 
+ * duration         Time::duration     Time duration until execution of this line. 
  * mt19937_seed     sizt                Seed for mersenne twister random number generator. 
  */
     
-    clock_::duration duration = clock_::now() - time_start;
+    Time::duration duration = Time::now() - time_start;
     sizt mt19937_seed = duration.count();
 
 /* ----------------------------------------------------
@@ -157,8 +157,7 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, pr
          * ------------------------------------------------------------------------
          */
 
-            fourier(sizt(xpix + fourier_dims[0] - xc) % fourier_dims[0], sizt(ypix + fourier_dims[1] - yc) % fourier_dims[1]) = phase;
-        
+            fourier(sizt(xpix + fourier_dims[0] - xc) % fourier_dims[0], sizt(ypix + fourier_dims[1] - yc) % fourier_dims[1]) = phase; 
         }
     }
 }

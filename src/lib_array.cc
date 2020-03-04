@@ -922,6 +922,9 @@ Array<type>  Array<type>::get_slice(sizt index, bool copy){
     sizt_vector dims_slice(this->dims.begin() + 1, this->dims.end());
     Array<type> data_slice(dims_slice, copy == true ? nullptr : slice_ptr);
     
+    if(copy == true)
+        memcpy(data_slice[0], slice_ptr, sizeof_vector(dims_slice) * sizeof(type));
+
     return(data_slice);
 }
 
@@ -976,7 +979,7 @@ Array<type>  Array<type>::get_norm(){
  */
 
 template <class type>
-Array<type>  Array<type>::get_pad(sizt_vector dims_padded, sizt_vector dims_start, type pad_value){
+Array<type>  Array<type>::get_pad(sizt_vector dims_start, sizt_vector dims_pad, type pad_value){
 
 #ifdef _CHKSTAT_
     if(this->stat == false)
@@ -984,47 +987,41 @@ Array<type>  Array<type>::get_pad(sizt_vector dims_padded, sizt_vector dims_star
 #endif
 
 #ifdef _CHKDIMS_
-    if(this->dims.size() != dims_start.size() || this->dims.size() != dims_padded.size())
+    if(this->dims.size() != dims_start.size() || this->dims.size() != dims_pad.size())
         throw std::runtime_error("In function Array<type>::get_pad(), expected " + std::to_string(this->dims.size()) + "D vector(s) as argument(s)");
     for(sizt ind = 0; ind < this->dims.size(); ind++){
-        if(this->dims[ind] + dims_start[ind] > dims_padded[ind])
+        if(this->dims[ind] + dims_start[ind] > dims_pad[ind])
             throw std::runtime_error("In function Array<type>::get_pad(), dimensions of the padded array are too small");
     }
 #endif
     
-    Array<type> array_padded(dims_padded);
+    Array<type> array_padded(dims_pad);
     switch(this->dims.size()){
 
-        case 1: for(sizt xpix = dims_start[0]; xpix < this->dims[0] + dims_start[0]; xpix++){
-                    array_padded.data_ptr_1D[xpix] = this->data_ptr_1D[xpix - dims_start[0]];
-                }
+        case 1: for(sizt xpix = 0; xpix < this->dims[0]; xpix++)
+                    array_padded.data_ptr_1D[xpix + dims_start[0]] = this->data_ptr_1D[xpix];
+
                 break;
 
-        case 2: for(sizt xpix = dims_start[0]; xpix < this->dims[0] + dims_start[0]; xpix++){
-                    for(sizt ypix = dims_start[1]; ypix < this->dims[1] + dims_start[1]; ypix++){
-                        array_padded(xpix, ypix) = this->data_ptr_2D[xpix - dims_start[0]][ypix - dims_start[1]];
-                    }
-                }
+        case 2: for(sizt xpix = 0; xpix < this->dims[0]; xpix++)
+                    for(sizt ypix = 0; ypix < this->dims[1]; ypix++)
+                        array_padded(xpix + dims_start[0], ypix + dims_start[1]) = this->data_ptr_2D[xpix][ypix];
+                
                 break;
 
-        case 3: for(sizt xpix = dims_start[0]; xpix < this->dims[0] + dims_start[0]; xpix++){
-                    for(sizt ypix = dims_start[1]; ypix < this->dims[1] + dims_start[1]; ypix++){
-                        for(sizt zpix = dims_start[2]; zpix < this->dims[2] + dims_start[2]; zpix++){
-                            array_padded(xpix, ypix, zpix) = this->data_ptr_3D[xpix - dims_start[0]][ypix - dims_start[1]][zpix - dims_start[2]];                        
-                        }
-                    }
-                }
+        case 3: for(sizt xpix = 0; xpix < this->dims[0]; xpix++)
+                    for(sizt ypix = 0; ypix < this->dims[1]; ypix++)
+                        for(sizt zpix = 0; zpix < this->dims[2]; zpix++)
+                            array_padded(xpix + dims_start[0], ypix + dims_start[1], zpix + dims_start[2]) = this->data_ptr_3D[xpix][ypix][zpix];
+                
                 break;
 
-        case 4: for(sizt xpix = dims_start[0]; xpix < this->dims[0] + dims_start[0]; xpix++){
-                    for(sizt ypix = dims_start[1]; ypix < this->dims[1] + dims_start[1]; ypix++){
-                        for(sizt zpix = dims_start[2]; zpix < this->dims[2] + dims_start[2]; zpix++){
-                            for(sizt wpix = dims_start[3]; wpix < this->dims[3] + dims_start[3]; wpix++){
-                                array_padded(xpix, ypix, zpix, wpix) = this->data_ptr_4D[xpix - dims_start[0]][ypix - dims_start[1]][zpix - dims_start[2]][wpix - dims_start[3]];
-                            }
-                        }
-                    }
-                }
+        case 4: for(sizt xpix = 0; xpix < this->dims[0]; xpix++)
+                    for(sizt ypix = 0; ypix < this->dims[1]; ypix++)
+                        for(sizt zpix = 0; zpix < this->dims[2]; zpix++)
+                            for(sizt wpix = 0; wpix < this->dims[3]; wpix++)
+                                array_padded(xpix + dims_start[0], ypix + dims_start[1], zpix + dims_start[2], wpix + dims_start[3]) = this->data_ptr_4D[xpix][ypix][zpix][wpix];
+                
                 break;
     }
     
@@ -1226,8 +1223,8 @@ int          Array<type>::wr_bin(const char *filename, bool clobber){
 
 /* ----------------------------
  * Function header: lib_array.h
- * Function name:   Array<type>::rd_fits/(const char*)
- * ---------------------------------------------
+ * Function name:   Array<type>::rd_fits(const char*)
+ * --------------------------------------------------
  */
 
 template <class type>
