@@ -119,7 +119,6 @@ int main(int argc, char *argv[]){
         fflush (console); 
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
-
     fprintf(console, "(Info)\tReading configuration:\t");
     fflush (console);
     
@@ -128,7 +127,6 @@ int main(int argc, char *argv[]){
         fflush (console);
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
-
     fprintf(console, "[Done] (%s)\n", argv[1]);
     fflush (console);
 
@@ -200,7 +198,6 @@ int main(int argc, char *argv[]){
             fflush (console);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
-
         fprintf(console, "[Done] (%s)\n", io_t::read_aperture_function_from.c_str());
         fflush (console);
 
@@ -251,31 +248,29 @@ int main(int argc, char *argv[]){
         MPI_Barrier(MPI_COMM_WORLD);
 
     /* -------------------------------------------------------
-     * Distribute the residual phase-screens to MPI processes.
+     * !(4) Distribute the residual phase-screens to MPI processes.
      * -------------------------------------------------------
      */
 
         for(int pid = 1; pid <= std::min(sizt(mpi_process_size) - 1, dims_residual[0]); pid++){
 
+        /* ---------------------------------------------------------
+         * Send residual phase-screens at fried_next to MPI process.
+         * ---------------------------------------------------------
+         */
+
             MPI_Send(residual[fried_next], sizeof_vector(dims_residual, 1), mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
             process_fried_map[pid] = fried_next;
             
-        /* -------------------------------------------------------
-         * Update and display percent_assigned, percent_completed.
-         * -------------------------------------------------------
+        /* --------------------------------------------------------------------------------
+         * Display <percent_assigned> and <percent_completed>, then increment <fried_next>.
+         * --------------------------------------------------------------------------------
          */
 
             percent_assigned  = (100.0 * (fried_next + 1)) / dims_residual[0];
             fprintf(console, "\r(Info)\tComputing PSFs:\t\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
             fflush (console);
-
-        /* ---------------------
-         * Increment fried_next.
-         * ---------------------
-         */
-
             fried_next++;
-
         }
 
     /* --------------------------
@@ -298,102 +293,62 @@ int main(int argc, char *argv[]){
 
         while(fried_done < dims_residual[0]){
 
-        /* --------------------------------------------------------------------
-         * Wait for a worker to ping master. If pinged, get worker information.
-         * --------------------------------------------------------------------
+        /* -------------------------------------------------------------------
+         * Wait for an MPI process to ping root, then get process information.
+         * Store the PSFs returned by the MPI process at the correct location.
+         * -------------------------------------------------------------------
          */	
 	
             MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
             MPI_Get_count(&mpi_status, mpi_precision, &mpi_recv_count);
-            
-        /*
-         * Variable declaration:
-         * -----------------------------------
-         * Name             Type    Description
-         * -----------------------------------
-         * fried_index_psf  sizt    Index of next fried in pointer space, for psf array.
-         */
+            MPI_Recv(psf_all[process_fried_map[mpi_status.MPI_SOURCE]], sizeof_vector(dims_psf_all, 1), mpi_precision, mpi_status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
 
-            sizt fried_index_psf = process_fried_map[mpi_status.MPI_SOURCE];
-
-        /* --------------------------------------------
-         * Get all PSFs, store at psf[fried_index_psf].
-         * --------------------------------------------
-         */
-
-            MPI_Recv(psf_all[fried_index_psf], sizeof_vector(dims_psf_all, 1), mpi_precision, mpi_status.MPI_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
-
-        /* --------------------------
-         * Increment fried_done.
-         * --------------------------
+        /* --------------------------------------------------------------------------------
+         * Increment <fried_done>, then display <percent_assigned> and <percent_completed>.
+         * --------------------------------------------------------------------------------
          */
 
             fried_done++;
-
-        /* -------------------------------------
-         * Update and display percent_completed.
-         * -------------------------------------
-         */
-
             percent_completed  = (100.0 * fried_done) / dims_residual[0];
-           
             fprintf(console, "\r(Info)\tComputing PSFs:\t\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
             fflush (console);
 
-        /* -----------------------------------------------------------------
-         * Send next set of residual phase-screens, if available, to worker.
-         * -----------------------------------------------------------------
-         */
-
             if(fried_next < dims_residual[0]){
-
-            /* ----------------------------
-             * Send phase-screen residuals.
-             * ----------------------------
+        
+            /* ------------------------------------------------------------------
+             * If more residual phase-screens are available, send to MPI process.
+             * ------------------------------------------------------------------
              */
 
                 MPI_Send(residual[fried_next], sizeof_vector(dims_residual, 1), mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
-	
-            /* -------------------------
-             * Update process_fried_map.
-             * -------------------------
-             */
-	
                 process_fried_map[mpi_status.MPI_SOURCE] = fried_next;
 
-            /* ------------------------------------
-             * Update and display percent_assigned.
-             * ------------------------------------
+            /* --------------------------------------------------------------------------------
+             * Display <percent_assigned> and <percent_completed>, then increment <fried_next>.
+             * --------------------------------------------------------------------------------
              */
 
                 percent_assigned = (100.0 * (fried_next + 1)) / dims_residual[0];
-
                 fprintf(console, "\r(Info)\tComputing PSFs:\t\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
                 fflush (console);
-
-            /* ----------------------------------
-             * Increment fried_next.
-             * ----------------------------------
-             */
-
                 fried_next++;    
             }
         }
 
-    /* -----------------------
-     * Shutdown MPI processes.
-     * -----------------------
+    /* ---------------------------
+     * Shutdown all MPI processes.
+     * ---------------------------
      */
 
         for(int pid = 1; pid < mpi_process_size; pid++)
             MPI_Send(residual[0], sizeof_vector(dims_residual, 1), mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
 
-    /* -----------------------
-     * !(7) Save PSFs to disk.
-     * -----------------------
-     */
-
         if(io_t::save){
+    
+        /* -----------------------
+         * !(7) Save PSFs to disk.
+         * -----------------------
+         */
             
             fprintf(console, "\n(Info)\tWriting to file:\t");
             fflush (console);
@@ -409,9 +364,9 @@ int main(int argc, char *argv[]){
         }
     }
     
-/* -------------------------------
- * Workflow for the MPI processes.
- * -------------------------------
+/* ---------------------
+ * MPI process workflow.
+ * ---------------------
  */
     
     else if(mpi_process_rank){
@@ -510,43 +465,32 @@ int main(int argc, char *argv[]){
         MPI_Recv(residual_all[0], residual_all.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
             
         while(mpi_status.MPI_TAG != mpi_cmds::kill){
-            
-            if(mpi_status.MPI_TAG == mpi_cmds::task){
+
 #ifdef _GET_ALL_POINT_SPREAD_FUNCTIONS_
-                for(sizt ind = 0; ind < sims_t::realizations_per_fried; ind++){
+            for(sizt ind = 0; ind < sims_t::realizations_per_fried; ind++){                    
+                psf      = psf_all.get_slice(ind, false);
+                if(!aperture_t::airy_disk)
+                    residual = residual_all.get_slice(ind, false);
                     
-                    psf      = psf_all.get_slice(ind, false);
-                    if(!aperture_t::airy_disk)
-                        residual = residual_all.get_slice(ind, false);
-                    
-                    make_psf_from_phase_screen(residual, psf, aperture, forward);
-                }
-#else
-                for(sizt ind = 0; ind < sims_t::realizations_per_fried; ind++){
-                    
-                    if(!aperture_t::airy_disk)
-                        residual = residual_all.get_slice(ind, false);
-                    
-                    make_psf_from_phase_screen(residual, psf, aperture, forward);
-                    psf_all += psf;
-                }
-                psf_all /= sims_t::realizations_per_fried;
-#endif
-
-            /* ------------------
-             * Send PSFs to root.
-             * ------------------
-             */
-
-                MPI_Send(psf_all[0], psf_all.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
-                
-            /* -----------------------------------------
-             * Get new residual phase-screens from root.
-             * -----------------------------------------
-             */
-                
-                MPI_Recv(residual_all[0], residual_all.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
+                make_psf_from_phase_screen(residual, psf, aperture, forward);
             }
+#else
+            for(sizt ind = 0; ind < sims_t::realizations_per_fried; ind++){        
+                if(!aperture_t::airy_disk)
+                    residual = residual_all.get_slice(ind, false);
+                    
+                make_psf_from_phase_screen(residual, psf, aperture, forward);
+                psf_all += psf;
+            }
+            psf_all /= sims_t::realizations_per_fried;
+#endif
+        /* ---------------------------------------------------------------
+         * Send PSFs to MPI root, then receive new residual phase-screens.
+         * ---------------------------------------------------------------
+         */
+
+            MPI_Send(psf_all[0], psf_all.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
+            MPI_Recv(residual_all[0], residual_all.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
         }
         
     /* -------------------------
