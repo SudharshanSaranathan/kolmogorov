@@ -402,12 +402,19 @@ int main(int argc, char *argv[]){
 
             fprintf(console, "\n(Info)\tWriting to file:\t");
             fflush (console);
-        
-            wr_status = residual.wr_fits(io_t::wr_residual_to.c_str(), io_t::clobber);
-    	    if(wr_status != EXIT_SUCCESS){
+
+            switch(format_t::wr_residual){
+                case fmt_t::BIN  : wr_status = residual.wr_bin(io_t::wr_residual_to.c_str(), io_t::clobber);
+                                   break;
+                case fmt_t::FITS : wr_status = residual.wr_fits(io_t::wr_residual_to.c_str(), io_t::clobber);
+                                   break;
+                default          : wr_status = EXIT_FAILURE;
+                                   break;
+            }           
+            if(wr_status != EXIT_SUCCESS){
                 fprintf(console, "[Failed][Err code = %d](%s)\n", wr_status, io_t::wr_residual_to.c_str());
-	            fflush (console);   
-            }else{	     
+                fflush (console);
+            }else{
                 fprintf(console, "[Done] (%s)\n", io_t::wr_residual_to.c_str());
                 fflush (console);
             }
