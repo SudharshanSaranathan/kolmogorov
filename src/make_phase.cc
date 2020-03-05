@@ -173,13 +173,13 @@ int main(int argc, char *argv[]){
      */
  
         Array<precision> fried;
-        rd_status = fried.rd_fits(io_t::read_fried_from.c_str());
+        rd_status = fried.rd_fits(io_t::rd_fried_from.c_str());
         if(rd_status != EXIT_SUCCESS){
-            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_fried_from.c_str());
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::rd_fried_from.c_str());
             fflush (console);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
-        fprintf(console, "[Done] (%s)\n", io_t::read_fried_from.c_str());
+        fprintf(console, "[Done] (%s)\n", io_t::rd_fried_from.c_str());
         fflush (console);
 
     /*
@@ -205,9 +205,9 @@ int main(int argc, char *argv[]){
         fflush (console);
 
         Array<precision> aperture;
-        rd_status = aperture.rd_fits(io_t::read_aperture_function_from.c_str());
+        rd_status = aperture.rd_fits(io_t::rd_aperture_from.c_str());
         if(rd_status != EXIT_SUCCESS){
-            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_aperture_function_from.c_str());
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::rd_aperture_from.c_str());
             fflush (console);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 	    }
@@ -222,7 +222,7 @@ int main(int argc, char *argv[]){
             fflush (console);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 	    }
-        fprintf(console, "[Done] (%s)\n", io_t::read_aperture_function_from.c_str());
+        fprintf(console, "[Done] (%s)\n", io_t::rd_aperture_from.c_str());
         fflush (console);
    
     /* ----------------------------------------
@@ -368,13 +368,13 @@ int main(int argc, char *argv[]){
 
             fprintf(console, "\n(Info)\tWriting to file:\t");
             fflush (console);
-
-            wr_status = phase_all.wr_fits(io_t::write_phase_to.c_str(), io_t::clobber);
+            
+            wr_status = phase_all.wr_fits(io_t::wr_phase_to.c_str(), io_t::clobber);
             if(wr_status != EXIT_SUCCESS){
-                fprintf(console, "[Failed][Err code = %d](%s)\n", wr_status, io_t::write_phase_to.c_str());
+                fprintf(console, "[Failed][Err code = %d](%s)\n", wr_status, io_t::wr_phase_to.c_str());
                 fflush (console);
             }
-            fprintf(console, "[Done] (%s)\n", io_t::write_phase_to.c_str());
+            fprintf(console, "[Done] (%s)\n", io_t::wr_phase_to.c_str());
             fflush (console);
         }
     /*
@@ -461,7 +461,7 @@ int main(int argc, char *argv[]){
      * -------------------------------
      */
 
-        fftw_import_wisdom_from_filename(io_t::read_fft_phase_wisdom_from.c_str());
+        fftw_import_wisdom_from_filename(io_t::rd_phs_wisdom_from.c_str());
 
     /*
      * Variable declaration:
@@ -543,7 +543,7 @@ int main(int argc, char *argv[]){
      * -------------------------
      */
             
-        fftw_export_wisdom_to_filename(io_t::read_fft_phase_wisdom_from.c_str());
+        fftw_export_wisdom_to_filename(io_t::rd_phs_wisdom_from.c_str());
         fftw_destroy_plan(reverse);
         fftw_cleanup();
     }

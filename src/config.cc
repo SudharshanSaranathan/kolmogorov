@@ -3,19 +3,18 @@
 #include <fstream>
 #include <sstream>
 
-string io_t::read_image_from             = "image.fits";
-string io_t::read_fried_from             = "fried.fits";
-string io_t::read_basis_from             = "basis.fits";
-string io_t::read_weights_from           = "weights.fits";
-string io_t::read_fft_psf_wisdom_from    = "fftw_wisdom_psf";
-string io_t::read_fft_phase_wisdom_from  = "fftw_wisdom_phase";
-string io_t::read_aperture_function_from = "pupil.fits";
+string io_t::rd_image_from      = "image.fits";
+string io_t::rd_fried_from      = "fried.fits";
+string io_t::rd_basis_from      = "basis.fits";
+string io_t::rd_coeff_from      = "coeff.fits";
+string io_t::rd_aperture_from   = "pupil.fits";
+string io_t::rd_psf_wisdom_from = "psf.wisdom";
+string io_t::rd_phs_wisdom_from = "phs.wisdom";
 
-string io_t::write_log_to      = "log.file";
-string io_t::write_phase_to    = "phase.fits";
-string io_t::write_images_to   = "image_convolved.fits";
-string io_t::write_residual_to = "residual.fits";
-string io_t::write_psf_to      = "psf.fits";
+string io_t::wr_psf_to      = "psf.fits";
+string io_t::wr_phase_to    = "phase.fits";
+string io_t::wr_image_to    = "image_convolved.fits";
+string io_t::wr_residual_to = "residual.fits";
 
 bool   io_t::save    = true;
 bool   io_t::clobber = false;
@@ -27,12 +26,11 @@ float sims_t::size_in_meters         = 10.0;
 
 float aperture_t::size            = 1.0;
 float aperture_t::sampling_factor = 1.5;
-bool  aperture_t::airy_disk       = false;
+bool  aperture_t::make_airy_disk  = false;
 
 float image_t::normalization     = 1600.0;
 float image_t::original_sampling = 1.0;
 float image_t::degraded_sampling = 1.0;
-imgft image_t::write_format      = imgft::FITS;
 
 int config_parse(const char* filename){
   
@@ -50,40 +48,37 @@ int config_parse(const char* filename){
         std::getline(tokens, value, ':');
 
         if(key == "image")
-	        io_t::read_image_from = value;
+	        io_t::rd_image_from = value;
 
         else if(key == "fried")
-	        io_t::read_fried_from = value;
+	        io_t::rd_fried_from = value;
 
         else if(key == "basis")
-	        io_t::read_basis_from = value;
+	        io_t::rd_basis_from = value;
 
         else if(key == "aperture")
-	        io_t::read_aperture_function_from = value;
+	        io_t::rd_aperture_from = value;
 
-        else if(key == "weights")
-	        io_t::read_weights_from = value;
+        else if(key == "coeff")
+	        io_t::rd_coeff_from = value;
         
         else if(key == "fftw_psf")
-	        io_t::read_fft_psf_wisdom_from = value;
+	        io_t::rd_psf_wisdom_from = value;
         
         else if(key == "fftw_phase")
-	        io_t::read_fft_phase_wisdom_from = value;
-        
-        else if(key == "log")
-	        io_t::write_log_to = value;
+	        io_t::rd_phs_wisdom_from = value;
         
         else if(key == "phase")
-	        io_t::write_phase_to = value;
+	        io_t::wr_phase_to = value;
         
         else if(key == "convolved_images")
-	        io_t::write_images_to = value;
+	        io_t::wr_image_to = value;
         
         else if(key == "residual")
-	        io_t::write_residual_to = value;
+	        io_t::wr_residual_to = value;
         
         else if(key == "psf")
-	        io_t::write_psf_to = value;
+	        io_t::wr_psf_to = value;
         
         else if(key == "realizations")
 	        sims_t::realizations_per_fried = std::stoi(value);
@@ -104,7 +99,7 @@ int config_parse(const char* filename){
 	        aperture_t::sampling_factor = std::stof(value);
         
         else if(key == "airy_disk")
-	        aperture_t::airy_disk = value == "true";
+	        aperture_t::make_airy_disk = value == "true";
         
         else if(key == "normalization")
 	        image_t::normalization = std::stof(value);

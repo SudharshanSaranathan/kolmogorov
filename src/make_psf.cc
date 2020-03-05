@@ -19,7 +19,7 @@
  * This program computes the Point Spread Function(s) (PSF) of the residual phase-screens.
  * The PSF is the forward fourier transform of the pupil function, defined as:
  *
- *      Pupil_function(x, y) = aperture_function(x, y) * exp(i * phase(x, y))
+ *      Pupil_function(x, y) = aperture(x, y) * exp(i * phase(x, y))
  *
  * where 'phase' denotes an individual phase-screen.
  *
@@ -174,14 +174,14 @@ int main(int argc, char *argv[]){
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        rd_status = residual.rd_fits(io_t::write_residual_to.c_str());
+        rd_status = residual.rd_fits(io_t::wr_residual_to.c_str());
         if(rd_status != EXIT_SUCCESS){
-            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::write_residual_to.c_str());
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::wr_residual_to.c_str());
             fflush (console);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
             
-        fprintf(console, "[Done] (%s)\n", io_t::write_residual_to.c_str());
+        fprintf(console, "[Done] (%s)\n", io_t::wr_residual_to.c_str());
         fflush (console);
 
     /* --------------------------------------
@@ -192,13 +192,13 @@ int main(int argc, char *argv[]){
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        rd_status = aperture.rd_fits(io_t::read_aperture_function_from.c_str());
+        rd_status = aperture.rd_fits(io_t::rd_aperture_from.c_str());
         if(rd_status != EXIT_SUCCESS){            
-            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_aperture_function_from.c_str());
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::rd_aperture_from.c_str());
             fflush (console);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
-        fprintf(console, "[Done] (%s)\n", io_t::read_aperture_function_from.c_str());
+        fprintf(console, "[Done] (%s)\n", io_t::rd_aperture_from.c_str());
         fflush (console);
 
     /*
@@ -353,12 +353,12 @@ int main(int argc, char *argv[]){
             fprintf(console, "\n(Info)\tWriting to file:\t");
             fflush (console);
 
-            wr_status = psf_all.wr_fits(io_t::write_psf_to.c_str(), io_t::clobber);
+            wr_status = psf_all.wr_fits(io_t::wr_psf_to.c_str(), io_t::clobber);
             if(wr_status != EXIT_SUCCESS){
-                fprintf(console, "[Failed][Err code = %d](%s)\n", wr_status, io_t::write_psf_to.c_str());
+                fprintf(console, "[Failed][Err code = %d](%s)\n", wr_status, io_t::wr_psf_to.c_str());
                 fflush (console);
             }else{
-                fprintf(console, "[Done] (%s)\n", io_t::write_psf_to.c_str());
+                fprintf(console, "[Done] (%s)\n", io_t::wr_psf_to.c_str());
                 fflush (console);
             }
         }
@@ -442,7 +442,7 @@ int main(int argc, char *argv[]){
      * -------------------------------
      */
 
-        fftw_import_wisdom_from_filename(io_t::read_fft_psf_wisdom_from.c_str());
+        fftw_import_wisdom_from_filename(io_t::rd_psf_wisdom_from.c_str());
 
     /*
      * Variable declaration:
@@ -469,14 +469,14 @@ int main(int argc, char *argv[]){
 #ifdef _GET_ALL_POINT_SPREAD_FUNCTIONS_
             for(sizt ind = 0; ind < sims_t::realizations_per_fried; ind++){                    
                 psf      = psf_all.get_slice(ind, false);
-                if(!aperture_t::airy_disk)
+                if(!aperture_t::make_airy_disk)
                     residual = residual_all.get_slice(ind, false);
                     
                 make_psf_from_phase_screen(residual, psf, aperture, forward);
             }
 #else
             for(sizt ind = 0; ind < sims_t::realizations_per_fried; ind++){        
-                if(!aperture_t::airy_disk)
+                if(!aperture_t::make_airy_disk)
                     residual = residual_all.get_slice(ind, false);
                     
                 make_psf_from_phase_screen(residual, psf, aperture, forward);
@@ -498,7 +498,7 @@ int main(int argc, char *argv[]){
      * -------------------------
      */
    
-        fftw_export_wisdom_to_filename(io_t::read_fft_psf_wisdom_from.c_str());
+        fftw_export_wisdom_to_filename(io_t::rd_psf_wisdom_from.c_str());
         fftw_destroy_plan(forward);
         fftw_cleanup();
 

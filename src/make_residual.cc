@@ -18,7 +18,7 @@
  * Description:
  * ------------
  * This program subtracts basis functions defined on the aperture from phase_all-screen simulations.
- * The subtraction is weighted, if weights are provided. The residual phase-screens represent
+ * The subtraction is weighted, if coeff are provided. The residual phase-screens represent
  * corrections to the phase-screens either by Adaptive Optics (AO) or by post-facto image
  * processing. 
  *
@@ -43,7 +43,7 @@
  * 1. Read and parse the config file.
  * 2. Read phase_all-screen simulations from file.
  * 3. Read basis functions from file.
- * 4. Read basis weights from file.
+ * 4. Read basis coeff from file.
  * 5. Distribute phase_all-screen simulations to workers.
  * 6. Store residual phase-screens returned by workers.
  * 7. Repeat steps 5-6 for all phase_all-screen simulations.
@@ -159,12 +159,12 @@ int main(int argc, char *argv[]){
      * Name         Type                Description
      * ---------------------------------------------
      * basis        Array<precision>    Array storing the basis functions defined on the aperture.
-     * weights      Array<precision>    Array storing the weights to subtract the basis functions with.
+     * coeff      Array<precision>    Array storing the coeff to subtract the basis functions with.
      * phase_all    Array<precision>    Array storing all phase_all-screen simulations.
      */
 
         Array<precision> basis;
-        Array<precision> weights;
+        Array<precision> coeff;
         Array<precision> phase_all;
 
     /* ---------------------------------------------
@@ -175,13 +175,13 @@ int main(int argc, char *argv[]){
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        rd_status = phase_all.rd_fits(io_t::write_phase_to.c_str());
+        rd_status = phase_all.rd_fits(io_t::wr_phase_to.c_str());
         if(rd_status != EXIT_SUCCESS){
-            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::write_phase_to.c_str());
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::wr_phase_to.c_str());
             fflush (console);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
-        fprintf(console, "[Done] (%s)\n", io_t::write_phase_to.c_str());
+        fprintf(console, "[Done] (%s)\n", io_t::wr_phase_to.c_str());
         fflush (console);
 
     /* ------------------------------------
@@ -192,13 +192,13 @@ int main(int argc, char *argv[]){
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        rd_status = basis.rd_fits(io_t::read_basis_from.c_str());
+        rd_status = basis.rd_fits(io_t::rd_basis_from.c_str());
         if(rd_status != EXIT_SUCCESS){        
-            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_basis_from.c_str());
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::rd_basis_from.c_str());
             fflush (console);        
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
-        fprintf(console, "[Done] (%s)\n", io_t::read_basis_from.c_str());
+        fprintf(console, "[Done] (%s)\n", io_t::rd_basis_from.c_str());
         fflush (console);
 
     /*
@@ -207,66 +207,66 @@ int main(int argc, char *argv[]){
      * Name                 Type            Description
      * ------------------------------------------------
      * dims_basis           sizt_vector     Dimensions of the array storing the basis functions.
-     * dims_weights         sizt_vector     Dimensions of the array storing the basis weights.
+     * dims_coeff         sizt_vector     Dimensions of the array storing the basis coeff.
      * dims_phase_all       sizt_vector     Dimensions of the array storing the phase-screens.
      * process_fried_map    sizt_vector     Map linking an MPI process to the index of fried parameter.
      */
 
         sizt_vector dims_basis       = basis.get_dims();
         sizt_vector dims_phase_all   = phase_all.get_dims();
-        sizt_vector dims_weights{dims_phase_all[0], dims_basis[0]};
+        sizt_vector dims_coeff{dims_phase_all[0], dims_basis[0]};
         sizt_vector process_fried_map(dims_phase_all[0] + 1);
 
     /* -----------------------------------------------
-     * !(4) Read basis weights from file, if provided.
+     * !(4) Read basis coeff from file, if provided.
      * -----------------------------------------------
      */
-        if(io_t::read_weights_from == "_ONES_"){
+        if(io_t::rd_coeff_from == "_ONES_"){
 
-            fprintf(console, "(Info)\tUsing weights = 1\t");
+            fprintf(console, "(Info)\tUsing coeff = 1\t");
             fflush (console);
 
         /* -----------------------
-         * Set all weights to 1.0.
+         * Set all coeff to 1.0.
          * -----------------------
          */
-            Array<precision> AO_weights(dims_weights);
-            for(sizt xpix = 0; xpix < dims_weights[0]; xpix++)
-                for(sizt ypix = 0; ypix < dims_weights[1]; ypix++)
-                    AO_weights(xpix, ypix) = 1.0;
+            Array<precision> AO_coeff(dims_coeff);
+            for(sizt xpix = 0; xpix < dims_coeff[0]; xpix++)
+                for(sizt ypix = 0; ypix < dims_coeff[1]; ypix++)
+                    AO_coeff(xpix, ypix) = 1.0;
 
-            weights = AO_weights;
+            coeff = AO_coeff;
 
-        }else if(io_t::read_weights_from == "_ZEROS_"){
+        }else if(io_t::rd_coeff_from == "_ZEROS_"){
 
-            fprintf(console, "(Info)\tUsing weights = 0\t");
+            fprintf(console, "(Info)\tUsing coeff = 0\t");
             fflush (console);
 
         /* -------------------------------------------------------------
-         * Set all weights to 0.0 (automatic when creating a new array).
+         * Set all coeff to 0.0 (automatic when creating a new array).
          * -------------------------------------------------------------
          */
             
-            Array<precision> AO_weights(dims_weights);
-            weights = AO_weights;
+            Array<precision> AO_coeff(dims_coeff);
+            coeff = AO_coeff;
 
         }else{
 
             fprintf(console, "(Info)\tReading file:\t\t");
             fflush (console);
          
-            rd_status = weights.rd_fits(io_t::read_weights_from.c_str());
+            rd_status = coeff.rd_fits(io_t::rd_coeff_from.c_str());
             if(rd_status != EXIT_SUCCESS){        
-                fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_weights_from.c_str());
+                fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::rd_coeff_from.c_str());
                 fflush (console);                
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);        
-            }else if(dims_weights[0] != weights.get_dims(0)){
-                fprintf(console, "(Error)\tExpected weights with dimensions [%lu, %lu]\n", dims_weights[0], dims_weights[1]);
+            }else if(dims_coeff[0] != coeff.get_dims(0)){
+                fprintf(console, "(Error)\tExpected coeff with dimensions [%lu, %lu]\n", dims_coeff[0], dims_coeff[1]);
                 fflush (console);
                 MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
             }            
-            dims_weights = weights.get_dims();
-            fprintf(console, "[Done] (%s)\n", io_t::read_weights_from.c_str());
+            dims_coeff = coeff.get_dims();
+            fprintf(console, "[Done] (%s)\n", io_t::rd_coeff_from.c_str());
             fflush (console);
         }
 
@@ -315,13 +315,13 @@ int main(int argc, char *argv[]){
         for(int pid = 1; pid < mpi_process_size; pid++){
 
         /* -------------------------------------------------------------------
-         * Send phase-screens simulations, and basis weights to MPI processes.
+         * Send phase-screens simulations, and basis coeff to MPI processes.
          * Record the index sent in <process_fried_map>.
          * ---------------------------------------------
          */
 
             MPI_Send(phase_all[fried_next], sizeof_vector(dims_phase_all, 1), mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
-            MPI_Send(weights[fried_next], dims_weights[1], mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
+            MPI_Send(coeff[fried_next], dims_coeff[1], mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
             process_fried_map[pid] = fried_next;
 
         /* --------------------------------------------------------------------------------
@@ -363,12 +363,12 @@ int main(int argc, char *argv[]){
 
            /* ---------------------------------------------------------------------------------
             * If more residuals need to be computed, send next set of phase-screen simulations.
-            * Send the corresponding weights, and record the index sent in <process_fried_map>.
+            * Send the corresponding coeff, and record the index sent in <process_fried_map>.
             * ---------------------------------------------------------------------------------
             */
 
                 MPI_Send(phase_all[fried_next], sizeof_vector(dims_phase_all, 1), mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
-                MPI_Send(weights[fried_next], dims_weights[1], mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send(coeff[fried_next], dims_coeff[1], mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
                 process_fried_map[mpi_status.MPI_SOURCE] = fried_next;
 
             /* --------------------------------------------------------------------------------
@@ -390,7 +390,7 @@ int main(int argc, char *argv[]){
 
         for(int pid = 1; pid < mpi_process_size; pid++){
             MPI_Send(phase_all[0], sizeof_vector(dims_phase_all, 1), mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
-            MPI_Send(weights[0], dims_weights[1], mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
+            MPI_Send(coeff[0], dims_coeff[1], mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
         }
 
         if(io_t::save){
@@ -403,12 +403,12 @@ int main(int argc, char *argv[]){
             fprintf(console, "\n(Info)\tWriting to file:\t");
             fflush (console);
         
-            wr_status = residual.wr_fits(io_t::write_residual_to.c_str(), io_t::clobber);
+            wr_status = residual.wr_fits(io_t::wr_residual_to.c_str(), io_t::clobber);
     	    if(wr_status != EXIT_SUCCESS){
-                fprintf(console, "[Failed][Err code = %d](%s)\n", wr_status, io_t::write_residual_to.c_str());
+                fprintf(console, "[Failed][Err code = %d](%s)\n", wr_status, io_t::wr_residual_to.c_str());
 	            fflush (console);   
             }else{	     
-                fprintf(console, "[Done] (%s)\n", io_t::write_residual_to.c_str());
+                fprintf(console, "[Done] (%s)\n", io_t::wr_residual_to.c_str());
                 fflush (console);
             }
        }
@@ -465,12 +465,12 @@ int main(int argc, char *argv[]){
      * --------------------------------------------
      * Name         Type                Description
      * --------------------------------------------
-     * weights      Array<precision>    Array storing the weights of the basis functions.
+     * coeff      Array<precision>    Array storing the coeff of the basis functions.
      * phase        Array<precision>    Array storing a single phase-screen.
      * phase_all    Array<precision>    Array storing the phase-screen simulations.
      */
 
-        Array<precision> weights(dims_modes);
+        Array<precision> coeff(dims_modes);
         Array<precision> phase(dims_phase);
         Array<precision> phase_all(dims_phase_all);
 
@@ -500,21 +500,21 @@ int main(int argc, char *argv[]){
      */
         
         MPI_Recv(phase_all[0], phase_all.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
-        MPI_Recv(weights[0], dims_modes[0], mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
+        MPI_Recv(coeff[0], dims_modes[0], mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
         while(mpi_status.MPI_TAG != mpi_cmds::kill){
             for(sizt ind = 0; ind < dims_phase_all[0]; ind++){
                 phase = phase_all.get_slice(ind, false);
-                make_residual_phase_screen(phase, basis, weights, basis_norm);
+                make_residual_phase_screen(phase, basis, coeff, basis_norm);
             }
 
             /* --------------------------------------------------------------------------------
-             * Send residual phase-screens to root, then receive new phase-screens and weights.
+             * Send residual phase-screens to root, then receive new phase-screens and coeff.
              * --------------------------------------------------------------------------------
              */
 
             MPI_Send(phase_all[0], phase_all.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
             MPI_Recv(phase_all[0], phase_all.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
-            MPI_Recv(weights[0], dims_modes[0], mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
+            MPI_Recv(coeff[0], dims_modes[0], mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
         }
     }
 

@@ -42,19 +42,18 @@ typedef enum imgft {
 typedef struct io_t{
 public:
     
-    static string read_image_from;
-    static string read_fried_from;
-    static string read_basis_from;
-    static string read_weights_from;
-    static string read_fft_psf_wisdom_from;
-    static string read_fft_phase_wisdom_from;
-    static string read_aperture_function_from;
+    static string rd_image_from;
+    static string rd_fried_from;
+    static string rd_basis_from;
+    static string rd_coeff_from;
+    static string rd_aperture_from;
+    static string rd_psf_wisdom_from;
+    static string rd_phs_wisdom_from;
 
-    static string write_log_to;
-    static string write_phase_to;
-    static string write_images_to;
-    static string write_residual_to;
-    static string write_psf_to;
+    static string wr_psf_to;
+    static string wr_phase_to;
+    static string wr_image_to;
+    static string wr_residual_to;
     
     static bool   save;
     static bool   clobber;
@@ -76,17 +75,16 @@ public:
 
     static float size;
     static float sampling_factor;
-    static bool  airy_disk;
+    static bool  make_airy_disk;
 
 } aperture_t;
 
 typedef struct image_t{
 public:
 
-    static float  normalization;
-    static float  original_sampling;
-    static float  degraded_sampling;
-    static imgft  write_format;
+    static float normalization;
+    static float original_sampling;
+    static float degraded_sampling;
 
 } image_t;
 
