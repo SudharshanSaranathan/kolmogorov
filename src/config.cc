@@ -16,6 +16,17 @@ string io_t::wr_phase_to    = "phase.fits";
 string io_t::wr_image_to    = "image_convolved.fits";
 string io_t::wr_residual_to = "residual.fits";
 
+fmt_t format_t::rd_image    = fmt_t::FITS;
+fmt_t format_t::rd_fried    = fmt_t::FITS;
+fmt_t format_t::rd_basis    = fmt_t::FITS;
+fmt_t format_t::rd_coeff    = fmt_t::FITS;
+fmt_t format_t::rd_aperture = fmt_t::FITS;
+
+fmt_t format_t::wr_psf      = fmt_t::FITS;
+fmt_t format_t::wr_phase    = fmt_t::FITS;
+fmt_t format_t::wr_image    = fmt_t::FITS;
+fmt_t format_t::wr_residual = fmt_t::FITS;
+
 bool   io_t::save    = true;
 bool   io_t::clobber = false;
 

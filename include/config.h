@@ -33,11 +33,11 @@ using uint_vector = std::vector<int>;
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::duration<float>       Period;
 
-typedef enum imgft {
+typedef enum fmt_t {
     BIN  = 0,
     ANA  = 1,
     FITS = 2
-} imgft;
+} fmt_t;
 
 typedef struct io_t{
 public:
@@ -59,6 +59,21 @@ public:
     static bool   clobber;
 
 } io_t;
+
+typedef struct format_t{
+    
+    static fmt_t rd_image;
+    static fmt_t rd_fried;
+    static fmt_t rd_basis;
+    static fmt_t rd_coeff;
+    static fmt_t rd_aperture;
+
+    static fmt_t wr_psf;
+    static fmt_t wr_phase;
+    static fmt_t wr_image;
+    static fmt_t wr_residual;
+
+} format_t;
 
 typedef struct sims_t{
 public:

@@ -168,13 +168,13 @@ int main(int argc, char *argv[]){
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        rd_status = psfs.rd_fits(io_t::write_psf_to.c_str());
+        rd_status = psfs.rd_fits(io_t::wr_psf_to.c_str());
         if(rd_status != EXIT_SUCCESS){
-            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::write_psf_to.c_str());
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::wr_psf_to.c_str());
             fflush (console);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }else{
-            fprintf(console, "[Done] (%s)\n", io_t::write_psf_to.c_str());
+            fprintf(console, "[Done] (%s)\n", io_t::wr_psf_to.c_str());
             fflush (console);
         }
 
@@ -196,13 +196,13 @@ int main(int argc, char *argv[]){
         fprintf(console, "(Info)\tReading file:\t\t");
         fflush (console);
 
-        rd_status = img.rd_fits(io_t::read_image_from.c_str());
+        rd_status = img.rd_fits(io_t::rd_image_from.c_str());
         if(rd_status != EXIT_SUCCESS){
-            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::read_image_from.c_str());
+            fprintf(console, "[Failed][Err code = %d](%s)\n", rd_status, io_t::rd_image_from.c_str());
             fflush (console);
             MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);        
         }else{
-            fprintf(console, "[Done] (%s)\n", io_t::read_image_from.c_str());
+            fprintf(console, "[Done] (%s)\n", io_t::rd_image_from.c_str());
             fflush (console);
         }
 
@@ -488,9 +488,9 @@ int main(int argc, char *argv[]){
             fprintf(console, "(Info)\tWriting to file:\t");
             fflush (console);
 
-            wr_status = imgs.wr_fits(io_t::write_images_to.c_str(), io_t::clobber);
+            wr_status = imgs.wr_fits(io_t::wr_image_to.c_str(), io_t::clobber);
             if(wr_status != EXIT_SUCCESS){	    
-                fprintf(console, "[Failed][Err code = %d](%s)\n", wr_status, io_t::write_images_to.c_str());
+                fprintf(console, "[Failed][Err code = %d](%s)\n", wr_status, io_t::wr_image_to.c_str());
                 fflush (console);
 	    
             }else{
