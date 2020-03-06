@@ -274,16 +274,10 @@ int main(int argc, char *argv[]){
             MPI_Send(fried[fried_next], 1, mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
             process_fried_map[pid] = fried_next;
             fried_next++;
-
-        /* ---------------------------------------------------
-         * Display <percent_assigned> and <percent_completed>.
-         * ---------------------------------------------------
-         */
-
-            percent_assigned  = (100.0 * fried_next) / fried.get_size();
-            fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-            fflush (console);
         }
+        percent_assigned  = (100.0 * fried_next) / fried.get_size();
+        fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+        fflush (console);
 
      /* ---------------------------------------------
       * For pid > fried parameters, kill MPI process.

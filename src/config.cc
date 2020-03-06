@@ -54,9 +54,13 @@ int config_parse(const char* filename){
     
         std::stringstream tokens(line);
         std::string key, value;
-        std::getline(tokens, key, ':');
+
+        std::getline(tokens, key, '=');
+        trim(key);
+
+        std::getline(tokens, value, '=');
         tokens >> std::ws;
-        std::getline(tokens, value, ':');
+        trim(value);
 
         if(key == "image")
 	        io_t::rd_image_from = value;
@@ -88,8 +92,8 @@ int config_parse(const char* filename){
         else if(key == "residual")
 	        io_t::wr_residual_to = value;
         
-        else if(key == "psf")
-	        io_t::wr_psf_to = value;
+        else if(key == "psf"){
+	        io_t::wr_psf_to = value;}
         
         else if(key == "realizations")
 	        sims_t::realizations_per_fried = std::stoi(value);
@@ -131,4 +135,15 @@ int config_parse(const char* filename){
     
     return(EXIT_SUCCESS);
 
+}
+
+int trim(std::string &str, char delimiter){
+
+    sizt string_begin = str.find_first_not_of(delimiter);
+    sizt string_end   = str.find_last_not_of (delimiter);
+
+    if(string_begin != std::string::npos && string_end != std::string::npos)
+        str = str.substr(string_begin, string_end - string_begin + 1);
+
+    return(EXIT_SUCCESS);
 }

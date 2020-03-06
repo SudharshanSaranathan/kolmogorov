@@ -25,10 +25,14 @@ template <typename type>
 using limits = std::numeric_limits<type>;
 
 template <typename type>
-using type_vector = std::vector<type>;
-using sizt_vector = std::vector<sizt>;
-using long_vector = std::vector<long>;
-using uint_vector = std::vector<int>;
+using type_vector  = std::vector<type>;
+using sizt_vector  = std::vector<sizt>;
+using long_vector  = std::vector<long>;
+using uint_vector  = std::vector<int>;
+
+const static sizt_vector sizt_default;
+const static long_vector long_default;
+const static uint_vector uint_default;
 
 typedef std::chrono::high_resolution_clock Time;
 typedef std::chrono::duration<float>       Period;
@@ -104,5 +108,6 @@ public:
 } image_t;
 
 int config_parse(const char*);
+int trim(std::string&, char delimiter = ' ');
 
 #endif

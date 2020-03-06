@@ -252,7 +252,7 @@ int main(int argc, char *argv[]){
      * -------------------------------------------------------
      */
 
-        for(int pid = 1; pid <= std::min(sizt(mpi_process_size) - 1, dims_residual[0]); pid++){
+        for(int pid = 1; pid <= std::min(sizt(mpi_process_size - 1), dims_residual[0]); pid++){
 
         /* ---------------------------------------------------------
          * Send residual phase-screens at fried_next to MPI process.
@@ -261,17 +261,11 @@ int main(int argc, char *argv[]){
 
             MPI_Send(residual[fried_next], sizeof_vector(dims_residual, 1), mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
             process_fried_map[pid] = fried_next;
-            
-        /* --------------------------------------------------------------------------------
-         * Display <percent_assigned> and <percent_completed>, then increment <fried_next>.
-         * --------------------------------------------------------------------------------
-         */
-
-            percent_assigned  = (100.0 * (fried_next + 1)) / dims_residual[0];
-            fprintf(console, "\r(Info)\tComputing PSFs:\t\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-            fflush (console);
             fried_next++;
         }
+        percent_assigned  = (100.0 * fried_next) / dims_residual[0];
+        fprintf(console, "\r(Info)\tComputing PSFs:\t\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+        fflush (console);
 
     /* --------------------------
      * Kill excess MPI processes.

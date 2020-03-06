@@ -76,6 +76,7 @@ int main(int argc, char *argv[]){
  *  rd_status           int         File read status.
  *  wr_status           int         File write status.
  */
+
     int mpi_process_rank = 0;
     int mpi_process_size = 0;
     int mpi_process_kill = 0;
@@ -375,32 +376,27 @@ int main(int argc, char *argv[]){
         MPI_Bcast( dims_img.data(),                       dims_img.size(), MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
         MPI_Bcast( img[0],                                 img.get_size(), mpi_precision,     0, MPI_COMM_WORLD);
 
-    /* ------------------------------------
-     * !(4) Distribute the PSFs to workers.
-     * -----------------------------------
+    /* ------------------------------------------
+     * !(4) Distribute the PSFs to MPI processes.
+     * ------------------------------------------
      */
 
-        for(int pid = 1; sizt(pid) < std::min(sizt(mpi_process_size) - 1, dims_psfs[0]); pid++){
+        for(int pid = 1; sizt(pid) <= std::min(sizt(mpi_process_size) - 1, dims_psfs[0]); pid++){
 
         /* -------------------------------------------
          * Send the PSFs at fried_next to MPI process.
          * Record the sent index in <process_fried_map>.
-         * ---------------------------------------------
+         * Increment <fried_next>.
+         * -----------------------
          */
 
             MPI_Send(psfs[fried_next], sizeof_vector(dims_psfs, 1), mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
             process_fried_map[pid] = fried_next;
-
-        /* --------------------------------------------------------------------------------
-         * Display <percent_assigned> and <percent_completed>, then increment <fried_next>.
-         * --------------------------------------------------------------------------------
-         */
-
-            percent_assigned  = (100.0 * (fried_next)) / dims_psfs[0];
-            fprintf(console, "\r(Info)\tConvolving image:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-            fflush (console);
             fried_next++;
         }
+        percent_assigned = (100.0 * (fried_next)) / dims_psfs[0];
+        fprintf(console, "\r(Info)\tConvolving image:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+        fflush (console);
 
     /* --------------------------
      * Kill excess MPI processes.

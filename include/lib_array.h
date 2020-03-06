@@ -402,7 +402,6 @@ public:
 
     int rd_fits(const char*);
     int wr_fits(const char*, bool clobber=false);
-
 };
 
 #endif

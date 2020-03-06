@@ -312,7 +312,7 @@ int main(int argc, char *argv[]){
      * -----------------------------------------------------------
      */
 
-        for(int pid = 1; pid < mpi_process_size; pid++){
+        for(int pid = 1; pid <= std::min(sizt(mpi_process_size - 1), dims_phase_all[0]); pid++){
 
         /* -------------------------------------------------------------------
          * Send phase-screens simulations, and basis coeff to MPI processes.
@@ -323,16 +323,20 @@ int main(int argc, char *argv[]){
             MPI_Send(phase_all[fried_next], sizeof_vector(dims_phase_all, 1), mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
             MPI_Send(coeff[fried_next], dims_coeff[1], mpi_precision, pid, mpi_cmds::task, MPI_COMM_WORLD);
             process_fried_map[pid] = fried_next;
-
-        /* --------------------------------------------------------------------------------
-         * Display <percent_assigned> and <percent_completed>, then increment <fried_next>.
-         * --------------------------------------------------------------------------------
-         */
-
-            percent_assigned  = (100.0 * (fried_next + 1)) / dims_phase_all[0];
-            fprintf(console, "\r(Info)\tComputing residuals: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
-            fflush (console);
             fried_next++;
+        }
+        percent_assigned  = (100.0 * fried_next) / dims_phase_all[0];
+        fprintf(console, "\r(Info)\tComputing residuals: \t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed); 
+        fflush (console);
+
+    /* --------------------------
+     * Kill excess MPI processes.
+     * --------------------------
+     */
+
+        for(int pid = dims_phase_all[0] + 1; pid < mpi_process_size; pid++){
+            MPI_Send(phase_all[0], sizeof_vector(dims_phase_all, 1), mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
+            MPI_Send(coeff[0], dims_coeff[1], mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
         }
 
         while(fried_done < dims_phase_all[0]){
