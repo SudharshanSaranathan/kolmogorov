@@ -113,7 +113,7 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, pr
  */
 
     std::mt19937 generator(mt19937_seed);
-    std::normal_distribution<precision> distribution(0.0, 1.0);
+    std::normal_distribution<precision> distribution(0.0, 1.0); //McGlamery
 
 /* --------------------------------------
  * Loop to construct Kolmogorov spectrum.
@@ -130,12 +130,12 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, pr
 
             frq = sqrt(pow(precision(xpix) - xc, 2) + pow(precision(ypix) - yc, 2));
            
-        /* --------------
-         * Set amplitude.
-         * --------------
+        /* ------------------------------------------------------------
+         * Set amplitude according to the Kolmogorov-Obukhov power law.
+         * ------------------------------------------------------------
          */
         
-            amp = frq == 0.0 ? 0.0 : sqrt(0.023) * pow(2.0*sim_size/fried, 5./6.) / pow(frq, 11./6.);
+            amp = frq == 0.0 ? 0.0 : sqrt(0.023) * pow(sim_size/fried, 5./6.) / pow(frq, 11./6.);
 
         /* 
          * Variable declaration
@@ -157,7 +157,7 @@ void make_phase_screen_fourier_shifted(Array<cmpx>& fourier, precision fried, pr
          * ------------------------------------------------------------------------
          */
 
-            fourier(sizt(xpix + fourier_dims[0] - xc) % fourier_dims[0], sizt(ypix + fourier_dims[1] - yc) % fourier_dims[1]) = phase; 
+            fourier(sizt(xpix + fourier_dims[0] - xc) % fourier_dims[0], sizt(ypix + fourier_dims[1] - yc) % fourier_dims[1]) = phase;
         }
     }
 }

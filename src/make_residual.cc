@@ -85,6 +85,7 @@ int main(int argc, char *argv[]){
 
     int mpi_process_rank = 0;
     int mpi_process_size = 0;
+    int mpi_process_kill = 0;
     int mpi_recv_count   = 0;
     int rd_status        = 0;
     int wr_status        = 0;
@@ -159,7 +160,7 @@ int main(int argc, char *argv[]){
      * Name         Type                Description
      * ---------------------------------------------
      * basis        Array<precision>    Array storing the basis functions defined on the aperture.
-     * coeff      Array<precision>    Array storing the coeff to subtract the basis functions with.
+     * coeff        Array<precision>    Array storing the coeff to subtract the basis functions with.
      * phase_all    Array<precision>    Array storing all phase_all-screen simulations.
      */
 
@@ -207,7 +208,7 @@ int main(int argc, char *argv[]){
      * Name                 Type            Description
      * ------------------------------------------------
      * dims_basis           sizt_vector     Dimensions of the array storing the basis functions.
-     * dims_coeff         sizt_vector     Dimensions of the array storing the basis coeff.
+     * dims_coeff           sizt_vector     Dimensions of the array storing the basis coeff.
      * dims_phase_all       sizt_vector     Dimensions of the array storing the phase-screens.
      * process_fried_map    sizt_vector     Map linking an MPI process to the index of fried parameter.
      */
@@ -303,18 +304,19 @@ int main(int argc, char *argv[]){
      */
 
         MPI_Bcast(dims_basis.data(), dims_basis.size(), MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+        MPI_Bcast(dims_coeff.data()+1, 1, mpi_precision, 0, MPI_COMM_WORLD);
         MPI_Bcast(basis[0], basis.get_size(), mpi_precision, 0, MPI_COMM_WORLD);
 
-    /* --------------------------------------------------------
-     * !(5) Distribute phase_all-screen simulations to workers.
+    /* ----------------------------------------------------
+     * !(5) Distribute phase screen simulations to workers.
      * !(6) Store residual phase-screens returned by workers.
-     * !(7) Repeat steps 5-6 for all phase_all-screen simulations.
-     * -----------------------------------------------------------
+     * !(7) Repeat steps 5-6 for all phase screen simulations.
+     * -------------------------------------------------------
      */
 
         for(int pid = 1; pid <= std::min(sizt(mpi_process_size - 1), dims_phase_all[0]); pid++){
 
-        /* -------------------------------------------------------------------
+        /* -----------------------------------------------------------------
          * Send phase-screens simulations, and basis coeff to MPI processes.
          * Record the index sent in <process_fried_map>.
          * ---------------------------------------------
@@ -337,8 +339,10 @@ int main(int argc, char *argv[]){
         for(int pid = dims_phase_all[0] + 1; pid < mpi_process_size; pid++){
             MPI_Send(phase_all[0], sizeof_vector(dims_phase_all, 1), mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
             MPI_Send(coeff[0], dims_coeff[1], mpi_precision, pid, mpi_cmds::kill, MPI_COMM_WORLD);
+            mpi_process_kill++;
         }
 
+        mpi_process_size -= mpi_process_kill;
         while(fried_done < dims_phase_all[0]){
 
         /* ---------------------------------------------------------------------
@@ -372,7 +376,7 @@ int main(int argc, char *argv[]){
             */
 
                 MPI_Send(phase_all[fried_next], sizeof_vector(dims_phase_all, 1), mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
-                MPI_Send(coeff[fried_next], dims_coeff[1], mpi_precision, mpi_status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
+                MPI_Send(coeff[fried_next], dims_coeff[1], MPI_UNSIGNED_LONG, mpi_status.MPI_SOURCE, mpi_cmds::task, MPI_COMM_WORLD);
                 process_fried_map[mpi_status.MPI_SOURCE] = fried_next;
 
             /* --------------------------------------------------------------------------------
@@ -441,6 +445,7 @@ int main(int argc, char *argv[]){
      */
         
         sizt_vector dims_basis(3);
+        sizt_vector dims_coeff(1);
 
     /* ------------------------------------------------------
      * Get dimensions of the basis functions array from root.
@@ -448,6 +453,7 @@ int main(int argc, char *argv[]){
      */
 
         MPI_Bcast(dims_basis.data(), dims_basis.size(), MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+        MPI_Bcast(dims_coeff.data(), 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
 
     /* ------------------------------------
      * Get basis functions array from root.
@@ -462,12 +468,10 @@ int main(int argc, char *argv[]){
      * ----------------------------------------------------
      * Name             Type            Description
      * ----------------------------------------------------
-     * dims_modes       sizt_vector     Number of basisfunctions.
      * dims_phase       sizt_vector     Dimensions of the array storing a single phase-screen.
      * dims_phase_all   sizt_vector     Dimensions of the array storing all phase-screens, per fried.
      */
 
-        sizt_vector dims_modes{dims_basis[0]};
         sizt_vector dims_phase{sims_t::size_x_in_pixels, sims_t::size_y_in_pixels};
         sizt_vector dims_phase_all{sims_t::realizations_per_fried, dims_phase[0], dims_phase[1]};
 
@@ -476,12 +480,12 @@ int main(int argc, char *argv[]){
      * --------------------------------------------
      * Name         Type                Description
      * --------------------------------------------
-     * coeff      Array<precision>    Array storing the coeff of the basis functions.
+     * coeff        Array<precision>    Array storing the coeff of the basis functions.
      * phase        Array<precision>    Array storing a single phase-screen.
      * phase_all    Array<precision>    Array storing the phase-screen simulations.
      */
 
-        Array<precision> coeff(dims_modes);
+        Array<precision> coeff(dims_coeff);
         Array<precision> phase(dims_phase);
         Array<precision> phase_all(dims_phase_all);
 
@@ -511,7 +515,11 @@ int main(int argc, char *argv[]){
      */
         
         MPI_Recv(phase_all[0], phase_all.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
-        MPI_Recv(coeff[0], dims_modes[0], mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
+        MPI_Recv(coeff[0], dims_coeff[0], mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
+        
+//        fprintf(stdout, "MPI_TAG: %d\n", mpi_status.MPI_TAG);
+//        fflush (stdout);
+
         while(mpi_status.MPI_TAG != mpi_cmds::kill){
             for(sizt ind = 0; ind < dims_phase_all[0]; ind++){
                 phase = phase_all.get_slice(ind, false);
@@ -525,7 +533,7 @@ int main(int argc, char *argv[]){
 
             MPI_Send(phase_all[0], phase_all.get_size(), mpi_precision, 0, mpi_pmsg::ready, MPI_COMM_WORLD);
             MPI_Recv(phase_all[0], phase_all.get_size(), mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
-            MPI_Recv(coeff[0], dims_modes[0], mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
+            MPI_Recv(coeff[0], dims_coeff[0], mpi_precision, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
         }
     }
 

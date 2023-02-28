@@ -2,9 +2,10 @@ GCC    =  mpicc
 MPICC  =  mpicc
 CSTD   = -std=c++11 -Wall
 
-INCDIR = ../include
-OBJDIR = ../lib
-BINDIR = ../bin
+HOMEDR = /scratch/saranathan/archive.dev/cplusplus/production/kolmogorov.github
+INCDIR = ${HOMEDR}/include
+OBJDIR = ${HOMEDR}/lib
+BINDIR = ${HOMEDR}/bin
 
 IFLAGS = -I${INCDIR} -I/opt/local/cfitsio/cfitsio-3.350/include
 LFLAGS = -L/opt/local/cfitsio/cfitsio-3.350/lib
@@ -35,9 +36,9 @@ MAKE_PSF_OBJS = ${patsubst %,${OBJDIR}/%,${MAKE_PSF_OBJS_}}
 MAKE_IMG_OBJS = ${patsubst %,${OBJDIR}/%,${MAKE_IMG_OBJS_}}
 MAKE_MTD_OBJS = ${patsubst %,${OBJDIR}/%,${MAKE_MTD_OBJS_}}
 
-.PHONY: all
+.PHONY : all
 
-${OBJDIR}/%.o: %.cc ${DEPS}
+${OBJDIR}/%.o: ${HOMEDR}/src/%.cc ${DEPS}
 	${GCC} ${CSTD} -c -o $@ $< ${IFLAGS} ${OFLAGS} ${LIBS}
 
 test_lib_mem: ${MEM_TEST_OBJS}
@@ -45,6 +46,9 @@ test_lib_mem: ${MEM_TEST_OBJS}
 
 test_lib_array: ${LIB_TEST_OBJS}
 	${GCC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
+
+all: ${MAKE_PHS_OBJS} ${MAKE_RES_OBJS} ${MAKE_PSF_OBJS} ${MAKE_IMG_OBJS}
+	${MPICC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
 
 make_phase: ${MAKE_PHS_OBJS}
 	${MPICC} ${CSTD} -o ${BINDIR}/$@ $^ ${IFLAGS} ${LFLAGS} ${OFLAGS} ${LIBS}
@@ -64,4 +68,3 @@ make_methods: ${MAKE_MTD_OBJS}
 clean:
 	rm -rf ${OBJDIR}/*
 	rm -rf ${BINDIR}/*
-	

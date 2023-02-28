@@ -17,10 +17,10 @@
  * Description:
  * ------------
  *
- * This program simulates the degradation of phase-screens by atmospheric turbulence. The   \\
- * simulated phase-screens, therefore, statistically represent the spatial distribution of  \\
- * wave-front errors at the exit pupil of a telescope. The phase-screens are simulated with \\
- * the property that their power spectrum follows the Kolmogorov-Obukhov power law. Each    \\
+ * This program simulates turbulent atmospheric phase screens, obeying established power laws.  \\
+ * The simulated phase screens, therefore, statistically represent the spatial distribution of  \\
+ * wave front errors at the exit pupil of a telescope. The phase-screens are simulated with     \\
+ * the property that their power spectrum follows the Kolmogorov-Obukhov power law. Each        \\
  * phase-screen realization is computed as the fourier transform of a fourier array.
  *
  * ------
@@ -107,9 +107,9 @@ int main(int argc, char *argv[]){
  */
 
     FILE *console   = mpi_process_rank == 0 ? stdout : fopen("/dev/null","wb");
-    fprintf(console, "------------------------------------------------------\n");
-    fprintf(console, "- Turbulence-degraded phasescreen simulation program -\n");
-    fprintf(console, "------------------------------------------------------\n");
+    fprintf(console, "---------------------------------------------\n");
+    fprintf(console, "- Turbulent phase screen simulation program -\n");
+    fprintf(console, "---------------------------------------------\n");
 
 /* ------------------------------------
  * !(1) Read and parse the config file.
@@ -245,7 +245,7 @@ int main(int argc, char *argv[]){
 
     /* ------------------------------------------------------
      * !(3) Distribute the fried parameters to MPI processes.
-     * !(4) Store the simulated phase-screens returned by MPI processes.
+     * !(4) Store the simulated phase screens returned by MPI processes.
      * !(5) Repeat steps 3-4 for all fried parameters.
      * -----------------------------------------------
      */
@@ -253,7 +253,7 @@ int main(int argc, char *argv[]){
         percent_assigned  = (100.0 * fried_next) / fried.get_size();
         percent_completed = (100.0 * fried_done) / fried.get_size();
         
-        fprintf(console, "\r(Info)\tSimulating phases:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed);
+        fprintf(console, "\r(Info)\tSimulating phase:\t[%0.1lf %% assigned, %0.1lf %% completed]", percent_assigned, percent_completed);
         fflush (console);
 
      /* --------------------------------------------------------
@@ -297,11 +297,11 @@ int main(int argc, char *argv[]){
 
         while(fried_done < fried.get_size()){
         	  
-        /* ------------------------------------------------------------------
-         * Wait for a MPI process to ping root, then get process information.
-         * Store phase-screen simulations returned by MPI process at the correct location.
+        /* -------------------------------------------------------------------
+         * Wait for an MPI process to ping root, then get process information.
+         * Store phase screen returned by MPI process at the correct location.
          * Increment <fried_done>.
-         * -------------------------------------------------------
+         * -------------------------------------------------------------------
          */	
 	
             MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_status);
@@ -364,7 +364,7 @@ int main(int argc, char *argv[]){
             fflush (console);
 
             switch(format_t::wr_phase){
-                case fmt_t::BIN  : wr_status = phase_all.wr_bin(io_t::wr_phase_to.c_str(), io_t::clobber);
+                case fmt_t::BIN  : wr_status = phase_all.wr_bin(io_t::wr_phase_to.c_str(),  io_t::clobber);
                                    break;
                 case fmt_t::FITS : wr_status = phase_all.wr_fits(io_t::wr_phase_to.c_str(), io_t::clobber);
                                    break;
@@ -399,9 +399,9 @@ int main(int argc, char *argv[]){
      * ------------------------------------------------
      * Name                 Type            Description
      * ------------------------------------------------
-     * dims_phase_all       sizt_vector     Dimensions of the array of all phase-screens, per fried.
-     * dims_phase_cropped   sizt_vector     Dimensions of the array of a single cropped phase-screen.
-     * dims_phase_complex   sizt_vector     Dimensions of the array of a single simulated phase-screen.
+     * dims_phase_all       sizt_vector     Dimensions of the array of all phase screens, per fried.
+     * dims_phase_cropped   sizt_vector     Dimensions of the array of a single cropped phase screen.
+     * dims_phase_complex   sizt_vector     Dimensions of the array of a single simulated phase screen.
      *
      * --------------------
      * Additional comments:
@@ -430,17 +430,19 @@ int main(int argc, char *argv[]){
      * ------------------------------------------------
      * Name             Type                Description
      * ------------------------------------------------
-     * phase_all        Array<precision>    Array storing all phase-screens, per fried.
-     * phase_cropped    Array<precision>    Array storing a single cropped phase-screen.
-     * phase_complex    Array<cmpx>         Array storing a single simulated phase-screen.
-     * phase_fourier	Array<cmpx>         Array storing the fourier of a single simulated phase-screen.
+     * phase_all        Array<precision>    Array storing all phase screens, per fried.
+     *                                      Not to be confused with <phase_all> in MPI
+     *                                      root's workflow.
+     * phase_cropped    Array<precision>    Array storing a single cropped phase screen.
+     * phase_complex    Array<cmpx>         Array storing a single simulated phase screen.
+     * phase_fourier	Array<cmpx>         Array storing the fourier of a single simulated phase screen.
      *
      * --------------------
      * Additional comments:
      * --------------------
      * phase_complex and phase_fourier are re-used over the requested number of realizations, 
      * cropped to the dimensions of the aperture and stored in phase_per_fried. 
-     * phase_all is then sent to MPI rank = 0.
+     * phase_all is then sent to MPI root.
      */
 
         Array<precision> phase_all(dims_phase_all);
@@ -449,6 +451,7 @@ int main(int argc, char *argv[]){
         Array<cmpx>      phase_fourier(dims_phase_complex);
 
 #ifdef _USE_APERTURE_
+
     /* ----------------------------------------------
      * If aperture function available, get from root.
      * ----------------------------------------------
@@ -463,7 +466,7 @@ int main(int argc, char *argv[]){
      * -------------------------------
      */
 
-        fftw_import_wisdom_from_filename(io_t::rd_phs_wisdom_from.c_str());
+//        fftw_import_wisdom_from_filename(io_t::rd_phs_wisdom_from.c_str());
 
     /*
      * Variable declaration:
@@ -473,11 +476,11 @@ int main(int argc, char *argv[]){
      * forward  fftw_plan   Re-usable FFTW plan for the forward transformation.
      */
 
-        fftw_plan reverse = fftw_plan_dft_2d(dims_phase_complex[0], dims_phase_complex[1],\
+        fftw_plan forward = fftw_plan_dft_2d(dims_phase_complex[0], dims_phase_complex[1],\
                                              reinterpret_cast<fftw_complex*>(phase_fourier[0]),\
                                              reinterpret_cast<fftw_complex*>(phase_complex[0]),\
-                                             FFTW_BACKWARD, FFTW_ESTIMATE);
-   
+                                             FFTW_FORWARD, FFTW_ESTIMATE);
+
     /*
      * Variable declaration:.
      * --------------------------------------------
@@ -506,7 +509,7 @@ int main(int argc, char *argv[]){
              */
 
                 make_phase_screen_fourier_shifted(phase_fourier, fried, sims_t::size_in_meters * aperture_t::sampling_factor);
-                fftw_execute_dft(reverse, reinterpret_cast<fftw_complex*>(phase_fourier[0]), reinterpret_cast<fftw_complex*>(phase_complex[0]));
+                fftw_execute_dft(forward, reinterpret_cast<fftw_complex*>(phase_fourier[0]), reinterpret_cast<fftw_complex*>(phase_complex[0]));
 
             /* --------------------------------------
              * Crop simulation to the requested size.
@@ -516,6 +519,7 @@ int main(int argc, char *argv[]){
                 phase_cropped = phase_complex.get_crop(dims_crop_begin, dims_phase_cropped).cast_to_type<precision>();
 
 #ifdef _USE_APERTURE_
+
             /* ---------------------------------------------------------------------------------
              * If aperture available, clip the phase-screen with the aperture and remove piston.
              * ---------------------------------------------------------------------------------
@@ -546,7 +550,7 @@ int main(int argc, char *argv[]){
      */
             
         fftw_export_wisdom_to_filename(io_t::rd_phs_wisdom_from.c_str());
-        fftw_destroy_plan(reverse);
+        fftw_destroy_plan(forward);
         fftw_cleanup();
     }
 

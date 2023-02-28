@@ -738,9 +738,9 @@ int main(int argc, char *argv[]){
                     sizt           mersenne = duration.count();
                     std::mt19937   generator(mersenne);
 
-                /* --------------------------------------
-                 * Add the noise to the convolved images.
-                 * --------------------------------------
+                /* ----------------------------------
+                 * Add noise to the convolved images.
+                 * ----------------------------------
                  */
 
                     for(sizt xpix = 0; xpix < dims_img[0]; xpix++){
